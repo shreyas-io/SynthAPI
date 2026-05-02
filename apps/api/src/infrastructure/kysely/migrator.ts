@@ -4,10 +4,15 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { FileMigrationProvider, Kysely, Migrator, PostgresDialect } from "kysely";
+import {
+  FileMigrationProvider,
+  Kysely,
+  Migrator,
+  PostgresDialect,
+} from "kysely";
 import pg from "pg";
 
-import { getSecrets } from "../../config/secrets.js";
+import { getSecrets } from "../../config/secrets";
 
 const { Pool } = pg;
 
@@ -16,7 +21,9 @@ type Database = Record<string, never>;
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationFolder = path.join(dirname, "../../../migrations");
 
-const buildConnectionString = (secrets: Awaited<ReturnType<typeof getSecrets>>) => {
+const buildConnectionString = (
+  secrets: Awaited<ReturnType<typeof getSecrets>>,
+) => {
   const user = encodeURIComponent(secrets.API_GATEWAY_DB_USER);
   const password = encodeURIComponent(secrets.API_GATEWAY_DB_PASS);
   const host = secrets.API_GATEWAY_DB_HOST;

@@ -1,11 +1,11 @@
-import { KeyValueStore } from "@mock-stack/application";
 import { createClient } from "redis";
+import { IKeyValueStore } from "../../domain/interfaces/kv_store";
 
-export const getRedisKeyValueStore = (creds: {
+export const RedisKeyValueStore = (creds: {
   redis_host: string;
   redis_port: number;
   redis_pass: string;
-}): KeyValueStore => {
+}): IKeyValueStore => {
   const connUrl = new URL(`redis://${creds.redis_host}`);
   connUrl.port = String(creds.redis_port);
   connUrl.password = encodeURIComponent(creds.redis_pass);

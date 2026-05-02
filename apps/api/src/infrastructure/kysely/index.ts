@@ -1,37 +1,12 @@
-import { Kysely, PostgresDialect, sql, type ColumnType } from "kysely";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 
-import type { getSecrets } from "../../config/secrets.js";
+import type { getSecrets } from "../../config/secrets";
+import type { Database } from "./models/index";
 
 const { Pool } = pg;
 
 type Secrets = Awaited<ReturnType<typeof getSecrets>>;
-
-type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
-
-export type UsersTable = {
-  id: ColumnType<string, string | undefined, never>;
-  username: string;
-  password_hash: string;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
-
-export type AuthorizedSessionsTable = {
-  id: ColumnType<string, string | undefined, never>;
-  user_id: string;
-  token_prefix: string;
-  token_suffix: string;
-  token_hash: string;
-  expires_at: ColumnType<Date, Date | string, Date | string>;
-  created_at: Timestamp;
-  updated_at: Timestamp;
-};
-
-export type Database = {
-  users: UsersTable;
-  authorized_sessions: AuthorizedSessionsTable;
-};
 
 export type ApiGatewayDatabase = {
   db: Kysely<Database>;

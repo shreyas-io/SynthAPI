@@ -3,24 +3,33 @@ import "dotenv/config";
 import cors from "cors";
 import express, { type Express } from "express";
 
-import { getSecrets } from "../app/config/secrets.js";
-import { createApiGatewayDatabase } from "../app/infrastructure/kysely/index.js";
-import { errorMiddleware } from "../app/middleware/error.js";
-import { responseMiddleware } from "../app/middleware/response.js";
-import { addRoutes } from "../app/routes/index.js";
+import { getSecrets } from "./config/secrets";
+import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
+import { errorMiddleware } from "./middleware/error";
+import { responseMiddleware } from "./middleware/response";
+import { addRoutes } from "./routes/index";
 import { createApplication } from "@mock-stack/application";
-import { getRedisKeyValueStore } from "./infrastructure/redis.js";
+import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
+import type { Kysely } from "kysely";
+import type { Database } from "./infrastructure/kysely/models/index";
 
 type ApiApp = {
   app: Express;
   destroy: () => Promise<void>;
 };
 
+export type ServerContext = {
+  db: Kysely<Database>;
+};
+
 export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
   const apiGatewayDatabase = createApiGatewayDatabase(secrets);
+  const serverContext: ServerContext = {
+    db: apiGatewayDatabase.db,
+  };
 
-  const keyValueStore = getRedisKeyValueStore({
+  const keyValueStore = RedisKeyValueStore({
     redis_host: secrets.REDIS_HOST,
     redis_pass: secrets.REDIS_PASS,
     redis_port: secrets.REDIS_PORT,
@@ -49,7 +58,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   app.use(express.json({ limit: "1mb" }));
   app.use(responseMiddleware);
 
-  addRoutes(app, application, apiGatewayDatabase);
+  addRoutes(app, application, serverContext);
   app.use(errorMiddleware);
 
   return {

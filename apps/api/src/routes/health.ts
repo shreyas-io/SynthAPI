@@ -1,6 +1,6 @@
 import type { Express } from "express";
 
-import { asyncRoute } from "../middleware/async_route.js";
+import { asyncRoute } from "../middleware/async_route";
 
 export const addHealthRoutes = (
   app: Express,
