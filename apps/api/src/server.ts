@@ -1,44 +1,18 @@
 import "dotenv/config";
 
 import cors from "cors";
-import express, {
-  type Express,
-  type NextFunction,
-  type Request,
-  type Response,
-} from "express";
+import express, { type Express } from "express";
 
-import { getSecrets } from "../config/secrets.js";
+import { getSecrets } from "../app/config/secrets.js";
+import { errorMiddleware } from "../app/middleware/error.js";
+import { responseMiddleware } from "../app/middleware/response.js";
+import { addRoutes } from "../app/routes/index.js";
 import { createApplication } from "@mock-stack/application";
 import { getRedisKeyValueStore } from "./infrastructure/redis.js";
 
 type ApiApp = {
   app: Express;
   destroy: () => Promise<void>;
-};
-
-const asyncRoute =
-  (handler: (req: Request, res: Response) => Promise<void>) =>
-  (req: Request, res: Response, next: NextFunction) => {
-    void handler(req, res).catch(next);
-  };
-
-const responseMiddleware = (
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  const json = res.json.bind(res);
-
-  res.json = (data) => {
-    if (res.statusCode >= 400) {
-      return json(data);
-    }
-
-    return json({ status: "success", data });
-  };
-
-  next();
 };
 
 export const createApiApp = async (): Promise<ApiApp> => {
@@ -67,24 +41,8 @@ export const createApiApp = async (): Promise<ApiApp> => {
   app.use(express.json({ limit: "1mb" }));
   app.use(responseMiddleware);
 
-  app.get(
-    "/health",
-    asyncRoute(async (_req, res) => {
-      res.json(await application.getHealth());
-    }),
-  );
-
-  app.use(
-    (error: unknown, _req: Request, res: Response, _next: NextFunction) => {
-      console.error(error);
-      res.status(500).json({
-        status: "error",
-        error: {
-          message: "Internal server error",
-        },
-      });
-    },
-  );
+  addRoutes(app, application);
+  app.use(errorMiddleware);
 
   return {
     app,
