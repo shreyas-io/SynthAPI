@@ -4,6 +4,7 @@ import cors from "cors";
 import express, { type Express } from "express";
 
 import { getSecrets } from "../app/config/secrets.js";
+import { createApiGatewayDatabase } from "../app/infrastructure/kysely/index.js";
 import { errorMiddleware } from "../app/middleware/error.js";
 import { responseMiddleware } from "../app/middleware/response.js";
 import { addRoutes } from "../app/routes/index.js";
@@ -17,6 +18,7 @@ type ApiApp = {
 
 export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
+  const apiGatewayDatabase = createApiGatewayDatabase(secrets);
 
   const keyValueStore = getRedisKeyValueStore({
     redis_host: secrets.REDIS_HOST,
@@ -24,7 +26,13 @@ export const createApiApp = async (): Promise<ApiApp> => {
     redis_port: secrets.REDIS_PORT,
   });
   const applicationDependencies = {
-    environment: secrets,
+    environment: {
+      DB_USER: secrets.APPLICATION_DB_USER,
+      DB_PASS: secrets.APPLICATION_DB_PASS,
+      DB_HOST: secrets.APPLICATION_DB_HOST,
+      DB_PORT: secrets.APPLICATION_DB_PORT,
+      DB_NAME: secrets.APPLICATION_DB_NAME,
+    },
     keyValueStore,
   };
 
@@ -47,6 +55,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   return {
     app,
     async destroy() {
+      await apiGatewayDatabase.destroy();
       await application.destroy();
       await keyValueStore.destroy();
     },

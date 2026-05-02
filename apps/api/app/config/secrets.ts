@@ -2,11 +2,20 @@ import { InfisicalSDK } from "@infisical/sdk";
 import * as z from "zod";
 
 const secretsSchema = z.object({
-  DB_USER: z.string(),
-  DB_PASS: z.string(),
-  DB_HOST: z.string(),
-  DB_PORT: z.union([z.string(), z.number().int()]).transform((v) => +v),
-  DB_NAME: z.string(),
+  APPLICATION_DB_USER: z.string(),
+  APPLICATION_DB_PASS: z.string(),
+  APPLICATION_DB_HOST: z.string(),
+  APPLICATION_DB_PORT: z
+    .union([z.string(), z.number().int()])
+    .transform((v) => +v),
+  APPLICATION_DB_NAME: z.string(),
+  API_GATEWAY_DB_USER: z.string(),
+  API_GATEWAY_DB_PASS: z.string(),
+  API_GATEWAY_DB_HOST: z.string(),
+  API_GATEWAY_DB_PORT: z
+    .union([z.string(), z.number().int()])
+    .transform((v) => +v),
+  API_GATEWAY_DB_NAME: z.string(),
   REDIS_HOST: z.string(),
   REDIS_PORT: z.union([z.string(), z.number().int()]).transform((v) => +v),
   REDIS_PASS: z.string(),

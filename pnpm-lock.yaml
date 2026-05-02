@@ -25,6 +25,12 @@ importers:
       express:
         specifier: ^5.2.1
         version: 5.2.1
+      kysely:
+        specifier: ^0.28.16
+        version: 0.28.16
+      pg:
+        specifier: ^8.20.0
+        version: 8.20.0
       redis:
         specifier: ^5.10.0
         version: 5.12.1

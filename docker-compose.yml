@@ -15,11 +15,16 @@ services:
       HOST: "0.0.0.0"
       CORS_WHITELISTED_DOMAINS: "http://localhost:5173,http://127.0.0.1:5173"
       VITE_API_BASE_URL: "http://localhost:8787"
-      DB_HOST: postgres
-      DB_PORT: "5432"
-      DB_NAME: mock_stack
-      DB_USER: user
-      DB_PASS: password
+      APPLICATION_DB_USER: user
+      APPLICATION_DB_PASS: password
+      APPLICATION_DB_HOST: postgres
+      APPLICATION_DB_PORT: "5432"
+      APPLICATION_DB_NAME: mock_api_app
+      API_GATEWAY_DB_USER: user
+      API_GATEWAY_DB_PASS: password
+      API_GATEWAY_DB_HOST: postgres
+      API_GATEWAY_DB_PORT: "5432"
+      API_GATEWAY_DB_NAME: api_gateway
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASS: redis-password
@@ -37,15 +42,16 @@ services:
     image: postgres:17-alpine
     container_name: mock-stack-postgres
     environment:
-      POSTGRES_DB: mock_stack
+      POSTGRES_DB: mock_api_app
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/001-init-databases.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d mock_stack"]
+      test: ["CMD-SHELL", "pg_isready -U user -d mock_api_app"]
       interval: 5s
       timeout: 3s
       retries: 10
