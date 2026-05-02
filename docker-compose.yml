@@ -4,14 +4,20 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     container_name: mock-stack-app
-    command: sh -lc "CI=true pnpm install --frozen-lockfile && pnpm dev:local"
+    command: >
+      sh -lc "
+        CI=true pnpm install --frozen-lockfile &&
+        pnpm --filter @mock-stack/api run migrate:latest &&
+        pnpm --filter @mock-stack/application run migrate:latest &&
+        pnpm dev:local
+      "
     depends_on:
       postgres-init:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
     environment:
-      PORT: "8787"
+      PORT: "3001"
       HOST: "0.0.0.0"
       CORS_WHITELISTED_DOMAINS: "http://localhost:5173,http://127.0.0.1:5173"
       VITE_API_BASE_URL: "http://localhost:8787"
@@ -20,6 +26,11 @@ services:
       APPLICATION_DB_HOST: postgres
       APPLICATION_DB_PORT: "5432"
       APPLICATION_DB_NAME: mock_api_app
+      DB_USER: user
+      DB_PASS: password
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: mock_api_app
       API_GATEWAY_DB_USER: user
       API_GATEWAY_DB_PASS: password
       API_GATEWAY_DB_HOST: postgres
@@ -29,7 +40,7 @@ services:
       REDIS_PORT: "6379"
       REDIS_PASS: redis-password
     ports:
-      - "8787:8787"
+      - "3001:3001"
       - "5173:5173"
     volumes:
       - .:/app

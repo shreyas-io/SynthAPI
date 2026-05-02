@@ -1,4 +1,4 @@
-import { Kysely, PostgresDialect, sql } from "kysely";
+import { Kysely, PostgresDialect, sql, type ColumnType } from "kysely";
 import pg from "pg";
 
 import type { getSecrets } from "../../config/secrets.js";
@@ -7,9 +7,34 @@ const { Pool } = pg;
 
 type Secrets = Awaited<ReturnType<typeof getSecrets>>;
 
-type Database = Record<string, never>;
+type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
+
+export type UsersTable = {
+  id: ColumnType<string, string | undefined, never>;
+  username: string;
+  password_hash: string;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+};
+
+export type AuthorizedSessionsTable = {
+  id: ColumnType<string, string | undefined, never>;
+  user_id: string;
+  token_prefix: string;
+  token_suffix: string;
+  token_hash: string;
+  expires_at: ColumnType<Date, Date | string, Date | string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+};
+
+export type Database = {
+  users: UsersTable;
+  authorized_sessions: AuthorizedSessionsTable;
+};
 
 export type ApiGatewayDatabase = {
+  db: Kysely<Database>;
   checkHealth: () => Promise<{ status: "ok"; result: number }>;
   destroy: () => Promise<void>;
 };
@@ -37,6 +62,7 @@ export const createApiGatewayDatabase = (
   });
 
   return {
+    db,
     async checkHealth() {
       const result = await sql<{ ok: number }>`select 1 as ok`.execute(db);
       const row = result.rows[0];

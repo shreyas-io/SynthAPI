@@ -1,5 +1,7 @@
 import type { Express } from "express";
 
+import type { ApiGatewayDatabase } from "../infrastructure/kysely/index.js";
+import { addAuthRoutes } from "./auth.js";
 import { addHealthRoutes } from "./health.js";
 
 export const addRoutes = (
@@ -7,6 +9,8 @@ export const addRoutes = (
   application: {
     getHealth: () => Promise<unknown>;
   },
+  apiGatewayDatabase: ApiGatewayDatabase,
 ) => {
   addHealthRoutes(app, application);
+  addAuthRoutes(app, apiGatewayDatabase);
 };

@@ -24,5 +24,5 @@ COPY packages/application/package.json packages/application/package.json
 RUN pnpm install --prod --frozen-lockfile
 COPY --from=build /app/apps/api/dist apps/api/dist
 COPY --from=build /app/packages/application/dist packages/application/dist
-EXPOSE 8787
+EXPOSE 3001
 CMD ["node", "apps/api/dist/server.js"]

@@ -49,7 +49,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   app.use(express.json({ limit: "1mb" }));
   app.use(responseMiddleware);
 
-  addRoutes(app, application);
+  addRoutes(app, application, apiGatewayDatabase);
   app.use(errorMiddleware);
 
   return {
