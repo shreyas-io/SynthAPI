@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+dist
+**/dist
+.wrangler
+.wrangler-state
+.pnpm-store
+.local-data
+.git
+.env
+.env.local
+coverage

@@ -4,19 +4,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "XDG_CONFIG_HOME=../../.wrangler-state wrangler dev --port 8787",
-    "build": "XDG_CONFIG_HOME=../../.wrangler-state wrangler deploy --dry-run --outdir dist",
+    "dev": "tsx watch --clear-screen=false --include ../../packages/application/dist src/server.ts",
+    "build": "pnpm --filter @mock-stack/application run build && tsc -p tsconfig.build.json",
+    "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
-    "deploy": "XDG_CONFIG_HOME=../../.wrangler-state wrangler deploy"
+    "docker:build": "docker build -f Dockerfile -t mock-stack-api ../.."
   },
   "dependencies": {
+    "@infisical/sdk": "^5.0.2",
     "@mock-stack/application": "workspace:*",
-    "hono": "^4.12.16"
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "redis": "^5.10.0",
+    "zod": "^4.4.2"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "vitest": "^4.1.5",
-    "wrangler": "4.87.0"
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.19.17",
+    "tsx": "^4.21.0",
+    "typescript": "^5.8.3"
   }
 }

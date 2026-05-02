@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "XDG_CONFIG_HOME=../../.wrangler-state vite dev --host 127.0.0.1 --port 5173",
+    "dev": "vite dev --config vite.dev.config.ts --host 0.0.0.0 --port 5173",
     "build": "XDG_CONFIG_HOME=../../.wrangler-state vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --config vitest.config.ts",

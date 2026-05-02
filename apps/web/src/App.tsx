@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 
-import { getBootstrapData, type GreetingResponse, type HealthResponse } from "./api";
+import {
+  getBootstrapData,
+  type GreetingResponse,
+  type HealthResponse,
+} from "./api";
 import "./index.css";
 
 type LoadState =
@@ -51,11 +55,14 @@ export default function App() {
   return (
     <main className="shell">
       <section className="hero">
-        <p className="eyebrow">Cloudflare Workers Monorepo</p>
-        <h1>React on Workers, backed by Hono and a DI-driven application package.</h1>
+        <p className="eyebrow">Cloudflare UI, AWS API</p>
+        <h1>
+          React on Cloudflare, backed by Express and a DI-driven application
+          package.
+        </h1>
         <p className="lede">
-          This frontend is deployed as a Worker-backed SPA and calls the API Worker
-          directly over HTTPS.
+          This frontend is deployed as a Cloudflare SPA and calls the AWS-hosted
+          API directly over HTTPS.
         </p>
       </section>
 
@@ -64,15 +71,17 @@ export default function App() {
           <span className="panel-label">Frontend status</span>
           <h2>Worker bootstrap</h2>
           <p>
-            Vite builds the SPA, Cloudflare serves the assets, and the app probes the
-            backend during startup.
+            Vite builds the SPA, Cloudflare serves the assets, and the app
+            probes the Express backend during startup.
           </p>
         </article>
 
         <article className="panel">
           <span className="panel-label">Backend status</span>
           <h2>Live API check</h2>
-          {state.status === "loading" && <p>Contacting the backend worker...</p>}
+          {state.status === "loading" && (
+            <p>Contacting the backend worker...</p>
+          )}
           {state.status === "error" && <p className="error">{state.message}</p>}
           {state.status === "ready" && (
             <>

@@ -21,8 +21,8 @@ describe("App", () => {
       .mockResolvedValueOnce(
         new Response(
           JSON.stringify({
-            message: "Hello from the application layer, Hono on Cloudflare Workers.",
-            target: "Hono on Cloudflare Workers",
+            message: "Hello from the application layer, Express on AWS.",
+            target: "Express on AWS",
           }),
         ),
       );
@@ -32,7 +32,7 @@ describe("App", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "Hello from the application layer, Hono on Cloudflare Workers.",
+          "Hello from the application layer, Express on AWS.",
         ),
       ).toBeInTheDocument();
     });

@@ -4,11 +4,12 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.15.1",
   "scripts": {
-    "dev": "pnpm --parallel --stream --filter @mock-stack/api --filter @mock-stack/web run dev",
+    "dev": "docker compose up --build",
+    "dev:local": "pnpm --filter @mock-stack/application run build && pnpm --parallel --stream --filter @mock-stack/application --filter @mock-stack/api --filter @mock-stack/web run \"/^dev$|^build:watch$/\"",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "deploy:api": "pnpm --filter @mock-stack/api run deploy",
+    "docker:api": "docker build -f apps/api/Dockerfile -t mock-stack-api .",
     "deploy:web": "pnpm --filter @mock-stack/web run deploy"
   }
 }

@@ -1,32 +1,52 @@
-import z from "zod";
+import type { DatabaseClient } from "./infrastructure/kysely";
+import type { KeyValueStore } from "./domain/ports/key_value_store";
+import { parseEnvironment, type Environment } from "./environment";
+export {
+  environmentSchema,
+  parseEnvironment,
+  type Environment,
+} from "./environment";
+export {
+  type KeyValueStore,
+  type KeyValueStoreSetOptions,
+} from "./domain/ports/key_value_store";
+export {
+  createPostgresDatabase,
+  type Database,
+  type DatabaseClient,
+  type DatabaseConfig,
+  type DatabaseHealthResult,
+} from "./infrastructure/kysely";
 
-const environment = z.object({
-  REDIS_HOST: z.string(),
-  REDIS_PASS: z.string(),
-  DB_NAME: z.string(),
-  DB_HOST: z.string(),
-  DB_PORT: z.string(),
-  DB_USER: z.string(),
-  DB_PASS: z.string(),
-});
-
-type Env = z.infer<typeof environment>;
+export type Greeting = {
+  message: string;
+  target: string;
+};
 
 export type ApplicationDependencies = {
-  environment: Env;
+  environment: Environment;
+  keyValueStore: KeyValueStore;
 };
 
 export type AppContext = ApplicationDependencies;
 
 export const createApplication = (app: ApplicationDependencies) => {
-  const env = environment.parse(app.environment);
+  parseEnvironment(app.environment);
 
   return {
-    getHealth() {
-      return {
-        status: "ok",
-        timestamp: new Date().toISOString,
-      };
+    async getHealth() {
+      try {
+        return {
+          status: "ok",
+          database: "ok",
+        };
+      } catch {
+        return {
+          status: "ok",
+          database: "error",
+        };
+      }
     },
+    destroy: async () => {},
   };
 };

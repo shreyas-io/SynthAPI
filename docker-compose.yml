@@ -1,0 +1,84 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: mock-stack-app
+    command: sh -lc "CI=true pnpm install --frozen-lockfile && pnpm dev:local"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      PORT: "8787"
+      HOST: "0.0.0.0"
+      CORS_WHITELISTED_DOMAINS: "http://localhost:5173,http://127.0.0.1:5173"
+      VITE_API_BASE_URL: "http://localhost:8787"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: mock_stack
+      DB_USER: user
+      DB_PASS: password
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASS: redis-password
+    ports:
+      - "8787:8787"
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - node-modules:/app/node_modules
+      - api-node-modules:/app/apps/api/node_modules
+      - web-node-modules:/app/apps/web/node_modules
+      - application-node-modules:/app/packages/application/node_modules
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: mock-stack-postgres
+    environment:
+      POSTGRES_DB: mock_stack
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d mock_stack"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: mock-stack-redis
+    command: ["redis-server", "--requirepass", "redis-password"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis-password", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: mock-stack-redis-commander
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_HOSTS: "local:redis:6379:0:redis-password"
+    ports:
+      - "8081:8081"
+
+volumes:
+  node-modules:
+  api-node-modules:
+  web-node-modules:
+  application-node-modules:
+  postgres-data:
+  redis-data:
