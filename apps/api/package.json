@@ -1,0 +1,22 @@
+{
+  "name": "@mock-stack/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "XDG_CONFIG_HOME=../../.wrangler-state wrangler dev --port 8787",
+    "build": "XDG_CONFIG_HOME=../../.wrangler-state wrangler deploy --dry-run --outdir dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "deploy": "XDG_CONFIG_HOME=../../.wrangler-state wrangler deploy"
+  },
+  "dependencies": {
+    "@mock-stack/application": "workspace:*",
+    "hono": "^4.12.16"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.5",
+    "wrangler": "4.87.0"
+  }
+}

@@ -1,0 +1,79 @@
+import z from "zod";
+
+const mock_api_simple_predicate = z.object({
+  key: z.string(),
+  label: z.string(),
+  type: z.literal("simple"),
+  target: z.enum([
+    "header",
+    "query",
+    "body",
+    "path_param",
+    "cookie",
+    "url",
+    "request_method",
+    "request_rate",
+    "request_interval_ms",
+  ]),
+  modifier: z.string(),
+  operator: z.enum([
+    "equals",
+    "not_equals",
+    "regex",
+    "null",
+    "not_null",
+    "gt",
+    "gte",
+    "lt",
+    "lte",
+    "array_includes",
+    "empty_array",
+    "not_empty_array",
+    "valid_json_schema",
+  ]),
+  value: z.union([z.string(), z.number(), z.boolean()]),
+});
+
+const mock_api_custom_predicate = z.object({
+  key: z.string(),
+  label: z.string(),
+  type: z.literal("custom"),
+  script: z.string(),
+});
+
+const mock_api_predicate = z.discriminatedUnion("type", [
+  mock_api_custom_predicate,
+  mock_api_simple_predicate,
+]);
+
+type MockApiPredicate = z.infer<typeof mock_api_predicate>;
+
+type MockApiRuleNode = {
+  id: string;
+  label: string;
+  type: "AND" | "OR";
+  predicates: MockApiPredicate[];
+  children: MockApiRuleNode[];
+};
+
+const mock_api_children: z.ZodType<MockApiRuleNode> = z.lazy(() =>
+  z.object({
+    id: z.string(),
+    label: z.string(),
+    type: z.enum(["AND", "OR"]),
+    predicates: z.array(mock_api_predicate),
+    children: z.array(mock_api_children),
+  }),
+);
+
+export const create_mock_api_rule_dto = z.object({
+  id: z.uuid().optional(), // if provided, will be set as the db primary key
+  mock_api_response_id: z.uuid(),
+  tree: z.object({
+    key: z.string(),
+    label: z.string(),
+    type: z.enum(["or", "and"]),
+    predicates: mock_api_predicate.array(),
+    children: mock_api_children.array(),
+  }),
+});

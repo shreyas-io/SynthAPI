@@ -1,0 +1,14 @@
+{
+  "name": "mock-stack",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.15.1",
+  "scripts": {
+    "dev": "pnpm --parallel --stream --filter @mock-stack/api --filter @mock-stack/web run dev",
+    "build": "pnpm -r run build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "deploy:api": "pnpm --filter @mock-stack/api run deploy",
+    "deploy:web": "pnpm --filter @mock-stack/web run deploy"
+  }
+}

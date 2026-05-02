@@ -1,0 +1,129 @@
+:root {
+  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  color: #f5efe2;
+  background:
+    radial-gradient(circle at top, rgba(255, 214, 153, 0.16), transparent 32%),
+    linear-gradient(135deg, #1f2a44 0%, #0d1321 55%, #111927 100%);
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.shell {
+  width: min(1100px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 4rem 0 5rem;
+}
+
+.hero {
+  max-width: 760px;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.8rem;
+  color: #ffd693;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.4rem, 6vw, 4.8rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.lede {
+  margin-top: 1.25rem;
+  max-width: 56ch;
+  color: rgba(245, 239, 226, 0.82);
+  font-size: 1.05rem;
+}
+
+.panel-grid {
+  display: grid;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.panel {
+  border: 1px solid rgba(255, 214, 153, 0.18);
+  border-radius: 24px;
+  padding: 1.5rem;
+  background: rgba(10, 16, 28, 0.72);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(18px);
+}
+
+.panel-label {
+  display: inline-block;
+  margin-bottom: 0.85rem;
+  color: #ffb454;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.4rem;
+}
+
+.panel p {
+  margin: 0;
+  color: rgba(245, 239, 226, 0.86);
+}
+
+.facts {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 1.25rem;
+}
+
+.facts div {
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 214, 153, 0.14);
+}
+
+.facts dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 214, 153, 0.72);
+}
+
+.facts dd {
+  margin: 0.25rem 0 0;
+  word-break: break-word;
+}
+
+.error {
+  color: #ff9c91;
+}
+
+@media (max-width: 640px) {
+  .shell {
+    width: min(100% - 1.5rem, 1100px);
+    padding-top: 3rem;
+  }
+
+  .hero h1 {
+    font-size: 2.6rem;
+  }
+}
