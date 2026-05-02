@@ -6,8 +6,8 @@ services:
     container_name: mock-stack-app
     command: sh -lc "CI=true pnpm install --frozen-lockfile && pnpm dev:local"
     depends_on:
-      postgres:
-        condition: service_healthy
+      postgres-init:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     environment:
@@ -51,10 +51,25 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./docker/postgres/init-databases.sh:/docker-entrypoint-initdb.d/001-init-databases.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d mock_api_app"]
+      test: ["CMD-SHELL", "pg_isready -U user -d postgres"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  postgres-init:
+    image: postgres:17-alpine
+    container_name: mock-stack-postgres-init
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: user
+      PGPASSWORD: password
+    volumes:
+      - ./docker/postgres/init-databases.sh:/init-databases.sh:ro
+    command: ["sh", "/init-databases.sh"]
 
   redis:
     image: redis:7.4-alpine

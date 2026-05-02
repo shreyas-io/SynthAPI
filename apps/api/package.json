@@ -8,6 +8,8 @@
     "build": "pnpm --filter @mock-stack/application run build && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "migrate:latest": "tsx app/infrastructure/kysely/migrator.ts latest",
+    "migrate:down": "tsx app/infrastructure/kysely/migrator.ts down",
     "docker:build": "docker build -f Dockerfile -t mock-stack-api ../.."
   },
   "dependencies": {
@@ -25,6 +27,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/node": "^22.19.17",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   }

@@ -19,10 +19,13 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "build:watch": "tsc -w -p tsconfig.build.json --preserveWatchOutput",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "migrate:latest": "tsx src/infrastructure/kysely/migrator.ts latest",
+    "migrate:down": "tsx src/infrastructure/kysely/migrator.ts down"
   },
   "devDependencies": {
     "@types/pg": "^8.15.6",
+    "tsx": "^4.21.0",
     "typescript": "^5.8.3"
   },
   "dependencies": {
