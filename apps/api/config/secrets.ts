@@ -1,4 +1,4 @@
-import * as InfisicalSDK from "@infisical/sdk";
+import { InfisicalSDK } from "@infisical/sdk";
 import * as z from "zod";
 
 const secretsSchema = z.object({
@@ -34,7 +34,7 @@ export async function getSecrets(): Promise<Secrets> {
   if (process.env["USE_VAULT_SECRETS"] === "true") {
     const infisicalConfig = vaultInputs.parse(process.env);
     const client = new InfisicalSDK({
-      siteUrl: infisicalConfig.INFISICAL_SECRET_PATH,
+      siteUrl: infisicalConfig.INFISICAL_SITE_URL,
     });
 
     await client.auth().universalAuth.login({
