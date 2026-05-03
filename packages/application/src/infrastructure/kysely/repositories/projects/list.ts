@@ -31,13 +31,13 @@ export const list = (client: DatabaseClient): IProjectsRepository["list"] => {
     pagination: ProjectPagination,
     sort: ProjectSort,
     columns: ColumnKeys,
-  ): Promise<Pick<Project, ColumnKeys>[]>;
-  async function listProjects<Columns extends readonly ColumnKeys[]>(
+  ): Promise<Pick<Project, C[number]>[]>;
+  async function listProjects<C extends readonly ColumnKeys[]>(
     filters: ProjectFilters,
     pagination: ProjectPagination,
     sort: ProjectSort,
-    columns?: Columns,
-  ): Promise<Project[] | Pick<Project, ColumnKeys>[]> {
+    columns?: C,
+  ): Promise<Project[] | Pick<Project, C[number]>[]> {
     let query = client.db.selectFrom("projects");
 
     if (columns?.length) {
