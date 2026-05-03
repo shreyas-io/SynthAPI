@@ -55,7 +55,7 @@ export const listProjectsFilterDto = z.object({
 
 export const listProjectsPaginationDto = z.object({
   limit: z.number().min(0).max(100),
-  offset: z.number().min(0).max(100),
+  offset: z.number().min(0),
 });
 
 export const listProjectsSortDto = z.object({

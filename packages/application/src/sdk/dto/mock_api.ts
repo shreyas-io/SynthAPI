@@ -29,7 +29,7 @@ export const listMockApisFilterDto = z.object({
 
 export const listMockApisPaginationDto = z.object({
   limit: z.number().min(0).max(100),
-  offset: z.number().min(0).max(100),
+  offset: z.number().min(0),
 });
 
 export const listMockApisSortDto = z.object({
