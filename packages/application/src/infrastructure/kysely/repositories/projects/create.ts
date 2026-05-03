@@ -1,9 +1,14 @@
-import type { CreateProjectInput } from "../../../../domain/entities/project";
+import type { ProjectEt } from "../../../../domain/entities/project";
 import type { DatabaseClient } from "../../index";
+
+type ProjectInput = Pick<
+  ProjectEt,
+  "name" | "description" | "globals" | "constants"
+>;
 
 export const createProject =
   (client: DatabaseClient) =>
-  async (input: CreateProjectInput): Promise<void> => {
+  async (input: ProjectInput): Promise<void> => {
     await client.db
       .insertInto("projects")
       .values({

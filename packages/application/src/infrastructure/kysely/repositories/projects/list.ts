@@ -1,5 +1,5 @@
-import type { IProjectsRepository } from "../../../../domain/entities/interfaces/projects";
-import type { Project } from "../../../../domain/entities/project";
+import type { IProjectsRepository } from "../../../../domain/entities/interfaces/repositories/projects";
+import type { ProjectEt } from "../../../../domain/entities/project";
 import type { DatabaseClient } from "../../index";
 
 type ProjectFilters = {
@@ -18,26 +18,34 @@ type ProjectSort = {
   order: "asc" | "desc";
 };
 
-type ColumnKeys = keyof Project;
+type ColumnKeys = Extract<keyof ProjectEt, string>;
 
 export const list = (client: DatabaseClient): IProjectsRepository["list"] => {
-  async function listProjects(
-    filters: ProjectFilters,
-    pagination: ProjectPagination,
-    sort: ProjectSort,
-  ): Promise<Project[]>;
-  async function listProjects<C extends readonly ColumnKeys[]>(
-    filters: ProjectFilters,
-    pagination: ProjectPagination,
-    sort: ProjectSort,
-    columns: ColumnKeys,
-  ): Promise<Pick<Project, C[number]>[]>;
-  async function listProjects<C extends readonly ColumnKeys[]>(
-    filters: ProjectFilters,
-    pagination: ProjectPagination,
-    sort: ProjectSort,
-    columns?: C,
-  ): Promise<Project[] | Pick<Project, C[number]>[]> {
+  async function listProjects(params: {
+    filters: ProjectFilters;
+    pagination?: ProjectPagination;
+    sort?: ProjectSort;
+  }): Promise<ProjectEt[]>;
+  async function listProjects<C extends readonly ColumnKeys[]>(params: {
+    filters: ProjectFilters;
+    columns: ColumnKeys;
+    pagination?: ProjectPagination;
+    sort?: ProjectSort;
+  }): Promise<Pick<ProjectEt, C[number]>[]>;
+  async function listProjects<C extends readonly ColumnKeys[]>({
+    filters,
+    columns,
+    pagination,
+    sort,
+  }: {
+    filters: ProjectFilters;
+    columns?: C;
+    pagination?: ProjectPagination;
+    sort?: ProjectSort;
+  }): Promise<ProjectEt[] | Pick<ProjectEt, C[number]>[]> {
+    if (!filters.ids?.length && !filters.name && !filters.description)
+      return [];
+
     let query = client.db.selectFrom("projects");
 
     if (columns?.length) {
@@ -58,13 +66,17 @@ export const list = (client: DatabaseClient): IProjectsRepository["list"] => {
       query = query.where("description", "ilike", `%${filters.description}%`);
     }
 
-    const rows = await query
-      .orderBy(sort.by, sort.order)
-      .limit(pagination.limit)
-      .offset(pagination.offset)
-      .execute();
+    if (sort?.by) {
+      query = query.orderBy(sort.by, sort.order);
+    }
 
-    return rows as Project[] | Pick<Project, ColumnKeys>[];
+    if (pagination?.limit) {
+      query = query.limit(pagination.limit).offset(pagination.offset);
+    }
+
+    const rows = await query.execute();
+
+    return rows as ProjectEt[] | Pick<ProjectEt, ColumnKeys>[];
   }
 
   return listProjects;

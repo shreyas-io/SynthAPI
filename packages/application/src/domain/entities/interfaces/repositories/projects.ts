@@ -1,0 +1,46 @@
+import type { ProjectEt } from "../../project";
+
+type ProjectInput = Pick<
+  ProjectEt,
+  "name" | "description" | "globals" | "constants"
+>;
+type ColumnKeys = Extract<keyof ProjectEt, string>;
+
+export interface IProjectsRepository {
+  create: (input: ProjectInput) => Promise<void>;
+  list: {
+    (params: {
+      filters: {
+        ids?: string[];
+        name?: string;
+        description?: string;
+      };
+      pagination?: {
+        limit: number;
+        offset: number;
+      };
+      sort?: {
+        by: "name" | "created_at";
+        order: "asc" | "desc";
+      };
+    }): Promise<ProjectEt[]>;
+    <C extends readonly ColumnKeys[]>(params: {
+      filters: {
+        ids?: string[];
+        name?: string;
+        description?: string;
+      };
+      columns: C;
+      pagination?: {
+        limit: number;
+        offset: number;
+      };
+      sort?: {
+        by: "name" | "created_at";
+        order: "asc" | "desc";
+      };
+    }): Promise<Pick<ProjectEt, C[number]>[]>;
+  };
+  update: (id: string, input: ProjectInput) => Promise<void>;
+  delete: (id: string) => Promise<void>;
+}

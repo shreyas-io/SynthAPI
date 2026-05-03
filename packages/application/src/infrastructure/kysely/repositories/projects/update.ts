@@ -1,9 +1,14 @@
-import type { UpdateProjectInput } from "../../../../domain/entities/project";
+import type { ProjectEt } from "../../../../domain/entities/project";
 import type { DatabaseClient } from "../../index";
+
+type ProjectInput = Pick<
+  ProjectEt,
+  "name" | "description" | "globals" | "constants"
+>;
 
 export const updateProject =
   (client: DatabaseClient) =>
-  async (id: string, input: UpdateProjectInput): Promise<void> => {
+  async (id: string, input: ProjectInput): Promise<void> => {
     await client.db
       .updateTable("projects")
       .set({

@@ -1,55 +1,46 @@
-export type ProjectArrayVariable = {
+type ProjectArrayVariable = {
   name: string;
   type: "array";
   value: string[] | number[] | boolean[];
 };
 
-export type ProjectStringVariable = {
+type ProjectStringVariable = {
   name: string;
   type: "string";
   value: string;
 };
 
-export type ProjectNumberVariable = {
+type ProjectNumberVariable = {
   name: string;
   type: "number";
   value: number;
 };
 
-export type ProjectBooleanVariable = {
+type ProjectBooleanVariable = {
   name: string;
   type: "boolean";
   value: boolean;
 };
 
-export type ProjectObjectVariable = {
+type ProjectObjectVariable = {
   name: string;
   type: "object";
   value: Record<string, any>;
 };
 
-export type ProjectVariable =
+export type ProjectVariableEt =
   | ProjectArrayVariable
   | ProjectStringVariable
   | ProjectNumberVariable
   | ProjectBooleanVariable
   | ProjectObjectVariable;
 
-export type Project = {
+export type ProjectEt = {
   id: string;
   name: string;
   description: string;
-  globals: ProjectVariable[];
-  constants: ProjectVariable[];
+  globals: ProjectVariableEt[];
+  constants: ProjectVariableEt[];
   created_at: Date;
   updated_at: Date;
 };
-
-export type ProjectListItem = Pick<Project, "id" | "name" | "description">;
-
-export type CreateProjectInput = Pick<
-  Project,
-  "name" | "description" | "globals" | "constants"
->;
-
-export type UpdateProjectInput = CreateProjectInput;

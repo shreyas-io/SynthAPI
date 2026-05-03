@@ -4,7 +4,7 @@ import * as z from "zod";
 import { AuthService } from "../domain/auth";
 import {
   ApiGatewayException,
-  ApiGatewayStatusCode,
+  HttpStatusCode,
 } from "../domain/exceptions/exception";
 import { asyncRoute } from "../middleware/async_route";
 import type { ServerContext } from "../server";
@@ -47,7 +47,7 @@ export const addAuthRoutes = (app: Express, serverContext: ServerContext) => {
       if (!body.success) {
         throw new ApiGatewayException({
           public_message: "Invalid signup request",
-          status_code: ApiGatewayStatusCode.BAD_REQUEST,
+          status_code: HttpStatusCode.BAD_REQUEST,
         });
       }
 
@@ -63,7 +63,7 @@ export const addAuthRoutes = (app: Express, serverContext: ServerContext) => {
       if (!credentials) {
         throw new ApiGatewayException({
           public_message: "Unauthorized",
-          status_code: ApiGatewayStatusCode.UNAUTHORIZED,
+          status_code: HttpStatusCode.UNAUTHORIZED,
         });
       }
 
@@ -72,7 +72,7 @@ export const addAuthRoutes = (app: Express, serverContext: ServerContext) => {
       if (!signin) {
         throw new ApiGatewayException({
           public_message: "Unauthorized",
-          status_code: ApiGatewayStatusCode.UNAUTHORIZED,
+          status_code: HttpStatusCode.UNAUTHORIZED,
         });
       }
 

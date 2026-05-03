@@ -40,7 +40,7 @@ const buildDatabaseConnectionString = (
 
 export const createPostgresDatabase = ({
   app,
-  maxConnections = 5,
+  maxConnections = 15,
 }: DatabaseConfig): DatabaseClient => {
   const db = new Kysely<Database>({
     dialect: new PostgresDialect({

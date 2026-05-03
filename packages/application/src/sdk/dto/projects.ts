@@ -40,9 +40,25 @@ const variable_types = z.discriminatedUnion("type", [
   object_variable_type,
 ]);
 
-export const create_project_dto = z.object({
+export const createProjectDto = z.object({
   name: z.string(),
   description: z.string(),
   globals: variable_types.array(),
   constants: variable_types.array(),
+});
+
+export const listProjectsFilterDto = z.object({
+  ids: z.uuidv7().array().optional(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+});
+
+export const listProjectsPaginationDto = z.object({
+  limit: z.number().min(0).max(100),
+  offset: z.number().min(0).max(100),
+});
+
+export const listProjectsSortDto = z.object({
+  by: z.enum(["name", "created_at"]),
+  order: z.enum(["asc", "desc"]),
 });

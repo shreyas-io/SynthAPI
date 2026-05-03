@@ -1,50 +1,33 @@
-import type { DatabaseClient } from "./infrastructure/kysely";
 import type { KeyValueStore } from "./domain/ports/key_value_store";
 import { parseEnvironment, type Environment } from "./environment";
-export {
-  environmentSchema,
-  parseEnvironment,
-  type Environment,
-} from "./environment";
-export {
-  type KeyValueStore,
-  type KeyValueStoreSetOptions,
-} from "./domain/ports/key_value_store";
-export {
-  type ExtractMockApiRequestPathInput,
-  type ExtractMockApiRequestPathResult,
-  type MockApiRequestPathExtractor,
-} from "./domain/ports/mock_api_request_path_extractor";
-export {
-  createMockApiRequestPathExtractor,
-  MockApiRequestPathMismatchError,
-} from "./domain/usecases/mock_api_request_path_extractor";
-export {
+import {
   createPostgresDatabase,
-  type Database,
   type DatabaseClient,
-  type DatabaseConfig,
-  type DatabaseHealthResult,
 } from "./infrastructure/kysely";
 
-export type Greeting = {
-  message: string;
-  target: string;
-};
-
-export type ApplicationDependencies = {
+type ApplicationDependencies = {
   environment: Environment;
   keyValueStore: KeyValueStore;
 };
 
-export type AppContext = ApplicationDependencies;
+export type AppContext = ApplicationDependencies & {
+  database: DatabaseClient;
+};
 
 export const createApplication = (app: ApplicationDependencies) => {
   parseEnvironment(app.environment);
+  const database = createPostgresDatabase({ app });
+  const ctx: AppContext = {
+    ...app,
+    database,
+  };
 
   return {
+    ctx,
     async getHealth() {
       try {
+        await database.checkHealth();
+
         return {
           status: "ok",
           database: "ok",
@@ -56,6 +39,8 @@ export const createApplication = (app: ApplicationDependencies) => {
         };
       }
     },
-    destroy: async () => {},
+    destroy: async () => {
+      await database.destroy();
+    },
   };
 };
