@@ -2,7 +2,7 @@ import {
   ExtractMockApiRequestPathInput,
   MockApiRequestPathExtractor,
 } from "../../ports/mock_api_request_path_extractor";
-import { QueryParams } from "../../entities/query_params";
+import { QueryParams } from "../../entities/execution_context";
 
 const mockUrlBase = "http://mock.local";
 

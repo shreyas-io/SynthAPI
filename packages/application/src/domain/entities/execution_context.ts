@@ -1,4 +1,6 @@
-type QueryParams = Record<string, string | string[]>;
+export type QueryParamValue = string | string[];
+
+export type QueryParams = Record<string, QueryParamValue>;
 
 export type ExecutionContext = {
   header: Record<string, any>;

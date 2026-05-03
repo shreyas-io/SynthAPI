@@ -16,10 +16,6 @@ export {
   type MockApiRequestPathExtractor,
 } from "./domain/ports/mock_api_request_path_extractor";
 export {
-  type QueryParams,
-  type QueryParamValue,
-} from "./domain/entities/query_params";
-export {
   createMockApiRequestPathExtractor,
   MockApiRequestPathMismatchError,
 } from "./domain/usecases/mock_api_request_path_extractor";
