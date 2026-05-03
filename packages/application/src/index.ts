@@ -4,6 +4,7 @@ import {
   createPostgresDatabase,
   type DatabaseClient,
 } from "./infrastructure/kysely";
+import { Projects } from "./sdk/handlers/projects";
 
 type ApplicationDependencies = {
   environment: Environment;
@@ -23,7 +24,7 @@ export const createApplication = (app: ApplicationDependencies) => {
   };
 
   return {
-    ctx,
+    projects: Projects(ctx),
     async getHealth() {
       try {
         await database.checkHealth();

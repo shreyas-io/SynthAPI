@@ -7,7 +7,7 @@ type ProjectInput = Pick<
 type ColumnKeys = Extract<keyof ProjectEt, string>;
 
 export interface IProjectsRepository {
-  create: (input: ProjectInput) => Promise<void>;
+  create: (input: ProjectInput) => Promise<string>;
   list: {
     (params: {
       filters: {

@@ -8,8 +8,8 @@
     "build": "pnpm --filter @mock-stack/application run build && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "migrate:latest": "tsx app/infrastructure/kysely/migrator.ts latest",
-    "migrate:down": "tsx app/infrastructure/kysely/migrator.ts down",
+    "migrate:latest": "tsx src/infrastructure/kysely/migrator.ts latest",
+    "migrate:down": "tsx src/infrastructure/kysely/migrator.ts down",
     "docker:build": "docker build -f Dockerfile -t mock-stack-api ../.."
   },
   "dependencies": {

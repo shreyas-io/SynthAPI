@@ -27,7 +27,21 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       input: Pick<ProjectEt, "name" | "description" | "globals" | "constants">,
     ) => {
       const projects_repository = ProjectsRepository(ctx.database);
-      await projects_repository.create(input);
+      const id = await projects_repository.create(input);
+
+      const projects = await projects_repository.list({
+        filters: {
+          ids: [id],
+        },
+      });
+      const project = projects.at(0);
+      if (!project) {
+        throw new MockApiException({
+          public_message: "Error encountered while creating project.",
+        });
+      }
+
+      return project;
     },
     getProject: async (id: string): Promise<ProjectEt> => {
       const projects = await projects_repository.list({
