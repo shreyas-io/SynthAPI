@@ -1,5 +1,8 @@
 import { AppContext } from "../../..";
-import { MockApiException } from "../../../exceptions/exception";
+import {
+  HttpStatusCode,
+  MockApiException,
+} from "../../../exceptions/exception";
 import { ProjectsRepository } from "../../../infrastructure/kysely/repositories/projects";
 import type { ProjectEt } from "../../entities/project";
 
@@ -52,7 +55,8 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       const project = projects.at(0);
       if (!project) {
         throw new MockApiException({
-          public_message: "Error encountered while creating project.",
+          public_message: "Project not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
         });
       }
 
