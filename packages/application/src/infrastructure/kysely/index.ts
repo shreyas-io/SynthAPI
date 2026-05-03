@@ -2,11 +2,13 @@ import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 
 import type { AppContext } from "../..";
+import type { MockApisTable } from "./models/mock_apis";
 import type { ProjectsTable } from "./models/projects";
 
 const { Pool } = pg;
 
 export type Database = {
+  mock_apis: MockApisTable;
   projects: ProjectsTable;
 };
 

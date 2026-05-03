@@ -4,6 +4,7 @@ import {
   createPostgresDatabase,
   type DatabaseClient,
 } from "./infrastructure/kysely";
+import { MockApis } from "./sdk/handlers/mock_apis";
 import { Projects } from "./sdk/handlers/projects";
 
 type ApplicationDependencies = {
@@ -24,6 +25,7 @@ export const createApplication = (app: ApplicationDependencies) => {
   };
 
   return {
+    mock_apis: MockApis(ctx),
     projects: Projects(ctx),
     async getHealth() {
       try {

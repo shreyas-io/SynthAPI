@@ -2,16 +2,16 @@ import type { Express } from "express";
 
 import { asyncRoute } from "../middleware/async_route";
 
-export type ProjectsSdk = {
-  createProject: (data: unknown) => Promise<unknown>;
-  getProject: (id: string) => Promise<unknown>;
-  listProjects: (
+export type MockApisSdk = {
+  createMockApi: (data: unknown) => Promise<unknown>;
+  getMockApi: (id: string) => Promise<unknown>;
+  listMockApis: (
     filters: unknown,
     pagination: unknown,
     sort: unknown,
   ) => Promise<unknown>;
-  updateProject: (id: string, data: unknown) => Promise<void>;
-  deleteProject: (id: string) => Promise<void>;
+  updateMockApi: (id: string, data: unknown) => Promise<void>;
+  deleteMockApi: (id: string) => Promise<void>;
 };
 
 const getString = (value: unknown): string | undefined => {
@@ -48,29 +48,47 @@ const getNumber = (value: unknown, fallback: number): number => {
   return Number.isFinite(numberValue) ? numberValue : fallback;
 };
 
-export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
+export const addMockApiRoutes = (app: Express, mock_apis: MockApisSdk) => {
   app.post(
-    "/api/v1/projects",
+    "/api/v1/mock-apis",
     asyncRoute(async (req, res) => {
-      const project = await projects.createProject(req.body);
-      res.status(201).json(project);
+      const mock_api = await mock_apis.createMockApi(req.body);
+      res.status(201).json(mock_api);
     }),
   );
 
   app.get(
-    "/api/v1/projects",
+    "/api/v1/mock-apis",
     asyncRoute(async (req, res) => {
       const filters: {
         ids?: string[];
+        project_ids?: string[];
+        method?: string;
+        path?: string;
         name?: string;
         description?: string;
       } = {};
       const ids = getStringArray(req.query.id);
+      const project_ids = getStringArray(req.query.project_id);
+      const method = getString(req.query.method);
+      const path = getString(req.query.path);
       const name = getString(req.query.name);
       const description = getString(req.query.description);
 
       if (ids?.length) {
         filters.ids = ids;
+      }
+
+      if (project_ids?.length) {
+        filters.project_ids = project_ids;
+      }
+
+      if (method) {
+        filters.method = method;
+      }
+
+      if (path) {
+        filters.path = path;
       }
 
       if (name) {
@@ -82,7 +100,7 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
       }
 
       res.json(
-        await projects.listProjects(
+        await mock_apis.listMockApis(
           filters,
           {
             limit: getNumber(req.query.limit, 20),
@@ -98,24 +116,24 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
   );
 
   app.get(
-    "/api/v1/projects/:id",
+    "/api/v1/mock-apis/:id",
     asyncRoute(async (req, res) => {
-      res.json(await projects.getProject(req.params.id as string));
+      res.json(await mock_apis.getMockApi(req.params.id as string));
     }),
   );
 
   app.put(
-    "/api/v1/projects/:id",
+    "/api/v1/mock-apis/:id",
     asyncRoute(async (req, res) => {
-      await projects.updateProject(req.params.id as string, req.body);
+      await mock_apis.updateMockApi(req.params.id as string, req.body);
       res.json({});
     }),
   );
 
   app.delete(
-    "/api/v1/projects/:id",
+    "/api/v1/mock-apis/:id",
     asyncRoute(async (req, res) => {
-      await projects.deleteProject(req.params.id as string);
+      await mock_apis.deleteMockApi(req.params.id as string);
       res.status(204).send();
     }),
   );
