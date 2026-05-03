@@ -31,6 +31,42 @@ try {
       },
       timeout_ms: 30_000,
     }),
+    pool.execute({
+      context: {
+        request: {
+          method: "POST",
+          path: "/users/42",
+          path_params: {
+            id: "42",
+          },
+          query: {
+            tags: ["admin", "tester"],
+          },
+          body: {
+            first_name: "Ada",
+            last_name: "Lovelace",
+            score: 98,
+          },
+        },
+        globals: {
+          execution_count: 7,
+        },
+      },
+      code: `
+full_name = request["body"]["first_name"] + " " + request["body"]["last_name"]
+
+{
+  "method": request["method"],
+  "path": request["path"],
+  "id": request["path_params"]["id"],
+  "tag_count": len(request["query"]["tags"]),
+  "full_name": full_name,
+  "next_execution_count": globals["execution_count"] + 1,
+  "allowed": request["body"]["score"] > 90,
+}
+`,
+      timeout_ms: 30_000,
+    }),
   ]);
 
   console.log("Results");
