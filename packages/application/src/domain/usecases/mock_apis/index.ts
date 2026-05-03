@@ -74,12 +74,28 @@ export const MockApisUsecase = (ctx: AppContext) => {
       pagination: MockApiPagination,
       sort: MockApiSort,
     ) => {
-      return await mock_apis_repository.list({
-        filters,
-        pagination,
-        sort,
-        columns: ["id", "project_id", "method", "path", "name", "description"],
-      });
+      const [total, records] = await Promise.all([
+        mock_apis_repository.count({
+          filters,
+        }),
+        mock_apis_repository.list({
+          filters,
+          pagination,
+          sort,
+          columns: [
+            "id",
+            "project_id",
+            "method",
+            "path",
+            "name",
+            "description",
+          ],
+        }),
+      ]);
+      return {
+        total,
+        records,
+      };
     },
     updateMockApi(id: string, input: MockApiInput): Promise<void> {
       return mock_apis_repository.update(id, input);

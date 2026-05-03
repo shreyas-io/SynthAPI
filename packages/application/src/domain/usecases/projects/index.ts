@@ -67,12 +67,20 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       pagination: ProjectPagination,
       sort: ProjectSort,
     ) => {
-      return await projects_repository.list({
-        filters,
-        pagination,
-        sort,
-        columns: ["id", "name", "description"],
-      });
+      const [total, records] = await Promise.all([
+        projects_repository.count({ filters }),
+        projects_repository.list({
+          filters,
+          pagination,
+          sort,
+          columns: ["id", "name", "description"],
+        }),
+      ]);
+
+      return {
+        total,
+        records,
+      };
     },
     updateProject(
       id: string,
