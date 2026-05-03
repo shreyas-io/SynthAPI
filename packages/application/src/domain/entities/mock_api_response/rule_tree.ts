@@ -37,12 +37,14 @@ type MockApiCustomPredicate = {
   script: string;
 };
 
-type MockApiPredicate = MockApiCustomPredicate | MockApiSimplePredicate;
+export type MockApiPredicateEt =
+  | MockApiCustomPredicate
+  | MockApiSimplePredicate;
 
-export type MockApiRuleTree = {
+export type MockApiRuleTreeEt = {
   key: string;
   label: string;
-  type: "AND" | "OR";
-  predicates: MockApiPredicate[];
-  children: MockApiRuleTree[];
+  type: "and" | "or";
+  predicates: MockApiPredicateEt[];
+  children: MockApiRuleTreeEt[];
 };

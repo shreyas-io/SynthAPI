@@ -66,14 +66,10 @@ const mock_api_children: z.ZodType<MockApiRuleNode> = z.lazy(() =>
   }),
 );
 
-export const create_mock_api_rule_dto = z.object({
-  id: z.uuid().optional(), // if provided, will be set as the db primary key
-  mock_api_response_id: z.uuid(),
-  tree: z.object({
-    key: z.string(),
-    label: z.string(),
-    type: z.enum(["or", "and"]),
-    predicates: mock_api_predicate.array(),
-    children: mock_api_children.array(),
-  }),
+export const createMockApiRuleTreeDto = z.object({
+  key: z.string(),
+  label: z.string(),
+  type: z.enum(["or", "and"]),
+  predicates: mock_api_predicate.array(),
+  children: mock_api_children.array(),
 });

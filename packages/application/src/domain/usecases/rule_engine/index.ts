@@ -1,13 +1,13 @@
 import { AppContext } from "../../..";
-import { ExecutionContext } from "../../entities/execution_context";
-import { MockApiRuleTree } from "../../entities/rule_tree/rule_tree";
+import { ExecutionContextEt } from "../../entities/execution_context";
+import { MockApiRuleTreeEt } from "../../entities/mock_api_response/rule_tree";
 
 export const RuleTree = (app: AppContext) => {
   return {
-    create: (tree: MockApiRuleTree) => {},
+    create: (tree: MockApiRuleTreeEt) => {},
     get: (id: string) => {},
-    update: (tree: MockApiRuleTree) => {},
+    update: (tree: MockApiRuleTreeEt) => {},
     delete: (id: string) => {},
-    execute: (tree: MockApiRuleTree, ctx: ExecutionContext) => {},
+    execute: (tree: MockApiRuleTreeEt, ctx: ExecutionContextEt) => {},
   };
 };

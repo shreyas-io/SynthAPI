@@ -1,5 +1,5 @@
 import type { IMockApiResponsesRepository } from "../../../../domain/entities/interfaces/repositories/mock_api_responses";
-import type { MockApiResponseEt } from "../../../../domain/entities/mock_api_response";
+import type { MockApiResponseEt } from "../../../../domain/entities/mock_api_response/mock_api_response";
 import type { DatabaseClient } from "../../index";
 
 type MockApiResponseFilters = {
@@ -45,11 +45,7 @@ export const list = (
     pagination?: MockApiResponsePagination;
     sort?: MockApiResponseSort;
   }): Promise<MockApiResponseEt[] | Pick<MockApiResponseEt, C[number]>[]> {
-    if (
-      !filters.ids?.length &&
-      !filters.mock_api_ids?.length &&
-      !filters.name
-    )
+    if (!filters.ids?.length && !filters.mock_api_ids?.length && !filters.name)
       return [];
 
     let query = client.db.selectFrom("mock_api_responses");

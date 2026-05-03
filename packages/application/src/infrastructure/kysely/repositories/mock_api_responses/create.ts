@@ -1,4 +1,4 @@
-import type { MockApiResponseEt } from "../../../../domain/entities/mock_api_response";
+import type { MockApiResponseEt } from "../../../../domain/entities/mock_api_response/mock_api_response";
 import type { DatabaseClient } from "../../index";
 import { uuidv7 } from "uuidv7";
 

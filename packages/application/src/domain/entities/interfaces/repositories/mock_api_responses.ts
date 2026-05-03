@@ -1,4 +1,4 @@
-import type { MockApiResponseEt } from "../../mock_api_response";
+import type { MockApiResponseEt } from "../../mock_api_response/mock_api_response";
 
 type MockApiResponseInput = Pick<
   MockApiResponseEt,

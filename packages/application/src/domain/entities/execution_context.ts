@@ -1,8 +1,8 @@
-export type QueryParamValue = string | string[];
+type QueryParamValue = string | string[];
 
 export type QueryParams = Record<string, QueryParamValue>;
 
-export type ExecutionContext = {
+export type ExecutionContextEt = {
   header: Record<string, any>;
   query: QueryParams;
   body: Record<string, any>;

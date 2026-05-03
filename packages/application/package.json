@@ -22,9 +22,11 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "migrate:create": "tsx src/create_migration.ts",
     "migrate:latest": "tsx src/migrator.ts latest",
-    "migrate:down": "tsx src/migrator.ts down"
+    "migrate:down": "tsx src/migrator.ts down",
+    "pyodide:smoke": "tsx src/infrastructure/pyodide/smoke.ts"
   },
   "devDependencies": {
+    "@types/node": "^22.19.17",
     "@types/pg": "^8.15.6",
     "tsx": "^4.21.0",
     "typescript": "^5.8.3"

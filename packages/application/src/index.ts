@@ -1,9 +1,17 @@
 import type { KeyValueStore } from "./domain/ports/key_value_store";
-import { parseEnvironment, type Environment } from "./environment";
+import {
+  parseEnvironment,
+  type Environment,
+  type ParsedEnvironment,
+} from "./environment";
 import {
   createPostgresDatabase,
   type DatabaseClient,
 } from "./infrastructure/kysely";
+import {
+  createPyodideWorkerPool,
+  type PyodideWorkerPool,
+} from "./infrastructure/pyodide";
 import { MockApis } from "./sdk/handlers/mock_apis";
 import { Projects } from "./sdk/handlers/projects";
 
@@ -12,16 +20,26 @@ type ApplicationDependencies = {
   keyValueStore: KeyValueStore;
 };
 
-export type AppContext = ApplicationDependencies & {
+export type AppContext = Omit<ApplicationDependencies, "environment"> & {
+  environment: ParsedEnvironment;
   database: DatabaseClient;
+  pyodide: PyodideWorkerPool;
 };
 
 export const createApplication = (app: ApplicationDependencies) => {
-  parseEnvironment(app.environment);
-  const database = createPostgresDatabase({ app });
+  const environment = parseEnvironment(app.environment);
+  const pyodide = createPyodideWorkerPool({
+    size: 1,
+    max_queue_size: 100,
+    worker_memory_limit_mb: 28,
+    worker_boot_timeout_ms: 10_000,
+  });
+  const database = createPostgresDatabase({ app: { environment } });
   const ctx: AppContext = {
     ...app,
+    environment,
     database,
+    pyodide,
   };
 
   return {
@@ -44,6 +62,7 @@ export const createApplication = (app: ApplicationDependencies) => {
     },
     destroy: async () => {
       await database.destroy();
+      await pyodide.destroy();
     },
   };
 };

@@ -1,5 +1,5 @@
 export type KeyValueStoreSetOptions = {
-  ttlSeconds?: number;
+  ttl_seconds?: number;
 };
 
 export type KeyValueStore = {
