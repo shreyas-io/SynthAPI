@@ -7,6 +7,16 @@ type MockApiInput = Pick<
 type ColumnKeys = Extract<keyof MockApiEt, string>;
 
 export interface IMockApisRepository {
+  count: (params: {
+    filters: {
+      ids?: string[];
+      project_ids?: string[];
+      method?: string;
+      path?: string;
+      name?: string;
+      description?: string;
+    };
+  }) => Promise<number>;
   create: (input: MockApiInput) => Promise<string>;
   list: {
     (params: {

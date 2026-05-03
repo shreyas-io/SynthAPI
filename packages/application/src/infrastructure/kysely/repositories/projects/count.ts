@@ -1,0 +1,37 @@
+import { sql } from "kysely";
+
+import type { IProjectsRepository } from "../../../../domain/entities/interfaces/repositories/projects";
+import type { DatabaseClient } from "../../index";
+
+type ProjectFilters = {
+  ids?: string[];
+  name?: string;
+  description?: string;
+};
+
+export const count =
+  (client: DatabaseClient): IProjectsRepository["count"] =>
+  async ({ filters }: { filters: ProjectFilters }): Promise<number> => {
+    if (!filters.ids?.length && !filters.name && !filters.description)
+      return 0;
+
+    let query = client.db
+      .selectFrom("projects")
+      .select(sql<number>`count(*)::int`.as("count"));
+
+    if (filters.ids?.length) {
+      query = query.where("id", "in", filters.ids);
+    }
+
+    if (filters.name) {
+      query = query.where("name", "ilike", `%${filters.name}%`);
+    }
+
+    if (filters.description) {
+      query = query.where("description", "ilike", `%${filters.description}%`);
+    }
+
+    const row = await query.executeTakeFirstOrThrow();
+
+    return row.count;
+  };
