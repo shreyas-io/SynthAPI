@@ -6,6 +6,8 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       id uuid primary key default uuidv7(),
       name text not null,
       description text not null,
+      globals jsonb not null default '[]'::jsonb,
+      constants jsonb not null default '[]'::jsonb,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     );

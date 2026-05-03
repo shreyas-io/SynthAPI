@@ -2,10 +2,13 @@ import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 
 import type { AppContext } from "../..";
+import type { ProjectsTable } from "./models/projects";
 
 const { Pool } = pg;
 
-export type Database = Record<string, never>;
+export type Database = {
+  projects: ProjectsTable;
+};
 
 export type DatabaseConfig = {
   app: Pick<AppContext, "environment">;
