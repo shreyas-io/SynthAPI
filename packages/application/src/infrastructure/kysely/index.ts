@@ -21,6 +21,7 @@ export type DatabaseHealthResult = {
 };
 
 export type DatabaseClient = {
+  db: Kysely<Database>;
   checkHealth: () => Promise<DatabaseHealthResult>;
   destroy: () => Promise<void>;
 };
@@ -51,6 +52,7 @@ export const createPostgresDatabase = ({
   });
 
   return {
+    db,
     async checkHealth() {
       const result = await sql<{ ok: number }>`select 1 as ok`.execute(db);
       const row = result.rows[0];

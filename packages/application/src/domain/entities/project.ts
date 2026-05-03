@@ -53,7 +53,3 @@ export type CreateProjectInput = Pick<
 >;
 
 export type UpdateProjectInput = CreateProjectInput;
-
-export type ListProjectsInput = Partial<
-  Pick<Project, "id" | "name" | "description">
->;
