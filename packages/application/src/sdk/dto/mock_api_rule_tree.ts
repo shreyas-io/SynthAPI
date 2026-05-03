@@ -51,7 +51,7 @@ type MockApiPredicate = z.infer<typeof mock_api_predicate>;
 type MockApiRuleNode = {
   id: string;
   label: string;
-  type: "AND" | "OR";
+  type: "and" | "or";
   predicates: MockApiPredicate[];
   children: MockApiRuleNode[];
 };
@@ -60,7 +60,7 @@ const mock_api_children: z.ZodType<MockApiRuleNode> = z.lazy(() =>
   z.object({
     id: z.string(),
     label: z.string(),
-    type: z.enum(["AND", "OR"]),
+    type: z.enum(["and", "or"]),
     predicates: z.array(mock_api_predicate),
     children: z.array(mock_api_children),
   }),

@@ -10,7 +10,6 @@ export const create_mock_api_dto = z.object({
 
 export const create_mock_api_response_dto = z.object({
   mock_api_id: z.uuid(),
-  response_key: z.string(),
   name: z.string(),
   status_code: z.number(),
   headers: z.record(z.string(), z.any()),

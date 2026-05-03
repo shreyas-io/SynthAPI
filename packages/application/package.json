@@ -20,8 +20,9 @@
     "build": "tsc -p tsconfig.build.json",
     "build:watch": "tsc -w -p tsconfig.build.json --preserveWatchOutput",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "migrate:latest": "tsx src/infrastructure/kysely/migrator.ts latest",
-    "migrate:down": "tsx src/infrastructure/kysely/migrator.ts down"
+    "migrate:create": "tsx src/create_migration.ts",
+    "migrate:latest": "tsx src/migrator.ts latest",
+    "migrate:down": "tsx src/migrator.ts down"
   },
   "devDependencies": {
     "@types/pg": "^8.15.6",

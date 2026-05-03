@@ -5,14 +5,14 @@ import { fileURLToPath } from "node:url";
 import { FileMigrationProvider, Kysely, Migrator, PostgresDialect } from "kysely";
 import pg from "pg";
 
-import { parseEnvironment } from "../../environment.js";
+import { parseEnvironment } from "./environment.js";
 
 const { Pool } = pg;
 
 type Database = Record<string, never>;
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
-const migrationFolder = path.join(dirname, "../../../migrations");
+const migrationFolder = path.join(dirname, "../migrations");
 
 const getEnvironment = () =>
   parseEnvironment({
