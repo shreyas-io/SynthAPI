@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --clear-screen=false --include ../../packages/application/dist src/server.ts",
+    "dev": "node --inspect=0.0.0.0:9229 --watch --import tsx --enable-source-maps src/server.ts",
     "build": "pnpm --filter @mock-stack/application run build && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
