@@ -1,6 +1,17 @@
 import { createClient } from "redis";
 import { IKeyValueStore } from "../../domain/interfaces/kv_store";
 
+// Keep existence check and expiry/write in one atomic Redis operation.
+const upsertExpiringScript = `
+if redis.call("EXISTS", KEYS[1]) == 1 then
+  redis.call("EXPIRE", KEYS[1], ARGV[2])
+  return "refreshed"
+end
+
+redis.call("SET", KEYS[1], ARGV[1], "EX", ARGV[2])
+return "created"
+`;
+
 export const RedisKeyValueStore = (creds: {
   redis_host: string;
   redis_port: number;
@@ -44,6 +55,16 @@ export const RedisKeyValueStore = (creds: {
       }
 
       await client.set(key, serialized);
+    },
+    async upsertExpiring(key, value, options) {
+      await connect();
+      const serialized = JSON.stringify(value);
+      const result = await client.eval(upsertExpiringScript, {
+        keys: [key],
+        arguments: [serialized, String(options.ttl_seconds)],
+      });
+
+      return result === "created" ? "created" : "refreshed";
     },
     async delete(key) {
       await connect();

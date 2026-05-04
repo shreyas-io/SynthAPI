@@ -7,6 +7,13 @@ export interface IKeyValueStore {
       ttl_seconds?: number;
     },
   ) => Promise<void>;
+  upsertExpiring: (
+    key: string,
+    value: unknown,
+    options: {
+      ttl_seconds: number;
+    },
+  ) => Promise<"created" | "refreshed">;
   delete: (key: string) => Promise<void>;
   increment: (key: string, amount?: number) => Promise<number>;
   destroy: () => Promise<void>;
