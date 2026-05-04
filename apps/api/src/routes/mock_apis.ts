@@ -12,6 +12,7 @@ export type MockApisSdk = {
   ) => Promise<unknown>;
   updateMockApi: (id: string, data: unknown) => Promise<void>;
   deleteMockApi: (id: string) => Promise<void>;
+  executeMockApi: (id: string, data: unknown) => Promise<unknown>;
 };
 
 const getString = (value: unknown): string | undefined => {
@@ -49,6 +50,15 @@ const getNumber = (value: unknown, fallback: number): number => {
 };
 
 export const addMockApiRoutes = (app: Express, mock_apis: MockApisSdk) => {
+  app.post(
+    "/api/v1/mock-apis/:id/execute",
+    asyncRoute(async (req, res) => {
+      res.json(
+        await mock_apis.executeMockApi(req.params.id as string, req.body),
+      );
+    }),
+  );
+
   app.post(
     "/api/v1/mock-apis",
     asyncRoute(async (req, res) => {

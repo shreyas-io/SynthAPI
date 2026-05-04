@@ -4,7 +4,7 @@ import { uuidv7 } from "uuidv7";
 
 type MockApiInput = Pick<
   MockApiEt,
-  "project_id" | "method" | "path" | "name" | "description"
+  "project_id" | "method" | "path" | "name" | "description" | "variables"
 >;
 
 export const createMockApi =
@@ -21,6 +21,9 @@ export const createMockApi =
         path: input.path,
         name: input.name,
         description: input.description,
+        ...(input.variables
+          ? { variables: JSON.stringify(input.variables) }
+          : {}),
       })
       .executeTakeFirstOrThrow();
 

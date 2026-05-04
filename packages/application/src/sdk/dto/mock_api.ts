@@ -1,4 +1,5 @@
 import z from "zod";
+import { variable_types } from "./variables";
 
 const httpMethod = z.enum([
   "GET",
@@ -16,6 +17,7 @@ export const createMockApiDto = z.object({
   name: z.string().max(64),
   description: z.string().max(255).nullable().default(null),
   project_id: z.uuidv7(),
+  variables: variable_types.array().optional(),
 });
 
 export const listMockApisFilterDto = z.object({
@@ -35,4 +37,11 @@ export const listMockApisPaginationDto = z.object({
 export const listMockApisSortDto = z.object({
   by: z.enum(["name", "created_at"]),
   order: z.enum(["asc", "desc"]),
+});
+
+export const executeMockApiDto = z.object({
+  url: z.string(),
+  headers: z.record(z.string(), z.any()).default({}),
+  body: z.record(z.string(), z.any()).default({}),
+  cookies: z.record(z.string(), z.any()).default({}),
 });

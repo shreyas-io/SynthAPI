@@ -14,8 +14,10 @@ export const updateProject =
       .set({
         name: input.name,
         description: input.description,
-        globals: input.globals,
-        constants: input.constants,
+        ...(input.globals ? { globals: JSON.stringify(input.globals) } : {}),
+        ...(input.constants
+          ? { constants: JSON.stringify(input.constants) }
+          : {}),
       })
       .where("id", "=", id)
       .execute();

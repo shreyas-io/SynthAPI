@@ -2,7 +2,7 @@ import type { MockApiEt } from "../../mock_api";
 
 type MockApiInput = Pick<
   MockApiEt,
-  "project_id" | "method" | "path" | "name" | "description"
+  "project_id" | "method" | "path" | "name" | "description" | "variables"
 >;
 type ColumnKeys = Extract<keyof MockApiEt, string>;
 

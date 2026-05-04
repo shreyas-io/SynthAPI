@@ -17,8 +17,10 @@ export const createProject =
         id,
         name: input.name,
         description: input.description,
-        globals: JSON.stringify(input.globals),
-        constants: JSON.stringify(input.constants),
+        ...(input.globals ? { globals: JSON.stringify(input.globals) } : {}),
+        ...(input.constants
+          ? { constants: JSON.stringify(input.constants) }
+          : {}),
       })
       .executeTakeFirstOrThrow();
     return id;

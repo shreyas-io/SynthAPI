@@ -8,7 +8,7 @@ import type { MockApiEt } from "../../entities/mock_api";
 
 type MockApiInput = Pick<
   MockApiEt,
-  "project_id" | "method" | "path" | "name" | "description"
+  "project_id" | "method" | "path" | "name" | "description" | "variables"
 >;
 
 type MockApiFilters = {

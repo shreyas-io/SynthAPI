@@ -3,6 +3,7 @@ import { MockApisUsecase } from "../../domain/usecases/mock_apis";
 import { MockApiException } from "../../exceptions/exception";
 import {
   createMockApiDto,
+  executeMockApiDto,
   listMockApisFilterDto,
   listMockApisPaginationDto,
   listMockApisSortDto,
@@ -29,7 +30,14 @@ export function MockApis(ctx: AppContext) {
           public_message: JSON.stringify(error.issues),
         });
 
-      return mock_apis.createMockApi(v);
+      return mock_apis.createMockApi({
+        method: v.method,
+        path: v.path,
+        name: v.name,
+        description: v.description,
+        project_id: v.project_id,
+        variables: v.variables ?? null,
+      });
     },
     getMockApi: (id: string) => mock_apis.getMockApi(id),
     listMockApis: (filters: unknown, pagination: unknown, sort: unknown) => {
@@ -100,7 +108,27 @@ export function MockApis(ctx: AppContext) {
           public_message: JSON.stringify(error.issues),
         });
 
-      return mock_apis.updateMockApi(id, v);
+      return mock_apis.updateMockApi(id, {
+        method: v.method,
+        path: v.path,
+        name: v.name,
+        description: v.description,
+        project_id: v.project_id,
+        variables: v.variables ?? null,
+      });
+    },
+    executeMockApi: (id: string, data: unknown) => {
+      const { data: v, success, error } = executeMockApiDto.safeParse(data);
+
+      if (!success)
+        throw new MockApiException({
+          public_message: JSON.stringify(error.issues),
+        });
+
+      return Promise.resolve({
+        mock_api_id: id,
+        request: v,
+      });
     },
   };
 }

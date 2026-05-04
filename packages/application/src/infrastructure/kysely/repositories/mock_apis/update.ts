@@ -3,7 +3,7 @@ import type { DatabaseClient } from "../../index";
 
 type MockApiInput = Pick<
   MockApiEt,
-  "project_id" | "method" | "path" | "name" | "description"
+  "project_id" | "method" | "path" | "name" | "description" | "variables"
 >;
 
 export const updateMockApi =
@@ -17,6 +17,9 @@ export const updateMockApi =
         path: input.path,
         name: input.name,
         description: input.description,
+        ...(input.variables
+          ? { variables: JSON.stringify(input.variables) }
+          : {}),
       })
       .where("id", "=", id)
       .execute();

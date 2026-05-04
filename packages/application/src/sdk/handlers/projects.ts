@@ -19,13 +19,18 @@ export function Projects(ctx: AppContext) {
   return {
     createProject: (data: unknown) => {
       const { data: v, success, error } = createProjectDto.safeParse(data);
-      console.log(error?.issues);
+
       if (!success)
         throw new MockApiException({
           public_message: JSON.stringify(error.issues),
         });
 
-      return projects.createProject(v);
+      return projects.createProject({
+        name: v.name,
+        description: v.description,
+        globals: v.globals ?? null,
+        constants: v.constants ?? null,
+      });
     },
     getProject: (id: string) => projects.getProject(id),
     listProjects: (filters: unknown, pagination: unknown, sort: unknown) => {
@@ -76,7 +81,20 @@ export function Projects(ctx: AppContext) {
       return projects.getProjects(projectFilters, p, s);
     },
     deleteProject: (id: string) => projects.deleteProject(id),
-    updateProject: (id: string, data: unknown) =>
-      projects.updateProject(id, createProjectDto.parse(data)),
+    updateProject: async (id: string, data: unknown) => {
+      const { data: v, success, error } = createProjectDto.safeParse(data);
+
+      if (!success)
+        throw new MockApiException({
+          public_message: JSON.stringify(error.issues),
+        });
+
+      await projects.updateProject(id, {
+        name: v.name,
+        description: v.description,
+        globals: v.globals ?? null,
+        constants: v.constants ?? null,
+      });
+    },
   };
 }

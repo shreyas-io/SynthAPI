@@ -1,6 +1,5 @@
 import type { ColumnType } from "kysely";
-
-import type { ProjectVariableEt } from "../../../domain/entities/project";
+import { VariableEt } from "../../../domain/entities/variables";
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 
@@ -9,15 +8,15 @@ export type ProjectsTable = {
   name: string;
   description: string;
   globals: ColumnType<
-    ProjectVariableEt[],
-    ProjectVariableEt[] | string,
-    ProjectVariableEt[] | string
-  >;
+    VariableEt[],
+    VariableEt[] | string,
+    VariableEt[] | string
+  > | null;
   constants: ColumnType<
-    ProjectVariableEt[],
-    ProjectVariableEt[] | string,
-    ProjectVariableEt[] | string
-  >;
+    VariableEt[],
+    VariableEt[] | string,
+    VariableEt[] | string
+  > | null;
   created_at: Timestamp;
   updated_at: Timestamp;
 };
