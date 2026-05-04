@@ -89,6 +89,7 @@ export const MockApisUsecase = (ctx: AppContext) => {
             "path",
             "name",
             "description",
+            "created_at",
           ],
         }),
       ]);

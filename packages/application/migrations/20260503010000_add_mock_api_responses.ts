@@ -5,10 +5,11 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     create table mock_api_responses (
       id uuid primary key default uuidv7(),
       mock_api_id uuid not null references mock_apis(id) on delete cascade,
-      name text not null,
-      rule_tree jsonb not null default '{}'::jsonb,
+      label VARCHAR(64) not null,
       response jsonb not null,
-      post_response_actions jsonb not null default '{"actions":[]}'::jsonb,
+      rate_limit_config jsonb,
+      rule_tree jsonb,
+      post_response_actions jsonb,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
     );

@@ -6,7 +6,10 @@ import { MockApiPredicateEt } from "../../entities/mock_api_response/rule_tree";
 export async function executePredicate(
   ctx: AppContext,
   predicate: MockApiPredicateEt,
-  execution_context: ExecutionContextEt,
+  execution_context: Pick<
+    ExecutionContextEt,
+    "globals" | "constants" | "system"
+  >,
 ): Promise<boolean> {
   if (predicate.type === "custom") {
     const { result, stderr } = await ctx.pyodide.execute({

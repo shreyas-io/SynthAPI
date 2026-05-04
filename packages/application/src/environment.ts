@@ -9,6 +9,7 @@ export const environmentSchema = z.object({
 });
 
 export type Environment = z.infer<typeof environmentSchema>;
+export type ParsedEnvironment = z.infer<typeof environmentSchema>;
 
-export const parseEnvironment = (environment: Environment): Environment =>
+export const parseEnvironment = (environment: Environment): ParsedEnvironment =>
   environmentSchema.parse(environment);

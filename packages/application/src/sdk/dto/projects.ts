@@ -1,6 +1,9 @@
 import z from "zod";
 
-const variable_name = z.string().regex(/^[0-9a-z_]+$/);
+const variable_name = z
+  .string()
+  .regex(/^[0-9a-z_]+$/)
+  .max(32);
 
 const array_variable_type = z.object({
   name: variable_name,
@@ -41,8 +44,8 @@ const variable_types = z.discriminatedUnion("type", [
 ]);
 
 export const createProjectDto = z.object({
-  name: z.string(),
-  description: z.string(),
+  name: z.string().max(64),
+  description: z.string().max(255),
   globals: variable_types.array(),
   constants: variable_types.array(),
 });

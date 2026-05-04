@@ -48,7 +48,7 @@ const mock_api_predicate = z.discriminatedUnion("type", [
 
 type MockApiPredicate = z.infer<typeof mock_api_predicate>;
 
-type MockApiRuleNode = {
+export type MockApiRuleNode = {
   id: string;
   label: string;
   type: "and" | "or";

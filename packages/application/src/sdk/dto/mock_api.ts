@@ -12,10 +12,10 @@ const httpMethod = z.enum([
 
 export const createMockApiDto = z.object({
   method: httpMethod,
-  path: z.string(),
-  name: z.string(),
-  description: z.string().nullable().default(null),
-  project_id: z.uuid(),
+  path: z.string().max(4096),
+  name: z.string().max(64),
+  description: z.string().max(255).nullable().default(null),
+  project_id: z.uuidv7(),
 });
 
 export const listMockApisFilterDto = z.object({

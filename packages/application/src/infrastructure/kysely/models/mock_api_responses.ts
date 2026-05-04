@@ -7,9 +7,22 @@ export type MockApiResponsesTable = {
   id: ColumnType<string, string | undefined, never>;
   mock_api_id: string;
   name: string;
-  rule_tree: ColumnType<JsonObject, JsonObject | string | undefined, JsonObject | string>;
   response: ColumnType<JsonObject, JsonObject | string, JsonObject | string>;
-  post_response_actions: ColumnType<JsonObject, JsonObject | string | undefined, JsonObject | string>;
+  rate_limit_config: ColumnType<
+    JsonObject,
+    JsonObject | string | undefined,
+    JsonObject | string
+  >;
+  rule_tree: ColumnType<
+    JsonObject,
+    JsonObject | string | undefined,
+    JsonObject | string
+  >;
+  post_response_actions: ColumnType<
+    JsonObject,
+    JsonObject | string | undefined,
+    JsonObject | string
+  >;
   created_at: Timestamp;
   updated_at: Timestamp;
 };
