@@ -8,12 +8,7 @@ import { MockApiResponseEt } from "../../entities/mock_api_response/mock_api_res
 
 type MockApiResponseInput = Pick<
   MockApiResponseEt,
-  | "mock_api_id"
-  | "name"
-  | "response"
-  | "rate_limit_config"
-  | "rule_tree"
-  | "post_response_actions"
+  "mock_api_id" | "name" | "response" | "rule_tree" | "post_response_actions"
 >;
 
 type MockApiResponseFilters = {

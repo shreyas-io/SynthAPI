@@ -28,7 +28,6 @@ export function MockApiResponses(ctx: AppContext) {
         mock_api_id: v.mock_api_id,
         name: v.name,
         response: v.response,
-        rate_limit_config: v.rate_limit_config ?? null,
         rule_tree: v.rule_tree ?? null,
         post_response_actions: v.post_response_actions ?? null,
       });
@@ -107,7 +106,6 @@ export function MockApiResponses(ctx: AppContext) {
         mock_api_id: v.mock_api_id,
         name: v.name,
         response: v.response,
-        rate_limit_config: v.rate_limit_config ?? null,
         rule_tree: v.rule_tree ?? null,
         post_response_actions: v.post_response_actions ?? null,
       });

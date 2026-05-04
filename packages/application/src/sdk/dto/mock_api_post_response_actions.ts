@@ -1,6 +1,8 @@
 import z from "zod";
 
-const globalValue = z.union([
+const variableScope = z.enum(["global", "local"]);
+
+const variableValue = z.union([
   z.string(),
   z.number(),
   z.boolean(),
@@ -9,47 +11,50 @@ const globalValue = z.union([
   z.record(z.string(), z.any()),
 ]);
 
-const setGlobalAction = z.object({
+const setVariableAction = z.object({
   type: z.literal("set"),
+  scope: variableScope,
   key: z.string().min(1),
-  value: globalValue.optional(),
-  value_template: z.string().optional(),
+  value: variableValue,
   order: z.number().int(),
 });
 
-const unsetGlobalAction = z.object({
+const unsetVariableAction = z.object({
   type: z.literal("unset"),
+  scope: variableScope,
   key: z.string().min(1),
   order: z.number().int(),
 });
 
-const incrementGlobalAction = z.object({
+const incrementVariableAction = z.object({
   type: z.literal("increment"),
+  scope: variableScope,
   key: z.string().min(1),
   amount: z.number().default(1),
   order: z.number().int(),
 });
 
-const decrementGlobalAction = z.object({
+const decrementVariableAction = z.object({
   type: z.literal("decrement"),
+  scope: variableScope,
   key: z.string().min(1),
   amount: z.number().default(1),
   order: z.number().int(),
 });
 
-const appendGlobalAction = z.object({
+const appendVariableAction = z.object({
   type: z.literal("append"),
+  scope: variableScope,
   key: z.string().min(1),
-  value: globalValue.optional(),
-  value_template: z.string().optional(),
+  value: variableValue,
   order: z.number().int(),
 });
 
-const removeFromGlobalAction = z.object({
+const removeFromVariableAction = z.object({
   type: z.literal("remove"),
+  scope: variableScope,
   key: z.string().min(1),
-  value: globalValue.optional(),
-  value_template: z.string().optional(),
+  value: variableValue,
   order: z.number().int(),
 });
 
@@ -61,11 +66,11 @@ const scriptPostResponseAction = z.object({
 });
 
 export const mockApiPostResponseAction = z.discriminatedUnion("type", [
-  setGlobalAction,
-  unsetGlobalAction,
-  incrementGlobalAction,
-  decrementGlobalAction,
-  appendGlobalAction,
-  removeFromGlobalAction,
+  setVariableAction,
+  unsetVariableAction,
+  incrementVariableAction,
+  decrementVariableAction,
+  appendVariableAction,
+  removeFromVariableAction,
   scriptPostResponseAction,
 ]);

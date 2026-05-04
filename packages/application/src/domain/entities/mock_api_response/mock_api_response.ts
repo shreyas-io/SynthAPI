@@ -1,21 +1,6 @@
 import { PostResponseActionsEt } from "./post_response_actions";
 import type { MockApiRuleTreeEt } from "./rule_tree";
 
-type RateLimitConfigEt = {
-  config: {
-    type: "identifier";
-    /**
-     * Key will just support template params.
-     * Each request, we just build the key from request and globals.
-     * We will maintain a data structure in redis which will store data
-     */
-    label: string;
-    number_of_requests: number;
-    time_interval_ms: number;
-  };
-  response: ApiResponseEt;
-};
-
 type ApiResponseEt = {
   status_code: number;
   headers: Record<string, any>;
@@ -28,7 +13,6 @@ export type MockApiResponseEt = {
   mock_api_id: string;
   name: string;
   response: ApiResponseEt;
-  rate_limit_config: Array<RateLimitConfigEt> | null;
   rule_tree: MockApiRuleTreeEt | null;
   post_response_actions: PostResponseActionsEt | null;
   created_at: Date;

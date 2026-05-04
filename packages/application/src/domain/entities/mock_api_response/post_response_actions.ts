@@ -6,47 +6,52 @@ type PostResponseActionValue =
   | any[]
   | Record<string, any>;
 
-type SetGlobalAction = {
+type VariableScope = "global" | "local";
+
+type SetVariableAction = {
   type: "set";
+  scope: VariableScope;
   key: string;
-  value?: PostResponseActionValue;
-  value_template?: string;
+  value: PostResponseActionValue;
   order: number;
 };
 
-type UnsetGlobalAction = {
+type UnsetVariableAction = {
   type: "unset";
+  scope: VariableScope;
   key: string;
   order: number;
 };
 
-type IncrementGlobalAction = {
+type IncrementVariableAction = {
   type: "increment";
+  scope: VariableScope;
   key: string;
   amount: number;
   order: number;
 };
 
-type DecrementGlobalAction = {
+type DecrementVariableAction = {
   type: "decrement";
+  scope: VariableScope;
   key: string;
   amount: number;
   order: number;
 };
 
-type AppendGlobalAction = {
+type AppendVariableAction = {
   type: "append";
+  scope: VariableScope;
   key: string;
-  value?: PostResponseActionValue;
-  value_template?: string;
+  value: PostResponseActionValue;
   order: number;
 };
 
-type RemoveFromGlobalAction = {
+type RemoveFromVariableAction = {
   type: "remove";
+  scope: VariableScope;
   key: string;
-  value?: PostResponseActionValue;
-  value_template?: string;
+  value: PostResponseActionValue;
   order: number;
 };
 
@@ -58,12 +63,12 @@ type ScriptPostResponseAction = {
 };
 
 type PostResponseAction =
-  | SetGlobalAction
-  | UnsetGlobalAction
-  | IncrementGlobalAction
-  | DecrementGlobalAction
-  | AppendGlobalAction
-  | RemoveFromGlobalAction
+  | SetVariableAction
+  | UnsetVariableAction
+  | IncrementVariableAction
+  | DecrementVariableAction
+  | AppendVariableAction
+  | RemoveFromVariableAction
   | ScriptPostResponseAction;
 
 export type PostResponseActionsEt = PostResponseAction[];
