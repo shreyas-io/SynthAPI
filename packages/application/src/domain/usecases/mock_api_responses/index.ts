@@ -19,7 +19,6 @@ type MockApiResponseInput = Pick<
 type MockApiResponseFilters = {
   ids?: string[];
   mock_api_ids?: string[];
-  method?: string;
   name?: string;
 };
 
@@ -39,7 +38,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
   );
 
   return {
-    createMockResponseApi: async (
+    createMockApiResponse: async (
       input: MockApiResponseInput,
     ): Promise<MockApiResponseEt> => {
       const id = await mock_api_responses_repository.create(input);
@@ -59,7 +58,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
 
       return mock_api_response;
     },
-    getMockResponseApi: async (id: string): Promise<MockApiResponseEt> => {
+    getMockApiResponse: async (id: string): Promise<MockApiResponseEt> => {
       const mock_api_responses = await mock_api_responses_repository.list({
         filters: {
           ids: [id],
@@ -76,7 +75,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
 
       return mock_api_response;
     },
-    getMockResponseApis: async (
+    getMockApiResponses: async (
       filters: MockApiResponseFilters,
       pagination: MockApiResponsePagination,
       sort: MockApiResponseSort,
@@ -97,13 +96,13 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         records,
       };
     },
-    updateMockResponseApi(
+    updateMockApiResponse(
       id: string,
       input: MockApiResponseInput,
     ): Promise<void> {
       return mock_api_responses_repository.update(id, input);
     },
-    deleteMockResponseApi(id: string): Promise<void> {
+    deleteMockApiResponse(id: string): Promise<void> {
       return mock_api_responses_repository.delete(id);
     },
   };

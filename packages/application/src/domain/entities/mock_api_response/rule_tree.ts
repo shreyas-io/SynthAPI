@@ -1,5 +1,4 @@
 type MockApiSimplePredicate = {
-  key: string;
   label: string;
   type: "simple";
   target:
@@ -31,7 +30,6 @@ type MockApiSimplePredicate = {
 };
 
 type MockApiCustomPredicate = {
-  key: string;
   label: string;
   type: "custom";
   script: string;
@@ -42,7 +40,6 @@ export type MockApiPredicateEt =
   | MockApiSimplePredicate;
 
 export type MockApiRuleTreeEt = {
-  key: string;
   label: string;
   type: "and" | "or";
   predicates: MockApiPredicateEt[];

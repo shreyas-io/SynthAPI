@@ -9,9 +9,9 @@ type RateLimitConfigEt = {
      * Each request, we just build the key from request and globals.
      * We will maintain a data structure in redis which will store data
      */
-    key: string;
+    label: string;
     number_of_requests: number;
-    time_interval: number;
+    time_interval_ms: number;
   };
   response: ApiResponseEt;
 };
@@ -28,9 +28,9 @@ export type MockApiResponseEt = {
   mock_api_id: string;
   name: string;
   response: ApiResponseEt;
-  rate_limit_config: Array<RateLimitConfigEt>;
-  rule_tree: MockApiRuleTreeEt;
-  post_response_actions: PostResponseActionsEt;
+  rate_limit_config: Array<RateLimitConfigEt> | null;
+  rule_tree: MockApiRuleTreeEt | null;
+  post_response_actions: PostResponseActionsEt | null;
   created_at: Date;
   updated_at: Date;
 };

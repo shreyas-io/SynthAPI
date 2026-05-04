@@ -4,7 +4,7 @@ export interface IKeyValueStore {
     key: string,
     value: unknown,
     options?: {
-      ttlSeconds?: number;
+      ttl_seconds?: number;
     },
   ) => Promise<void>;
   delete: (key: string) => Promise<void>;

@@ -12,6 +12,7 @@ import {
   createPyodideWorkerPool,
   type PyodideWorkerPool,
 } from "./infrastructure/pyodide";
+import { MockApiResponses } from "./sdk/handlers/mock_api_responses";
 import { MockApis } from "./sdk/handlers/mock_apis";
 import { Projects } from "./sdk/handlers/projects";
 
@@ -45,6 +46,7 @@ export const createApplication = (app: ApplicationDependencies) => {
   return {
     mock_apis: MockApis(ctx),
     projects: Projects(ctx),
+    mock_api_responses: MockApiResponses(ctx),
     async getHealth() {
       try {
         await database.checkHealth();

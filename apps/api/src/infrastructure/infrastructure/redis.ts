@@ -38,8 +38,8 @@ export const RedisKeyValueStore = (creds: {
       await connect();
       const serialized = JSON.stringify(value);
 
-      if (options?.ttlSeconds) {
-        await client.set(key, serialized, { EX: options.ttlSeconds });
+      if (options?.ttl_seconds) {
+        await client.set(key, serialized, { EX: options.ttl_seconds });
         return;
       }
 
