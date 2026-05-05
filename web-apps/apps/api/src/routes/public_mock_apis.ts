@@ -81,41 +81,38 @@ const sendMockApiResponse = (
     return;
   }
 
-  res.json(result.body.value);
+  res.json(result.body);
 };
 
 export const addPublicMockApiRoutes = (
   app: Express,
   mock_apis: MockApisSdk,
 ) => {
-  app.all(
-    /.*/,
-    (req: Request, res: Response, next: NextFunction) => {
-      if (req.path.startsWith("/api/v1")) {
-        next();
-        return;
-      }
+  app.all(/.*/, (req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith("/api/v1")) {
+      next();
+      return;
+    }
 
-      const project_slug = req.get("x-project-slug");
+    const project_slug = req.get("x-project-slug");
 
-      if (!project_slug) {
-        next();
-        return;
-      }
+    if (!project_slug) {
+      next();
+      return;
+    }
 
-      void mock_apis
-        .executePublicMockApi({
-          project_slug,
-          method: req.method,
-          url: req.originalUrl,
-          headers: getForwardedHeaders(req),
-          body: getRequestBody(req),
-          cookies: parseCookies(req.headers.cookie),
-        })
-        .then((result) =>
-          sendMockApiResponse(res, result as MockApiExecutionResponse),
-        )
-        .catch(next);
-    },
-  );
+    void mock_apis
+      .executePublicMockApi({
+        project_slug,
+        method: req.method,
+        url: req.originalUrl,
+        headers: getForwardedHeaders(req),
+        body: getRequestBody(req),
+        cookies: parseCookies(req.headers.cookie),
+      })
+      .then((result) =>
+        sendMockApiResponse(res, result as MockApiExecutionResponse),
+      )
+      .catch(next);
+  });
 };
