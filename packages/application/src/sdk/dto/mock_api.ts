@@ -11,6 +11,24 @@ const httpMethod = z.enum([
   "OPTIONS",
 ]);
 
+const requestBodyDto = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("json"),
+    value: z.any(),
+  }),
+  z.object({
+    type: z.literal("text"),
+    value: z.string(),
+  }),
+  z.object({
+    type: z.literal("form_urlencoded"),
+    value: z.record(z.string(), z.union([z.string(), z.string().array()])),
+  }),
+  z.object({
+    type: z.literal("empty"),
+  }),
+]);
+
 export const createMockApiDto = z.object({
   method: httpMethod,
   path: z.string().max(4096),
@@ -42,6 +60,11 @@ export const listMockApisSortDto = z.object({
 export const executeMockApiDto = z.object({
   url: z.string(),
   headers: z.record(z.string(), z.any()).default({}),
-  body: z.record(z.string(), z.any()).default({}),
+  body: requestBodyDto.default({ type: "empty" }),
   cookies: z.record(z.string(), z.any()).default({}),
+});
+
+export const executePublicMockApiDto = executeMockApiDto.extend({
+  project_slug: z.string(),
+  method: httpMethod,
 });

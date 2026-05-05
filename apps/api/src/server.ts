@@ -8,6 +8,7 @@ import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
 import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
+import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
 import { createApplication } from "@mock-stack/application";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import type { Kysely } from "kysely";
@@ -56,6 +57,9 @@ export const createApiApp = async (): Promise<ApiApp> => {
     }),
   );
   app.use(express.json({ limit: "1mb" }));
+  app.use(express.text({ limit: "1mb" }));
+  app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+  addPublicMockApiRoutes(app, application.mock_apis);
   app.use(responseMiddleware);
 
   addRoutes(app, application, serverContext);

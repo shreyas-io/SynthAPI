@@ -4,7 +4,7 @@ import { uuidv7 } from "uuidv7";
 
 type ProjectInput = Pick<
   ProjectEt,
-  "name" | "description" | "globals" | "constants"
+  "slug" | "name" | "description" | "globals" | "constants"
 >;
 
 export const createProject =
@@ -15,6 +15,7 @@ export const createProject =
       .insertInto("projects")
       .values({
         id,
+        slug: input.slug,
         name: input.name,
         description: input.description,
         ...(input.globals ? { globals: JSON.stringify(input.globals) } : {}),

@@ -2,20 +2,47 @@ type QueryParamValue = string | string[];
 
 export type QueryParams = Record<string, QueryParamValue>;
 
+export type FormUrlEncodedBody = {
+  type: "form_urlencoded";
+  value: Record<string, string | string[]>;
+};
+
+export type EmptyBody = {
+  type: "empty";
+};
+
+export type JsonBody = {
+  type: "json";
+  value: any;
+};
+
+export type TextBody = {
+  type: "text";
+  value: string;
+};
+
+export type RequestBodyEt =
+  | JsonBody
+  | TextBody
+  | FormUrlEncodedBody
+  | EmptyBody;
+
+export type ResponseBodyEt = JsonBody | TextBody | EmptyBody;
+
 export type ExecutionContextEt = {
   request: {
     url: string;
     method: string;
     header: Record<string, any>;
     query: QueryParams;
-    body: Record<string, any>;
+    body: RequestBodyEt;
     path_param: Record<string, string>;
     cookie: Record<string, any>;
   };
   response: {
     status_code: number;
     header: Record<string, any>;
-    body: Record<string, any>;
+    body: ResponseBodyEt;
     cookie: Record<string, any>;
   };
   // globals and constants are part of the project
@@ -29,12 +56,4 @@ export type ExecutionContextEt = {
    * Else, create new ones with defaults
    * */
   variables: Record<string, any>;
-  /**
-   * System is part of the request. Can contain following details:
-   *
-   * call_count: 12
-   * last_called_at: "2026-05-03T10:00:00.000Z"
-   * sequential_index: 3
-   * */
-  system: Record<string, any>;
 };

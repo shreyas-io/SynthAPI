@@ -4,6 +4,7 @@ import type { DatabaseClient } from "../../index";
 
 type ProjectFilters = {
   ids?: string[];
+  slug?: string;
   name?: string;
   description?: string;
 };
@@ -28,7 +29,7 @@ export const list = (client: DatabaseClient): IProjectsRepository["list"] => {
   }): Promise<ProjectEt[]>;
   async function listProjects<C extends readonly ColumnKeys[]>(params: {
     filters: ProjectFilters;
-    columns: ColumnKeys;
+    columns: C;
     pagination?: ProjectPagination;
     sort?: ProjectSort;
   }): Promise<Pick<ProjectEt, C[number]>[]>;
@@ -43,7 +44,12 @@ export const list = (client: DatabaseClient): IProjectsRepository["list"] => {
     pagination?: ProjectPagination;
     sort?: ProjectSort;
   }): Promise<ProjectEt[] | Pick<ProjectEt, C[number]>[]> {
-    if (!filters.ids?.length && !filters.name && !filters.description)
+    if (
+      !filters.ids?.length &&
+      !filters.slug &&
+      !filters.name &&
+      !filters.description
+    )
       return [];
 
     let query = client.db.selectFrom("projects");
@@ -56,6 +62,10 @@ export const list = (client: DatabaseClient): IProjectsRepository["list"] => {
 
     if (filters.ids?.length) {
       query = query.where("id", "in", filters.ids);
+    }
+
+    if (filters.slug) {
+      query = query.where("slug", "=", filters.slug);
     }
 
     if (filters.name) {

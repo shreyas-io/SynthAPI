@@ -2,10 +2,24 @@ import { z } from "zod";
 import { mockApiPostResponseAction } from "./mock_api_post_response_actions";
 import { createMockApiRuleTreeDto } from "./mock_api_rule_tree";
 
+const responseBodyDto = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("json"),
+    value: z.any(),
+  }),
+  z.object({
+    type: z.literal("text"),
+    value: z.string(),
+  }),
+  z.object({
+    type: z.literal("empty"),
+  }),
+]);
+
 const responseDto = z.object({
   status_code: z.number().min(100).max(599),
   headers: z.record(z.string(), z.any()),
-  body: z.record(z.string(), z.any()),
+  body: responseBodyDto,
   cookies: z.record(z.string(), z.any()),
 });
 

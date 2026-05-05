@@ -3,7 +3,7 @@ import type { DatabaseClient } from "../../index";
 
 type ProjectInput = Pick<
   ProjectEt,
-  "name" | "description" | "globals" | "constants"
+  "slug" | "name" | "description" | "globals" | "constants"
 >;
 
 export const updateProject =
@@ -12,6 +12,7 @@ export const updateProject =
     await client.db
       .updateTable("projects")
       .set({
+        slug: input.slug,
         name: input.name,
         description: input.description,
         ...(input.globals ? { globals: JSON.stringify(input.globals) } : {}),

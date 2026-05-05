@@ -1,14 +1,14 @@
-import { AppContext } from "../../..";
-import { MockApiException } from "../../../exceptions/exception";
-import { ExecutionContextEt } from "../../entities/execution_context";
-import { MockApiPredicateEt } from "../../entities/mock_api_response/rule_tree";
+import { AppContext } from "../../../..";
+import { MockApiException } from "../../../../exceptions/exception";
+import { ExecutionContextEt } from "../../../entities/execution_context";
+import { MockApiPredicateEt } from "../../../entities/mock_api_response/rule_tree";
 
 export async function executePredicate(
   ctx: AppContext,
   predicate: MockApiPredicateEt,
   execution_context: Pick<
     ExecutionContextEt,
-    "globals" | "constants" | "system"
+    "globals" | "constants"
   >,
 ): Promise<boolean> {
   if (predicate.type === "custom") {

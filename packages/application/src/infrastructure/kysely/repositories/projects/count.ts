@@ -5,6 +5,7 @@ import type { DatabaseClient } from "../../index";
 
 type ProjectFilters = {
   ids?: string[];
+  slug?: string;
   name?: string;
   description?: string;
 };
@@ -12,7 +13,12 @@ type ProjectFilters = {
 export const count =
   (client: DatabaseClient): IProjectsRepository["count"] =>
   async ({ filters }: { filters: ProjectFilters }): Promise<number> => {
-    if (!filters.ids?.length && !filters.name && !filters.description)
+    if (
+      !filters.ids?.length &&
+      !filters.slug &&
+      !filters.name &&
+      !filters.description
+    )
       return 0;
 
     let query = client.db
@@ -21,6 +27,10 @@ export const count =
 
     if (filters.ids?.length) {
       query = query.where("id", "in", filters.ids);
+    }
+
+    if (filters.slug) {
+      query = query.where("slug", "=", filters.slug);
     }
 
     if (filters.name) {

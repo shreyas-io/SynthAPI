@@ -10,6 +10,7 @@ import { MockApiException } from "../../exceptions/exception";
 
 type ProjectFilters = {
   ids?: string[];
+  slug?: string;
   name?: string;
   description?: string;
 };
@@ -26,6 +27,7 @@ export function Projects(ctx: AppContext) {
         });
 
       return projects.createProject({
+        slug: v.slug,
         name: v.name,
         description: v.description,
         globals: v.globals ?? null,
@@ -70,6 +72,10 @@ export function Projects(ctx: AppContext) {
         projectFilters.ids = f.ids;
       }
 
+      if (f.slug) {
+        projectFilters.slug = f.slug;
+      }
+
       if (f.name) {
         projectFilters.name = f.name;
       }
@@ -90,6 +96,7 @@ export function Projects(ctx: AppContext) {
         });
 
       await projects.updateProject(id, {
+        slug: v.slug,
         name: v.name,
         description: v.description,
         globals: v.globals ?? null,

@@ -62,15 +62,21 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
     asyncRoute(async (req, res) => {
       const filters: {
         ids?: string[];
+        slug?: string;
         name?: string;
         description?: string;
       } = {};
       const ids = getStringArray(req.query.id);
+      const slug = getString(req.query.slug);
       const name = getString(req.query.name);
       const description = getString(req.query.description);
 
       if (ids?.length) {
         filters.ids = ids;
+      }
+
+      if (slug) {
+        filters.slug = slug;
       }
 
       if (name) {

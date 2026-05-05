@@ -8,6 +8,7 @@ import type { ProjectEt } from "../../entities/project";
 
 type ProjectFilters = {
   ids?: string[];
+  slug?: string;
   name?: string;
   description?: string;
 };
@@ -27,7 +28,10 @@ export const ProjectsUsecase = (ctx: AppContext) => {
 
   return {
     createProject: async (
-      input: Pick<ProjectEt, "name" | "description" | "globals" | "constants">,
+      input: Pick<
+        ProjectEt,
+        "slug" | "name" | "description" | "globals" | "constants"
+      >,
     ) => {
       const projects_repository = ProjectsRepository(ctx.database);
       const id = await projects_repository.create(input);
@@ -73,7 +77,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
           filters,
           pagination,
           sort,
-          columns: ["id", "name", "description"],
+          columns: ["id", "slug", "name", "description"],
         }),
       ]);
 
@@ -84,7 +88,10 @@ export const ProjectsUsecase = (ctx: AppContext) => {
     },
     updateProject(
       id: string,
-      input: Pick<ProjectEt, "name" | "description" | "globals" | "constants">,
+      input: Pick<
+        ProjectEt,
+        "slug" | "name" | "description" | "globals" | "constants"
+      >,
     ): Promise<void> {
       return projects_repository.update(id, input);
     },

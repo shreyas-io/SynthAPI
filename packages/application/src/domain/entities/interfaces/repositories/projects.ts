@@ -2,7 +2,7 @@ import type { ProjectEt } from "../../project";
 
 type ProjectInput = Pick<
   ProjectEt,
-  "name" | "description" | "globals" | "constants"
+  "slug" | "name" | "description" | "globals" | "constants"
 >;
 type ColumnKeys = Extract<keyof ProjectEt, string>;
 
@@ -10,6 +10,7 @@ export interface IProjectsRepository {
   count: (params: {
     filters: {
       ids?: string[];
+      slug?: string;
       name?: string;
       description?: string;
     };
@@ -19,6 +20,7 @@ export interface IProjectsRepository {
     (params: {
       filters: {
         ids?: string[];
+        slug?: string;
         name?: string;
         description?: string;
       };
@@ -34,6 +36,7 @@ export interface IProjectsRepository {
     <C extends readonly ColumnKeys[]>(params: {
       filters: {
         ids?: string[];
+        slug?: string;
         name?: string;
         description?: string;
       };

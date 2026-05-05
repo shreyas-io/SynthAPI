@@ -1,9 +1,11 @@
 import { AppContext } from "../..";
 import { MockApisUsecase } from "../../domain/usecases/mock_apis";
+import { executePublicMockApi } from "../../domain/usecases/mock_api_execution";
 import { MockApiException } from "../../exceptions/exception";
 import {
   createMockApiDto,
   executeMockApiDto,
+  executePublicMockApiDto,
   listMockApisFilterDto,
   listMockApisPaginationDto,
   listMockApisSortDto,
@@ -129,6 +131,17 @@ export function MockApis(ctx: AppContext) {
         mock_api_id: id,
         request: v,
       });
+    },
+    executePublicMockApi: (data: unknown) => {
+      const { data: v, success, error } =
+        executePublicMockApiDto.safeParse(data);
+
+      if (!success)
+        throw new MockApiException({
+          public_message: JSON.stringify(error.issues),
+        });
+
+      return executePublicMockApi(ctx, v);
     },
   };
 }

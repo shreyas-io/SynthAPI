@@ -13,6 +13,7 @@ export type MockApisSdk = {
   updateMockApi: (id: string, data: unknown) => Promise<void>;
   deleteMockApi: (id: string) => Promise<void>;
   executeMockApi: (id: string, data: unknown) => Promise<unknown>;
+  executePublicMockApi: (data: unknown) => Promise<unknown>;
 };
 
 const getString = (value: unknown): string | undefined => {

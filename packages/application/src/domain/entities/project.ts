@@ -2,6 +2,7 @@ import { type VariableEt } from "./variables";
 
 export type ProjectEt = {
   id: string;
+  slug: string;
   name: string;
   description: string;
   globals: Array<VariableEt> | null;
