@@ -7,7 +7,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       mock_api_id uuid not null references mock_apis(id) on delete cascade,
       label VARCHAR(64) not null,
       response jsonb not null,
-      rate_limit_config jsonb,
       rule_tree jsonb,
       post_response_actions jsonb,
       created_at timestamptz not null default now(),
