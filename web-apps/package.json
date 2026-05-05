@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.15.1",
   "scripts": {
-    "dev": "docker compose up --build",
+    "dev": "pnpm dev:local",
     "dev:local": "pnpm --filter @mock-stack/application run build && pnpm --parallel --stream --filter @mock-stack/application --filter @mock-stack/api --filter @mock-stack/web run \"/^dev$|^build:watch$/\"",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
