@@ -1,67 +1,70 @@
 # mock-stack
 
-A `pnpm` workspace monorepo with:
+Docker-first local stack with:
 
-- `apps/api`: an Express API intended for Docker/ECS on AWS.
-- `apps/web`: a React SPA deployed on Cloudflare Workers/Pages with static assets and the Cloudflare Vite plugin.
-- `packages/application`: a pure TypeScript backend package consumed through dependency injection by the API server.
+- `gateway/`: Kong Gateway DB-less configuration.
+- `web-apps/apps/api`: Express API, reachable through Kong in local Docker.
+- `web-apps/apps/web`: React/Vite frontend.
+- `web-apps/packages/application`: backend application package consumed by the API.
 
-## Quick start
+## Quick Start
 
 ```bash
-pnpm install
-pnpm dev
+docker compose up --build
 ```
 
-`pnpm dev` starts Docker Compose for the app, Postgres, Redis, and Redis Commander. The app container runs both the API and frontend dev servers with hot reload.
+The backend API port is internal-only. Use Kong for backend traffic.
 
 Local defaults:
 
-- API: `http://127.0.0.1:8787`
-- Web: `http://127.0.0.1:5173`
+- Kong gateway: `http://localhost:8787`
+- Web: `http://localhost:5173`
 - Postgres: `localhost:5432`
 - Redis: `localhost:6379`
 - Redis Commander: `http://localhost:8081`
 
-Create `apps/web/.env.local` with:
+## Gateway Routes
+
+Control-plane APIs go through Kong:
 
 ```bash
-VITE_API_BASE_URL=http://127.0.0.1:8787
+curl http://localhost:8787/mock-stack/health
+curl http://localhost:8787/mock-stack/api/v1/projects
 ```
 
-Create `apps/api/.env` from `apps/api/.env.example` if you want to override local defaults:
+Public mock APIs use project subdomains. Kong extracts the slug from the host
+and forwards it to the backend as `x-project-slug`.
 
 ```bash
-CORS_WHITELISTED_DOMAINS=http://127.0.0.1:5173,http://localhost:5173
+curl -H "Host: acme.mock-stack.localhost" \
+  "http://localhost:8787/users/123?fetch_account=true"
 ```
 
-## Local Services
+The backend service itself does not know how slugs map to domains.
 
-Start Postgres, Redis, and Redis Commander:
+## Environment
+
+Copy the root env example if you want to override Docker defaults:
 
 ```bash
-docker compose up -d
+cp .env.example .env
 ```
 
-Local defaults:
-
-- Postgres database: `mock_stack`
-- Postgres user: `user`
-- Postgres password: `password`
-- Redis: `localhost:6379`
-- Redis password: `redis-password`
-- Redis Commander: `http://localhost:8081`
-
-Stop the services:
+The frontend should use Kong as its backend base URL:
 
 ```bash
-docker compose down
+VITE_API_BASE_URL=http://localhost:8787/mock-stack
 ```
 
-## API Docker
+## Workspace Commands
 
-Build the API container:
+Run Node workspace commands from `web-apps/`:
 
 ```bash
-pnpm docker:api
+cd web-apps
+pnpm install
+pnpm typecheck
+pnpm build
 ```
+
+Docker Compose runs migrations and starts API/frontend watchers automatically.
