@@ -1,3 +1,5 @@
+import { randomBytes } from "node:crypto";
+
 import { AppContext } from "../..";
 import { ProjectsUsecase } from "../../domain/usecases/projects";
 import {
@@ -15,6 +17,20 @@ type ProjectFilters = {
   description?: string;
 };
 
+const getSlugBase = (name: string): string => {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 244);
+
+  return slug || "project";
+};
+
+const getProjectSlug = (name: string): string => {
+  return `${getSlugBase(name)}-${randomBytes(5).toString("hex")}`;
+};
+
 export function Projects(ctx: AppContext) {
   const projects = ProjectsUsecase(ctx);
   return {
@@ -27,7 +43,7 @@ export function Projects(ctx: AppContext) {
         });
 
       return projects.createProject({
-        slug: v.slug,
+        slug: getProjectSlug(v.name),
         name: v.name,
         description: v.description,
         globals: v.globals ?? null,
@@ -96,7 +112,6 @@ export function Projects(ctx: AppContext) {
         });
 
       await projects.updateProject(id, {
-        slug: v.slug,
         name: v.name,
         description: v.description,
         globals: v.globals ?? null,

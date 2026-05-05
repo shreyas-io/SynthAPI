@@ -4,6 +4,10 @@ type ProjectInput = Pick<
   ProjectEt,
   "slug" | "name" | "description" | "globals" | "constants"
 >;
+type ProjectUpdateInput = Pick<
+  ProjectEt,
+  "name" | "description" | "globals" | "constants"
+>;
 type ColumnKeys = Extract<keyof ProjectEt, string>;
 
 export interface IProjectsRepository {
@@ -51,6 +55,6 @@ export interface IProjectsRepository {
       };
     }): Promise<Pick<ProjectEt, C[number]>[]>;
   };
-  update: (id: string, input: ProjectInput) => Promise<void>;
+  update: (id: string, input: ProjectUpdateInput) => Promise<void>;
   delete: (id: string) => Promise<void>;
 }

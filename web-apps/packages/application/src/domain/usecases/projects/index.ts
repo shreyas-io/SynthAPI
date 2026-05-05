@@ -90,7 +90,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       id: string,
       input: Pick<
         ProjectEt,
-        "slug" | "name" | "description" | "globals" | "constants"
+        "name" | "description" | "globals" | "constants"
       >,
     ): Promise<void> {
       return projects_repository.update(id, input);
