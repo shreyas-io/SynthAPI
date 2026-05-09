@@ -7,6 +7,7 @@ export type MockApiResponsesTable = {
   id: ColumnType<string, string | undefined, never>;
   mock_api_id: string;
   name: string;
+  is_default: ColumnType<boolean, boolean | undefined, boolean>;
   response: ColumnType<JsonObject, JsonObject | string, JsonObject | string>;
   rule_tree: ColumnType<
     JsonObject,

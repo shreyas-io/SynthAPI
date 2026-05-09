@@ -26,6 +26,7 @@ const responseDto = z.object({
 export const createMockApiResponseDto = z.object({
   mock_api_id: z.uuidv7(),
   name: z.string().max(64),
+  is_default: z.boolean().default(false),
   response: responseDto,
   rule_tree: createMockApiRuleTreeDto.optional(),
   post_response_actions: z.array(mockApiPostResponseAction).optional(),

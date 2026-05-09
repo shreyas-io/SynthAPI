@@ -2,7 +2,12 @@ import type { MockApiResponseEt } from "../../mock_api_response/mock_api_respons
 
 type MockApiResponseInput = Pick<
   MockApiResponseEt,
-  "mock_api_id" | "name" | "rule_tree" | "response" | "post_response_actions"
+  | "mock_api_id"
+  | "name"
+  | "is_default"
+  | "rule_tree"
+  | "response"
+  | "post_response_actions"
 >;
 type ColumnKeys = Extract<keyof MockApiResponseEt, string>;
 

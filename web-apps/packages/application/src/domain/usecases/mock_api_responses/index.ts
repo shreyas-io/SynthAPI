@@ -8,7 +8,12 @@ import { MockApiResponseEt } from "../../entities/mock_api_response/mock_api_res
 
 type MockApiResponseInput = Pick<
   MockApiResponseEt,
-  "mock_api_id" | "name" | "response" | "rule_tree" | "post_response_actions"
+  | "mock_api_id"
+  | "name"
+  | "is_default"
+  | "response"
+  | "rule_tree"
+  | "post_response_actions"
 >;
 
 type MockApiResponseFilters = {
@@ -83,7 +88,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
           filters,
           pagination,
           sort,
-          columns: ["id", "mock_api_id", "name", "created_at"],
+          columns: ["id", "mock_api_id", "name", "is_default", "created_at"],
         }),
       ]);
       return {

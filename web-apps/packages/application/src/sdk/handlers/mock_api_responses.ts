@@ -27,6 +27,7 @@ export function MockApiResponses(ctx: AppContext) {
       return mock_api_responses.createMockApiResponse({
         mock_api_id: v.mock_api_id,
         name: v.name,
+        is_default: v.is_default,
         response: v.response,
         rule_tree: v.rule_tree ?? null,
         post_response_actions: v.post_response_actions ?? null,
@@ -105,6 +106,7 @@ export function MockApiResponses(ctx: AppContext) {
       return mock_api_responses.updateMockApiResponse(id, {
         mock_api_id: v.mock_api_id,
         name: v.name,
+        is_default: v.is_default,
         response: v.response,
         rule_tree: v.rule_tree ?? null,
         post_response_actions: v.post_response_actions ?? null,

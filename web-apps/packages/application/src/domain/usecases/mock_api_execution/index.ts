@@ -254,11 +254,18 @@ export async function executePublicMockApi(
   });
 
   let mock_api_response: (typeof mock_api_responses)[number] | undefined;
+  let default_mock_api_response:
+    | (typeof mock_api_responses)[number]
+    | undefined;
 
   for (const response of mock_api_responses) {
+    if (response.is_default) {
+      default_mock_api_response ??= response;
+      continue;
+    }
+
     if (!response.rule_tree) {
-      mock_api_response = response;
-      break;
+      continue;
     }
 
     const { result } = await executeRuleTree(
@@ -272,6 +279,8 @@ export async function executePublicMockApi(
       break;
     }
   }
+
+  mock_api_response ??= default_mock_api_response;
 
   if (!mock_api_response) {
     throw new MockApiException({
