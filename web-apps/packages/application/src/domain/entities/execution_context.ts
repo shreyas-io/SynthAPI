@@ -33,17 +33,17 @@ export type ExecutionContextEt = {
   request: {
     url: string;
     method: string;
-    header: Record<string, any>;
-    query: QueryParams;
+    headers: Record<string, any>;
+    query_params: QueryParams;
     body: RequestBodyEt;
-    path_param: Record<string, string>;
-    cookie: Record<string, any>;
+    path_params: Record<string, string>;
+    cookies: Record<string, any>;
   };
   response: {
     status_code: number;
-    header: Record<string, any>;
+    headers: Record<string, any>;
     body: ResponseBodyEt;
-    cookie: Record<string, any>;
+    cookies: Record<string, any>;
   };
   // globals and constants are part of the project
   globals: Record<string, any>;

@@ -62,9 +62,10 @@ const parseRuntimeUrl = (url: string): ParsedPath => {
 const getPathMatch = (
   configured_path: string,
   runtime_path: string,
-):
-  | Pick<Match, "static_segments" | "dynamic_segments" | "path_length">
-  | null => {
+): Pick<
+  Match,
+  "static_segments" | "dynamic_segments" | "path_length"
+> | null => {
   const configured_segments = normalizePath(configured_path)
     .split("/")
     .filter(Boolean);
@@ -222,7 +223,7 @@ async function executeMockApi(ctx: AppContext, id: string, request_data: any) {
    * Second, check redis if all variables for this mock api exist...
    * ...and update TTL for all that exist, else insert again with default values.
    * Third, we map all the inputs of this request - URL, request body, headers, cookies
-   * Fourth, we check if rate limited or not.
+   * Fourth, we execute API
    */
 
   const mock_api_repo = MockApisRepository(ctx.database);

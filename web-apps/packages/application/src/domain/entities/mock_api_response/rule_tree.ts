@@ -1,33 +1,42 @@
-type MockApiSimplePredicate = {
+type PredicateValue =
+  | string
+  | number
+  | boolean
+  | null
+  | Record<string, any>
+  | Array<any>;
+
+type MockApiNoModifierPredicate = {
   label: string;
   type: "simple";
-  target:
-    | "header"
-    | "query"
-    | "body"
-    | "path_param"
-    | "cookie"
-    | "url"
-    | "request_method"
-    | "request_rate"
-    | "request_interval_ms";
-  modifier: string;
+  operator:
+    | "null"
+    | "not_null"
+    | "empty_array"
+    | "not_empty_array"
+    | "valid_json_schema";
+  value: PredicateValue;
+};
+
+type MockApiWithModifierPredicate = {
+  label: string;
+  type: "simple";
+  modifier: string; // {{request.headers.something}}
   operator:
     | "equals"
     | "not_equals"
     | "regex"
-    | "null"
-    | "not_null"
     | "gt"
     | "gte"
     | "lt"
     | "lte"
-    | "array_includes"
-    | "empty_array"
-    | "not_empty_array"
-    | "valid_json_schema";
-  value: string | number | boolean;
+    | "array_includes";
+  value: PredicateValue;
 };
+
+type MockApiSimplePredicate =
+  | MockApiNoModifierPredicate
+  | MockApiWithModifierPredicate;
 
 type MockApiCustomPredicate = {
   label: string;

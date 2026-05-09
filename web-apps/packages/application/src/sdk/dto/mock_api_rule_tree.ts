@@ -1,6 +1,43 @@
 import z from "zod";
 
-const mock_api_simple_predicate = z.object({
+const predicate_value: z.ZodType<
+  string | number | boolean | null | Record<string, any> | Array<any>
+> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.record(z.string(), z.any()),
+    z.array(z.any()),
+  ]),
+);
+
+const mockApiPredicateTargets = z.enum([
+  "header",
+  "query",
+  "body",
+  "path_param",
+  "cookie",
+  "url",
+  "request_method",
+]);
+
+const mockApiNoModifierPredicateSchema = z.object({
+  label: z.string(),
+  type: z.literal("simple"),
+  target: mockApiPredicateTargets,
+  operator: z.enum([
+    "null",
+    "not_null",
+    "empty_array",
+    "not_empty_array",
+    "valid_json_schema",
+  ]),
+  value: predicate_value,
+});
+
+const mockApiWithModifierPredicateSchema = z.object({
   label: z.string(),
   type: z.literal("simple"),
   target: z.enum([
@@ -11,27 +48,25 @@ const mock_api_simple_predicate = z.object({
     "cookie",
     "url",
     "request_method",
-    "request_rate",
-    "request_interval_ms",
   ]),
   modifier: z.string(),
   operator: z.enum([
     "equals",
     "not_equals",
     "regex",
-    "null",
-    "not_null",
     "gt",
     "gte",
     "lt",
     "lte",
     "array_includes",
-    "empty_array",
-    "not_empty_array",
-    "valid_json_schema",
   ]),
-  value: z.union([z.string(), z.number(), z.boolean()]),
+  value: predicate_value,
 });
+
+const mockApiSimplePredicateSchema = z.discriminatedUnion("operator", [
+  mockApiNoModifierPredicateSchema,
+  mockApiWithModifierPredicateSchema,
+]);
 
 const mock_api_custom_predicate = z.object({
   label: z.string(),
@@ -41,7 +76,7 @@ const mock_api_custom_predicate = z.object({
 
 const mock_api_predicate = z.discriminatedUnion("type", [
   mock_api_custom_predicate,
-  mock_api_simple_predicate,
+  mockApiSimplePredicateSchema,
 ]);
 
 type MockApiPredicate = z.infer<typeof mock_api_predicate>;

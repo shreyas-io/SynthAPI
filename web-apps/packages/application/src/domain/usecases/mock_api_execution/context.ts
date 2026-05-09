@@ -78,17 +78,17 @@ export async function getMockApiExecutionContext(
     request: {
       url: "",
       method: "",
-      header: {},
-      query: {},
+      headers: {},
+      query_params: {},
       body: { type: "empty" },
-      path_param: {},
-      cookie: {},
+      path_params: {},
+      cookies: {},
     },
     response: {
       status_code: 200,
-      header: {},
+      headers: {},
       body: { type: "empty" },
-      cookie: {},
+      cookies: {},
     },
     globals,
     constants: Object.fromEntries(

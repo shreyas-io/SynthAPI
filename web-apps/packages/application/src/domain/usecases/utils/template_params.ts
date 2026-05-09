@@ -6,10 +6,36 @@ function extractTemplateParams(template: string): string[] {
   const regex = /\{\{[a-zA-Z_][a-zA-Z0-9_.]*\}\}/g;
   const matches = new Set(template.match(regex));
 
-  return [...(matches ?? [])].map((v) => v.toString());
+  return [...(matches ?? [])].map((v) => v.toString().slice(2, -2));
 }
 
-function mapTemplateParams(
+export const recursivelyMapTemplateParams = (
+  template: unknown,
+  context: Record<string, any>,
+): any => {
+  if (typeof template === "string") {
+    return mapTemplateParams(template, context);
+  }
+
+  // recursively map arrays
+  if (Array.isArray(template)) {
+    return template.map((item) => recursivelyMapTemplateParams(item, context));
+  }
+
+  // recursively map objects
+  if (template && typeof template === "object") {
+    return Object.fromEntries(
+      Object.entries(template).map(([key, _entry]) => [
+        key,
+        recursivelyMapTemplateParams(template, context),
+      ]),
+    );
+  }
+
+  return template;
+};
+
+export function mapTemplateParams(
   template: string,
   context: Record<string, any>,
 ): any {
