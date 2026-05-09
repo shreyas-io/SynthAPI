@@ -3,6 +3,7 @@ import type { Express } from "express";
 import type { ServerContext } from "../server";
 import { addAuthRoutes } from "./auth";
 import { addHealthRoutes } from "./health";
+import { authMiddleware } from "../middleware/auth";
 import {
   addMockApiResponseRoutes,
   type MockApiResponsesSdk,
@@ -21,8 +22,9 @@ export const addRoutes = (
   serverContext: ServerContext,
 ) => {
   addHealthRoutes(app, application);
+  addAuthRoutes(app, serverContext);
+  app.use("/api/v1", authMiddleware(serverContext));
   addMockApiRoutes(app, application.mock_apis);
   addMockApiResponseRoutes(app, application.mock_api_responses);
   addProjectRoutes(app, application.projects);
-  addAuthRoutes(app, serverContext);
 };

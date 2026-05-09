@@ -5,8 +5,15 @@ import {
   HttpStatusCode,
 } from "../domain/exceptions/exception";
 import type { ServerContext } from "../server";
+import { getAuthCookie } from "../domain/auth_cookie";
 
 const parseBearerToken = (req: Request): string | null => {
+  const cookieToken = getAuthCookie(req);
+
+  if (cookieToken) {
+    return cookieToken;
+  }
+
   const header = req.header("authorization");
 
   if (!header?.startsWith("Bearer ")) {

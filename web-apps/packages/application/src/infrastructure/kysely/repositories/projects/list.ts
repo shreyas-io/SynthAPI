@@ -48,7 +48,8 @@ export const list = (client: DatabaseClient): IProjectsRepository["list"] => {
       !filters.ids?.length &&
       !filters.slug &&
       !filters.name &&
-      !filters.description
+      !filters.description &&
+      !pagination
     )
       return [];
 

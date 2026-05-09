@@ -72,7 +72,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       sort: ProjectSort,
     ) => {
       const [total, records] = await Promise.all([
-        projects_repository.count({ filters }),
+        projects_repository.count({ filters, pagination }),
         projects_repository.list({
           filters,
           pagination,

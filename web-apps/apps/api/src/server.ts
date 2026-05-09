@@ -54,6 +54,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
       origin: secrets.CORS_WHITELISTED_DOMAINS.map((domain) =>
         domain.trim(),
       ).filter(Boolean),
+      credentials: true,
     }),
   );
   app.use(express.json({ limit: "1mb" }));

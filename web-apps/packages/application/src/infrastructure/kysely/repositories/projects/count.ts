@@ -12,12 +12,22 @@ type ProjectFilters = {
 
 export const count =
   (client: DatabaseClient): IProjectsRepository["count"] =>
-  async ({ filters }: { filters: ProjectFilters }): Promise<number> => {
+  async ({
+    filters,
+    pagination,
+  }: {
+    filters: ProjectFilters;
+    pagination?: {
+      limit: number;
+      offset: number;
+    };
+  }): Promise<number> => {
     if (
       !filters.ids?.length &&
       !filters.slug &&
       !filters.name &&
-      !filters.description
+      !filters.description &&
+      !pagination
     )
       return 0;
 

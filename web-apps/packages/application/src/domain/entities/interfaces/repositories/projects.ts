@@ -18,6 +18,10 @@ export interface IProjectsRepository {
       name?: string;
       description?: string;
     };
+    pagination?: {
+      limit: number;
+      offset: number;
+    };
   }) => Promise<number>;
   create: (input: ProjectInput) => Promise<string>;
   list: {
