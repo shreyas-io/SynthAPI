@@ -8,15 +8,21 @@ import { MockApiEt } from "../../entities/mock_api";
 import { ProjectEt } from "../../entities/project";
 import { VariableEt } from "../../entities/variables";
 
-const LOCAL_VARIABLE_TTL_SECONDS = 60 * 60; // 1 hour
-const GLOBAL_VARIABLE_TTL_SECONDS = 24 * 60 * 60; // 24 hour
+export const LOCAL_VARIABLE_TTL_SECONDS = 60 * 60; // 1 hour
+export const GLOBAL_VARIABLE_TTL_SECONDS = 24 * 60 * 60; // 24 hour
 
-const getLocalVarKey = (mock_api_id: string, variable_name: string): string => {
-  return `id-${mock_api_id}:local-${variable_name}`;
+export const getLocalVarKey = (
+  mock_api_id: string,
+  variable_name: string,
+): string => {
+  return `api-${mock_api_id}:local-${variable_name}`;
 };
 
-const getGlobalVarKey = (project_id: string, variable_name: string): string => {
-  return `id-${project_id}:global-${variable_name}`;
+export const getGlobalVarKey = (
+  project_id: string,
+  variable_name: string,
+): string => {
+  return `prj-${project_id}:global-${variable_name}`;
 };
 
 export async function upsertMockApiVariables(

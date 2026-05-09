@@ -7,6 +7,7 @@ import { MockApiResponsesRepository } from "../../../infrastructure/kysely/repos
 import { MockApisRepository } from "../../../infrastructure/kysely/repositories/mock_apis";
 import { ProjectsRepository } from "../../../infrastructure/kysely/repositories/projects";
 import { getMockApiExecutionContext, upsertMockApiVariables } from "./context";
+import { executePostResponseActions } from "./post_response_actions";
 import { executeRuleTree } from "./rule_engine/execute_rule_tree";
 import type {
   QueryParams,
@@ -278,6 +279,15 @@ export async function executePublicMockApi(
       status_code: HttpStatusCode.NOT_FOUND,
     });
   }
+
+  execution_context.response = mock_api_response.response;
+
+  await executePostResponseActions(ctx, {
+    project_id: project.id,
+    mock_api_id: mock_api.id,
+    actions: mock_api_response.post_response_actions,
+    execution_context,
+  });
 
   return {
     mock_api_id: mock_api.id,

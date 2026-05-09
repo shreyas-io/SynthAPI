@@ -3,7 +3,7 @@ import _ from "lodash";
 function extractTemplateParams(template: string): string[] {
   if (typeof template !== "string") return [];
 
-  const regex = /\{\{[a-zA-Z_][a-zA-Z0-9_.]*\}\}/g;
+  const regex = /\{\{[a-zA-Z_][a-zA-Z0-9_.-]*\}\}/g;
   const matches = new Set(template.match(regex));
 
   return [...(matches ?? [])].map((v) => v.toString().slice(2, -2));
