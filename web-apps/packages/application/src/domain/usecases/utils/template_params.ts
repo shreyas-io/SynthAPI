@@ -25,9 +25,9 @@ export const recursivelyMapTemplateParams = (
   // recursively map objects
   if (template && typeof template === "object") {
     return Object.fromEntries(
-      Object.entries(template).map(([key, _entry]) => [
+      Object.entries(template).map(([key, entry]) => [
         key,
-        recursivelyMapTemplateParams(template, context),
+        recursivelyMapTemplateParams(entry, context),
       ]),
     );
   }
