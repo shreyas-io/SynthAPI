@@ -49,13 +49,11 @@ type PredicateTemplate = Omit<PredicateBox, "id">;
 
 type DraggedBox =
   | { type: "predicate_template"; template: PredicateTemplate }
-  | { type: "rule_template"; ruleType: RuleBox["type"] }
-  | { type: "predicate"; fromRuleId: string; predicateId: string }
-  | { type: "rule"; ruleId: string };
+  | { type: "rule_template"; ruleType: RuleBox["type"] };
 
 type SelectedBox =
   | { type: "rule"; ruleId: string }
-  | { type: "predicate"; ruleId: string; predicateId: string };
+  | { type: "predicate"; predicateId: string };
 
 const defaultPredicateTemplate: PredicateTemplate = {
   label: "Header matches",
@@ -115,6 +113,12 @@ const initialRuleTree: RuleBox = {
   children: [],
 };
 
+const stringifyExpected = (value: PredicateValue | undefined): string => {
+  if (value === undefined) return "";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value, null, 2);
+};
+
 const operatorNeedsExpected = (operator: string) =>
   (operatorsWithExpected as readonly string[]).includes(operator);
 
@@ -128,24 +132,42 @@ const parseExpected = (value: string): PredicateValue => {
   }
 };
 
+const toPredicate = (predicate: PredicateBox): RulePredicate => {
+  const next: RulePredicate = {
+    label: predicate.label,
+    type: "simple",
+    actual: predicate.actual,
+    operator: predicate.operator,
+  };
+
+  if (operatorNeedsExpected(predicate.operator)) {
+    next.expected = parseExpected(predicate.expected);
+  }
+
+  return next;
+};
+
 const toRuleTree = (rule: RuleBox): RuleTree => ({
   label: rule.label,
   type: rule.type,
-  predicates: rule.predicates.map((predicate) => {
-    const next: RulePredicate = {
-      label: predicate.label,
-      type: "simple",
-      actual: predicate.actual,
-      operator: predicate.operator,
-    };
-
-    if (operatorNeedsExpected(predicate.operator)) {
-      next.expected = parseExpected(predicate.expected);
-    }
-
-    return next;
-  }),
+  predicates: rule.predicates.map(toPredicate),
   children: rule.children.map(toRuleTree),
+});
+
+const fromPredicate = (predicate: RulePredicate): PredicateBox => ({
+  id: createId(),
+  label: predicate.label,
+  actual: predicate.actual,
+  operator: predicate.operator,
+  expected: stringifyExpected(predicate.expected),
+});
+
+const fromRuleTree = (rule: RuleTree): RuleBox => ({
+  id: createId(),
+  label: rule.label,
+  type: rule.type,
+  predicates: rule.predicates.map(fromPredicate),
+  children: (rule.children ?? []).map(fromRuleTree),
 });
 
 const updateRule = (
@@ -163,29 +185,24 @@ const updateRule = (
 
 const updatePredicate = (
   rule: RuleBox,
-  ruleId: string,
   predicateId: string,
   update: (predicate: PredicateBox) => PredicateBox,
-): RuleBox => {
-  if (rule.id === ruleId) {
-    return {
-      ...rule,
-      predicates: rule.predicates.map((predicate) =>
-        predicate.id === predicateId ? update(predicate) : predicate,
-      ),
-    };
-  }
+): RuleBox => ({
+  ...rule,
+  predicates: rule.predicates.map((predicate) => {
+    if (predicate.id === predicateId) return update(predicate);
 
-  return {
-    ...rule,
-    children: rule.children.map((child) =>
-      updatePredicate(child, ruleId, predicateId, update),
-    ),
-  };
-};
+    return predicate;
+  }),
+  children: rule.children.map((child) => updatePredicate(child, predicateId, update)),
+});
 
-const containsRule = (rule: RuleBox, ruleId: string): boolean =>
-  rule.id === ruleId || rule.children.some((child) => containsRule(child, ruleId));
+const removeRule = (rule: RuleBox, ruleId: string): RuleBox => ({
+  ...rule,
+  children: rule.children
+    .filter((child) => child.id !== ruleId)
+    .map((child) => removeRule(child, ruleId)),
+});
 
 const findRule = (rule: RuleBox, ruleId: string): RuleBox | null => {
   if (rule.id === ruleId) return rule;
@@ -208,53 +225,6 @@ const findPredicate = (rule: RuleBox, predicateId: string): PredicateBox | null 
   }
 
   return null;
-};
-
-const takeRule = (
-  rule: RuleBox,
-  ruleId: string,
-): { tree: RuleBox; removed: RuleBox | null } => {
-  let removed: RuleBox | null = null;
-
-  const children = rule.children.flatMap((child) => {
-    if (child.id === ruleId) {
-      removed = child;
-      return [];
-    }
-
-    const next = takeRule(child, ruleId);
-    if (next.removed) removed = next.removed;
-    return [next.tree];
-  });
-
-  return { tree: { ...rule, children }, removed };
-};
-
-const takePredicate = (
-  rule: RuleBox,
-  ruleId: string,
-  predicateId: string,
-): { tree: RuleBox; removed: PredicateBox | null } => {
-  if (rule.id === ruleId) {
-    const removed = rule.predicates.find((predicate) => predicate.id === predicateId) ?? null;
-
-    return {
-      tree: {
-        ...rule,
-        predicates: rule.predicates.filter((predicate) => predicate.id !== predicateId),
-      },
-      removed,
-    };
-  }
-
-  let removed: PredicateBox | null = null;
-  const children = rule.children.map((child) => {
-    const next = takePredicate(child, ruleId, predicateId);
-    if (next.removed) removed = next.removed;
-    return next.tree;
-  });
-
-  return { tree: { ...rule, children }, removed };
 };
 
 function RulePalette({
@@ -290,7 +260,7 @@ function RulePalette({
         </button>
       ))}
       <div className="palette-section">
-        <h3>Connection strategy</h3>
+        <h3>Child groups</h3>
         {(["and", "or"] as const).map((ruleType) => (
           <button
             className="palette-block connection-block"
@@ -305,7 +275,7 @@ function RulePalette({
             }}
           >
             <span>{ruleType === "and" ? "ALL conditions" : "ANY condition"}</span>
-            <small>Creates a child group</small>
+            <small>Drop into a group</small>
           </button>
         ))}
       </div>
@@ -321,10 +291,7 @@ function RuleTreeNode({
   onSelect,
   onChangeRule,
   onRemoveRule,
-  onDragRule,
-  onDragPredicate,
-  onDragEnd,
-  onDropBox,
+  onDropRule,
 }: {
   rule: RuleBox;
   isRoot: boolean;
@@ -333,42 +300,26 @@ function RuleTreeNode({
   onSelect: (selected: SelectedBox) => void;
   onChangeRule: (ruleId: string, update: (rule: RuleBox) => RuleBox) => void;
   onRemoveRule: (ruleId: string) => void;
-  onDragRule: (ruleId: string) => void;
-  onDragPredicate: (fromRuleId: string, predicateId: string) => void;
-  onDragEnd: () => void;
-  onDropBox: (ruleId: string) => void;
+  onDropRule: (ruleId: string) => void;
 }) {
   const isSelected = selected.type === "rule" && selected.ruleId === rule.id;
 
   const dropOnRule = (event: DragEvent<HTMLElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    onDropBox(rule.id);
+    onDropRule(rule.id);
   };
 
   return (
     <section className={`tree-rule-card ${isSelected ? "selected" : ""}`}>
       <header className="tree-rule-header" onClick={() => onSelect({ type: "rule", ruleId: rule.id })}>
-        <span
-          className={`drag-handle ${isRoot ? "disabled" : ""}`}
-          draggable={!isRoot}
-          onClick={(event) => event.stopPropagation()}
-          onDragEnd={onDragEnd}
-          onDragStart={(event) => {
-            event.stopPropagation();
-            event.dataTransfer.effectAllowed = "move";
-            event.dataTransfer.setData("text/plain", rule.label);
-            onDragRule(rule.id);
-          }}
-        >
-          {isRoot ? "Root" : "Move"}
-        </span>
+        {isRoot && <span className="pill">Root</span>}
         <span className="pill">{rule.type.toUpperCase()}</span>
         <div>
           <strong>{rule.label}</strong>
           <small>
-            {rule.predicates.length} predicate{rule.predicates.length === 1 ? "" : "s"},{" "}
-            {rule.children.length} child group{rule.children.length === 1 ? "" : "s"}
+            {rule.predicates.length} predicate{rule.predicates.length === 1 ? "" : "s"}
+            , {rule.children.length} group{rule.children.length === 1 ? "" : "s"}
           </small>
         </div>
         {!isRoot && (
@@ -384,66 +335,13 @@ function RuleTreeNode({
         )}
       </header>
 
-      <div className="tree-inline-actions">
-        <button
-          type="button"
-          onClick={() =>
-            onChangeRule(rule.id, (current) => ({
-              ...current,
-              predicates: [...current.predicates, createPredicate(defaultPredicateTemplate)],
-            }))
-          }
-        >
-          + Predicate
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            onChangeRule(rule.id, (current) => ({
-              ...current,
-              children: [...current.children, createRule("and")],
-            }))
-          }
-        >
-          + ALL group
-        </button>
-        <button
-          type="button"
-          onClick={() =>
-            onChangeRule(rule.id, (current) => ({
-              ...current,
-              children: [...current.children, createRule("or")],
-            }))
-          }
-        >
-          + ANY group
-        </button>
-      </div>
-
-      <div
-        className={`tree-dropzone ${draggedBox ? "drag-active" : ""}`}
-        onDragOver={(event) => {
-          event.preventDefault();
-          event.dataTransfer.dropEffect =
-            draggedBox?.type === "predicate_template" || draggedBox?.type === "rule_template"
-              ? "copy"
-              : "move";
-        }}
-        onDrop={dropOnRule}
-      >
-        <span>Drop predicate or child group here</span>
-      </div>
-
       <div className="tree-children">
         {rule.predicates.map((predicate) => (
           <PredicateNode
             key={predicate.id}
             predicate={predicate}
-            ruleId={rule.id}
             selected={selected}
             onSelect={onSelect}
-            onDrag={() => onDragPredicate(rule.id, predicate.id)}
-            onDragEnd={onDragEnd}
             onRemove={() => {
               onChangeRule(rule.id, (current) => ({
                 ...current,
@@ -453,7 +351,6 @@ function RuleTreeNode({
             }}
           />
         ))}
-
         {rule.children.map((child) => (
           <RuleTreeNode
             key={child.id}
@@ -464,12 +361,23 @@ function RuleTreeNode({
             onSelect={onSelect}
             onChangeRule={onChangeRule}
             onRemoveRule={onRemoveRule}
-            onDragRule={onDragRule}
-            onDragPredicate={onDragPredicate}
-            onDragEnd={onDragEnd}
-            onDropBox={onDropBox}
+            onDropRule={onDropRule}
           />
         ))}
+        <div
+          className={`tree-dropzone ${draggedBox ? "drag-active" : ""}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect =
+              draggedBox?.type === "predicate_template" ||
+              draggedBox?.type === "rule_template"
+                ? "copy"
+                : "move";
+          }}
+          onDrop={dropOnRule}
+        >
+          <span>Drop predicate or child group here</span>
+        </div>
       </div>
     </section>
   );
@@ -477,19 +385,13 @@ function RuleTreeNode({
 
 function PredicateNode({
   predicate,
-  ruleId,
   selected,
   onSelect,
-  onDrag,
-  onDragEnd,
   onRemove,
 }: {
   predicate: PredicateBox;
-  ruleId: string;
   selected: SelectedBox;
   onSelect: (selected: SelectedBox) => void;
-  onDrag: () => void;
-  onDragEnd: () => void;
   onRemove: () => void;
 }) {
   const isSelected = selected.type === "predicate" && selected.predicateId === predicate.id;
@@ -497,35 +399,23 @@ function PredicateNode({
   return (
     <article
       className={`tree-predicate-card ${isSelected ? "selected" : ""}`}
-      onClick={() => onSelect({ type: "predicate", ruleId, predicateId: predicate.id })}
+      onClick={() => onSelect({ type: "predicate", predicateId: predicate.id })}
     >
-      <span
-        className="drag-handle"
-        draggable
-        onClick={(event) => event.stopPropagation()}
-        onDragEnd={onDragEnd}
-        onDragStart={(event) => {
-          event.stopPropagation();
-          event.dataTransfer.effectAllowed = "move";
-          event.dataTransfer.setData("text/plain", predicate.label);
-          onDrag();
-        }}
-      >
-        Move
-      </span>
-      <div>
-        <strong>{predicate.label}</strong>
-        <small>{predicate.operator}</small>
+      <div className="tree-predicate-header">
+        <div>
+          <strong>{predicate.label}</strong>
+          <small>{predicate.operator}</small>
+        </div>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onRemove();
+          }}
+        >
+          Remove
+        </button>
       </div>
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onRemove();
-        }}
-      >
-        Remove
-      </button>
     </article>
   );
 }
@@ -540,7 +430,6 @@ function RuleConfigPanel({
   selected: SelectedBox;
   onChangeRule: (ruleId: string, update: (rule: RuleBox) => RuleBox) => void;
   onChangePredicate: (
-    ruleId: string,
     predicateId: string,
     update: (predicate: PredicateBox) => PredicateBox,
   ) => void;
@@ -596,7 +485,7 @@ function RuleConfigPanel({
         <input
           value={predicate.label}
           onChange={(event) =>
-            onChangePredicate(selected.ruleId, predicate.id, (current) => ({
+            onChangePredicate(predicate.id, (current) => ({
               ...current,
               label: event.target.value,
             }))
@@ -608,7 +497,7 @@ function RuleConfigPanel({
         <input
           value={predicate.actual}
           onChange={(event) =>
-            onChangePredicate(selected.ruleId, predicate.id, (current) => ({
+            onChangePredicate(predicate.id, (current) => ({
               ...current,
               actual: event.target.value,
             }))
@@ -620,7 +509,7 @@ function RuleConfigPanel({
         <select
           value={predicate.operator}
           onChange={(event) =>
-            onChangePredicate(selected.ruleId, predicate.id, (current) => ({
+            onChangePredicate(predicate.id, (current) => ({
               ...current,
               operator: event.target.value,
               expected: operatorNeedsExpected(event.target.value) ? current.expected : "",
@@ -640,7 +529,7 @@ function RuleConfigPanel({
           <textarea
             value={predicate.expected}
             onChange={(event) =>
-              onChangePredicate(selected.ruleId, predicate.id, (current) => ({
+              onChangePredicate(predicate.id, (current) => ({
                 ...current,
                 expected: event.target.value,
               }))
@@ -653,15 +542,19 @@ function RuleConfigPanel({
 }
 
 export function RuleTreeEditor({
+  initialTree,
   onChange,
 }: {
+  initialTree?: RuleTree | null;
   onChange: (tree: RuleTree) => void;
 }) {
-  const [tree, setTree] = useState<RuleBox>(initialRuleTree);
+  const [tree, setTree] = useState<RuleBox>(() =>
+    initialTree ? fromRuleTree(initialTree) : initialRuleTree,
+  );
   const [draggedBox, setDraggedBox] = useState<DraggedBox | null>(null);
   const [selected, setSelected] = useState<SelectedBox>({
     type: "rule",
-    ruleId: initialRuleTree.id,
+    ruleId: tree.id,
   });
 
   const changeRule = (ruleId: string, update: (rule: RuleBox) => RuleBox) => {
@@ -669,21 +562,26 @@ export function RuleTreeEditor({
   };
 
   const changePredicate = (
-    ruleId: string,
     predicateId: string,
     update: (predicate: PredicateBox) => PredicateBox,
   ) => {
-    setTree((current) => updatePredicate(current, ruleId, predicateId, update));
+    setTree((current) => updatePredicate(current, predicateId, update));
   };
 
-  const removeRule = (ruleId: string) => {
-    setTree((current) => takeRule(current, ruleId).tree);
-    setSelected({ type: "rule", ruleId: tree.id });
-  };
-
-  const dropBox = (targetRuleId: string) => {
+  const dropOnRule = (targetRuleId: string) => {
     const box = draggedBox;
-    if (!box) return;
+
+    if (!box) {
+      const childRule = createRule("and");
+      setTree((current) =>
+        updateRule(current, targetRuleId, (rule) => ({
+          ...rule,
+          children: [...rule.children, childRule],
+        })),
+      );
+      setSelected({ type: "rule", ruleId: childRule.id });
+      return;
+    }
 
     if (box.type === "predicate_template") {
       const predicate = createPredicate(box.template);
@@ -693,7 +591,7 @@ export function RuleTreeEditor({
           predicates: [...rule.predicates, predicate],
         })),
       );
-      setSelected({ type: "predicate", ruleId: targetRuleId, predicateId: predicate.id });
+      setSelected({ type: "predicate", predicateId: predicate.id });
       setDraggedBox(null);
       return;
     }
@@ -711,44 +609,6 @@ export function RuleTreeEditor({
       return;
     }
 
-    if (box.type === "predicate") {
-      if (box.fromRuleId === targetRuleId) {
-        setDraggedBox(null);
-        return;
-      }
-
-      setTree((current) => {
-        const next = takePredicate(current, box.fromRuleId, box.predicateId);
-        if (!next.removed) return current;
-        const movedPredicate = next.removed;
-
-        return updateRule(next.tree, targetRuleId, (rule) => ({
-          ...rule,
-          predicates: [...rule.predicates, movedPredicate],
-        }));
-      });
-      setSelected({ type: "predicate", ruleId: targetRuleId, predicateId: box.predicateId });
-      setDraggedBox(null);
-      return;
-    }
-
-    setTree((current) => {
-      if (box.ruleId === current.id || box.ruleId === targetRuleId) return current;
-
-      const movingRule = findRule(current, box.ruleId);
-      if (!movingRule || containsRule(movingRule, targetRuleId)) return current;
-
-      const next = takeRule(current, box.ruleId);
-      if (!next.removed) return current;
-      const movedRule = next.removed;
-
-      return updateRule(next.tree, targetRuleId, (rule) => ({
-        ...rule,
-        children: [...rule.children, movedRule],
-      }));
-    });
-    setSelected({ type: "rule", ruleId: box.ruleId });
-    setDraggedBox(null);
   };
 
   return (
@@ -780,13 +640,11 @@ export function RuleTreeEditor({
             draggedBox={draggedBox}
             onSelect={setSelected}
             onChangeRule={changeRule}
-            onRemoveRule={removeRule}
-            onDragRule={(ruleId) => setDraggedBox({ type: "rule", ruleId })}
-            onDragPredicate={(fromRuleId, predicateId) =>
-              setDraggedBox({ type: "predicate", fromRuleId, predicateId })
-            }
-            onDragEnd={() => setDraggedBox(null)}
-            onDropBox={dropBox}
+            onRemoveRule={(ruleId) => {
+              setTree((current) => removeRule(current, ruleId));
+              setSelected({ type: "rule", ruleId: tree.id });
+            }}
+            onDropRule={dropOnRule}
           />
         </div>
         <RuleConfigPanel

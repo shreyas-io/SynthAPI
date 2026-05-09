@@ -52,7 +52,7 @@ export function NewMockApiResponsePage() {
   };
 
   return (
-    <main className="page">
+    <main className="page rule-editor-page">
       <form className="card form" onSubmit={submit}>
         <p className="eyebrow">New response</p>
         <h1>Create mock response</h1>

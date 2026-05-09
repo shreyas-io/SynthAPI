@@ -64,6 +64,10 @@ textarea {
   grid-template-columns: 260px 1fr;
 }
 
+.app-shell.sidebar-collapsed {
+  grid-template-columns: 84px 1fr;
+}
+
 .sidebar {
   display: flex;
   position: sticky;
@@ -76,10 +80,34 @@ textarea {
   background: #182235;
 }
 
+.sidebar.collapsed {
+  align-items: center;
+  padding: 1rem 0.75rem;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.sidebar.collapsed .sidebar-header {
+  display: grid;
+  justify-items: center;
+}
+
 .brand {
   font-size: 1.35rem;
   font-weight: 800;
   text-decoration: none;
+}
+
+.sidebar-collapse {
+  padding: 0.5rem 0.7rem;
+  color: #182235;
+  background: #fff8ea;
+  font-size: 0.75rem;
 }
 
 .sidebar nav {
@@ -213,6 +241,15 @@ p {
   margin-top: 1.25rem;
 }
 
+.rule-editor-page {
+  width: calc(100% - 2rem);
+  max-width: none;
+}
+
+.rule-editor-page .rule-editor {
+  min-height: calc(100vh - 2rem);
+}
+
 .editor-toolbar {
   display: flex;
   align-items: center;
@@ -229,6 +266,7 @@ p {
   align-items: start;
   gap: 1rem;
   grid-template-columns: minmax(220px, 260px) minmax(360px, 1fr) minmax(260px, 320px);
+  min-height: calc(100vh - 12rem);
 }
 
 .rule-palette,
@@ -307,12 +345,19 @@ p {
 
 .tree-rule-card {
   display: grid;
-  gap: 0.85rem;
-  border: 1px solid rgba(24, 34, 53, 0.14);
-  border-radius: 22px;
-  padding: 1rem;
-  background: rgba(255, 252, 244, 0.88);
-  box-shadow: 0 16px 44px rgba(24, 34, 53, 0.09);
+  gap: 1.15rem;
+  border: 2px solid rgba(179, 93, 47, 0.32);
+  border-radius: 26px;
+  padding: 1.25rem;
+  background: linear-gradient(145deg, rgba(255, 252, 244, 0.96), rgba(255, 244, 220, 0.78));
+  box-shadow: 0 18px 48px rgba(24, 34, 53, 0.1);
+}
+
+.tree-children > .tree-rule-card {
+  margin-top: 0.35rem;
+  border-color: rgba(179, 93, 47, 0.46);
+  border-left-width: 5px;
+  background: linear-gradient(145deg, rgba(255, 250, 238, 0.98), rgba(255, 238, 205, 0.74));
 }
 
 .tree-rule-card.selected,
@@ -322,8 +367,7 @@ p {
 }
 
 .tree-rule-header,
-.tree-predicate-card,
-.tree-inline-actions {
+.tree-predicate-header {
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -331,11 +375,19 @@ p {
 }
 
 .tree-rule-header {
+  margin: -0.35rem -0.35rem 0;
+  border-radius: 20px;
+  padding: 0.65rem 0.75rem;
+  background: rgba(179, 93, 47, 0.08);
+}
+
+.tree-rule-header,
+.tree-predicate-header {
   cursor: pointer;
 }
 
 .tree-rule-header > div,
-.tree-predicate-card > div {
+.tree-predicate-header > div {
   display: grid;
   gap: 0.15rem;
   min-width: 0;
@@ -352,21 +404,14 @@ p {
   margin-left: auto;
 }
 
-.tree-inline-actions button {
-  padding: 0.45rem 0.7rem;
-  color: #182235;
-  background: rgba(24, 34, 53, 0.08);
-  font-size: 0.82rem;
-}
-
 .tree-dropzone {
   display: grid;
   min-height: 3.4rem;
   place-items: center;
-  border: 1px dashed rgba(24, 34, 53, 0.16);
+  border: 1px dashed rgba(24, 34, 53, 0.18);
   border-radius: 18px;
   padding: 0.85rem;
-  background: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.42);
   color: rgba(24, 34, 53, 0.56);
   font-size: 0.9rem;
 }
@@ -378,16 +423,18 @@ p {
 
 .tree-children {
   display: grid;
-  gap: 0.75rem;
-  padding-left: 1rem;
-  border-left: 2px solid rgba(24, 34, 53, 0.08);
+  gap: 1.25rem;
+  padding-left: 1.35rem;
+  border-left: 3px solid rgba(179, 93, 47, 0.2);
 }
 
 .tree-predicate-card {
-  border: 1px dashed rgba(24, 34, 53, 0.16);
+  display: grid;
+  gap: 0.75rem;
+  border: 1px dashed rgba(24, 34, 53, 0.18);
   border-radius: 18px;
-  padding: 0.8rem;
-  background: rgba(255, 248, 234, 0.92);
+  padding: 0.9rem;
+  background: rgba(255, 250, 238, 0.78);
   cursor: pointer;
 }
 
@@ -398,22 +445,6 @@ p {
 .rule-config label {
   display: grid;
   gap: 0.35rem;
-}
-
-.drag-handle {
-  display: inline-flex;
-  width: fit-content;
-  border-radius: 999px;
-  padding: 0.35rem 0.65rem;
-  color: #182235;
-  background: rgba(24, 34, 53, 0.08);
-  font-size: 0.78rem;
-  cursor: grab;
-}
-
-.drag-handle.disabled {
-  cursor: default;
-  opacity: 0.7;
 }
 
 pre {
