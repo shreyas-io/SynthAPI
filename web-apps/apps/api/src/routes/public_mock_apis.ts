@@ -81,7 +81,7 @@ const sendMockApiResponse = (
     return;
   }
 
-  res.json(result.body);
+  res.json(result.body.value);
 };
 
 export const addPublicMockApiRoutes = (

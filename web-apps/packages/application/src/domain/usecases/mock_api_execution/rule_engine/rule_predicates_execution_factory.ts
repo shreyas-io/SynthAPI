@@ -13,30 +13,28 @@ const executeSimplePredicate = (
   predicate: Extract<MockApiPredicateEt, { type: "simple" }>,
   execution_context: ExecutionContextEt,
 ): boolean => {
-  const expected_value = recursivelyMapTemplateParams(
-    predicate.value,
+  const actual_value = recursivelyMapTemplateParams(
+    predicate.actual,
     execution_context,
   );
+  const expected_value =
+    "expected" in predicate
+      ? recursivelyMapTemplateParams(predicate.expected, execution_context)
+      : undefined;
 
-  let actual_value;
-  if ("modifier" in predicate) {
-    actual_value = recursivelyMapTemplateParams(
-      predicate.modifier,
-      execution_context,
-    );
-  }
   switch (predicate.operator) {
     case "equals":
       return _.isEqual(expected_value, actual_value);
     case "not_equals":
       return !_.isEqual(expected_value, actual_value);
     case "regex":
-      const regex = actual_value;
-      const value = expected_value;
-      if (typeof regex !== "string" || typeof value !== "string") {
+      if (
+        typeof actual_value !== "string" ||
+        typeof expected_value !== "string"
+      ) {
         return false;
       }
-      return new RegExp(regex).test(value);
+      return new RegExp(expected_value).test(actual_value);
     case "null":
       return actual_value === null || actual_value === undefined;
     case "not_null":
@@ -58,15 +56,33 @@ const executeSimplePredicate = (
       if (predicate.operator === "lt") return left < right;
       return left <= right;
     case "array_includes":
-      const arr = expected_value;
-      const val_to_find = actual_value;
-      return Array.isArray(arr) && arr.includes(val_to_find);
+      return Array.isArray(actual_value) && actual_value.includes(expected_value);
+    case "is_set":
+      return actual_value !== null && actual_value !== undefined;
+    case "is_not_set":
+      return actual_value === null || actual_value === undefined;
+    case "string_empty":
+      return actual_value === null || actual_value === undefined || actual_value === "";
+    case "string_not_empty":
+      return typeof actual_value === "string" && actual_value.length > 0;
+    case "string_includes":
+      return (
+        typeof actual_value === "string" &&
+        typeof expected_value === "string" &&
+        actual_value.includes(expected_value)
+      );
+    case "string_not_includes":
+      return (
+        typeof actual_value === "string" &&
+        typeof expected_value === "string" &&
+        !actual_value.includes(expected_value)
+      );
     case "empty_array":
-      return Array.isArray(expected_value) && expected_value.length === 0;
+      return Array.isArray(actual_value) && actual_value.length === 0;
     case "not_empty_array":
-      return Array.isArray(expected_value) && expected_value.length !== 0;
+      return Array.isArray(actual_value) && actual_value.length !== 0;
     case "valid_json_schema":
-      const validate = ajv.compile(actual_value);
+      const validate = ajv.compile(expected_value);
       return validate(actual_value);
     default:
       break;

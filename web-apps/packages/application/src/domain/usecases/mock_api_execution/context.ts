@@ -1,5 +1,9 @@
 import { AppContext } from "../../..";
-import { ExecutionContextEt } from "../../entities/execution_context";
+import {
+  ExecutionContextEt,
+  QueryParams,
+  RequestBodyEt,
+} from "../../entities/execution_context";
 import { MockApiEt } from "../../entities/mock_api";
 import { ProjectEt } from "../../entities/project";
 import { VariableEt } from "../../entities/variables";
@@ -56,10 +60,21 @@ const variablesToRecord = async (
   return Object.fromEntries(entries);
 };
 
+type MockApiExecutionRequest = {
+  url: string;
+  method: string;
+  headers: Record<string, any>;
+  query_params: QueryParams;
+  body: RequestBodyEt;
+  path_params: Record<string, string>;
+  cookies: Record<string, any>;
+};
+
 export async function getMockApiExecutionContext(
   ctx: AppContext,
   mock_api: Pick<MockApiEt, "id" | "variables">,
   project: Pick<ProjectEt, "id" | "globals" | "constants">,
+  request?: MockApiExecutionRequest,
 ): Promise<ExecutionContextEt> {
   const kv_store = ctx.keyValueStore;
 
@@ -76,13 +91,13 @@ export async function getMockApiExecutionContext(
 
   return {
     request: {
-      url: "",
-      method: "",
-      headers: {},
-      query_params: {},
-      body: { type: "empty" },
-      path_params: {},
-      cookies: {},
+      url: request?.url ?? "",
+      method: request?.method ?? "",
+      headers: request?.headers ?? {},
+      query_params: request?.query_params ?? {},
+      body: request?.body ?? { type: "empty" },
+      path_params: request?.path_params ?? {},
+      cookies: request?.cookies ?? {},
     },
     response: {
       status_code: 200,

@@ -6,22 +6,26 @@ type PredicateValue =
   | Record<string, any>
   | Array<any>;
 
-type MockApiNoModifierPredicate = {
+type MockApiPredicateWithoutExpected = {
   label: string;
   type: "simple";
+  actual: string; // {{request.headers.something}}
   operator:
     | "null"
     | "not_null"
     | "empty_array"
     | "not_empty_array"
-    | "valid_json_schema";
-  value: PredicateValue;
+    | "valid_json_schema"
+    | "is_set"
+    | "is_not_set"
+    | "string_empty"
+    | "string_not_empty";
 };
 
-type MockApiWithModifierPredicate = {
+type MockApiPredicateWithExpected = {
   label: string;
   type: "simple";
-  modifier: string; // {{request.headers.something}}
+  actual: string; // {{request.headers.something}}
   operator:
     | "equals"
     | "not_equals"
@@ -30,13 +34,16 @@ type MockApiWithModifierPredicate = {
     | "gte"
     | "lt"
     | "lte"
-    | "array_includes";
-  value: PredicateValue;
+    | "array_includes"
+    | "string_includes"
+    | "string_not_includes"
+    | "valid_json_schema";
+  expected: PredicateValue;
 };
 
 type MockApiSimplePredicate =
-  | MockApiNoModifierPredicate
-  | MockApiWithModifierPredicate;
+  | MockApiPredicateWithoutExpected
+  | MockApiPredicateWithExpected;
 
 type MockApiCustomPredicate = {
   label: string;
