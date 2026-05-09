@@ -10,5 +10,5 @@ create_database() {
   psql --dbname postgres -c "CREATE DATABASE \"$database\""
 }
 
-create_database "mock_api_app"
-create_database "api_gateway"
+create_database "${APPLICATION_DB_NAME:-mock_api_app}"
+create_database "${API_GATEWAY_DB_NAME:-api_gateway}"
