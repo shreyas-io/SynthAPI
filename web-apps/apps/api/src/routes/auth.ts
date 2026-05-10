@@ -6,7 +6,9 @@ import {
   ApiGatewayException,
   HttpStatusCode,
 } from "../domain/exceptions/exception";
+import { clearAuthCookie, setAuthCookie } from "../domain/auth_cookie";
 import { asyncRoute } from "../middleware/async_route";
+import { authMiddleware } from "../middleware/auth";
 import type { ServerContext } from "../server";
 
 const signupBodySchema = z.object({
@@ -38,6 +40,7 @@ const parseBasicAuth = (req: Request) => {
 
 export const addAuthRoutes = (app: Express, serverContext: ServerContext) => {
   const auth = AuthService(serverContext);
+  const requireAuth = authMiddleware(serverContext);
 
   app.post(
     "/api/v1/auth/signup",
@@ -76,7 +79,25 @@ export const addAuthRoutes = (app: Express, serverContext: ServerContext) => {
         });
       }
 
+      setAuthCookie(res, signin.token, signin.expiresAt);
+
       res.json(signin);
+    }),
+  );
+
+  app.post(
+    "/api/v1/auth/signout",
+    asyncRoute(async (_req, res) => {
+      clearAuthCookie(res);
+      res.json({});
+    }),
+  );
+
+  app.get(
+    "/api/v1/auth/me",
+    requireAuth,
+    asyncRoute(async (req, res) => {
+      res.json(req.user);
     }),
   );
 };
