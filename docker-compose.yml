@@ -17,33 +17,37 @@ services:
       redis:
         condition: service_healthy
     environment:
-      PORT: "${API_PORT:-3001}"
+      PORT: "${API_PORT}"
       HOST: "0.0.0.0"
-      CORS_WHITELISTED_DOMAINS: "${CORS_WHITELISTED_DOMAINS:-http://localhost:5173,http://127.0.0.1:5173}"
-      VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:8787/mock-stack}"
-      APPLICATION_DB_USER: "${POSTGRES_USER:-user}"
-      APPLICATION_DB_PASS: "${POSTGRES_PASSWORD:-password}"
+      CORS_WHITELISTED_DOMAINS: "${CORS_WHITELISTED_DOMAINS}"
+      VITE_API_BASE_URL: "${VITE_API_BASE_URL}"
+      APPLICATION_DB_USER: "${POSTGRES_USER}"
+      APPLICATION_DB_PASS: "${POSTGRES_PASSWORD}"
       APPLICATION_DB_HOST: postgres
       APPLICATION_DB_PORT: "5432"
-      APPLICATION_DB_NAME: "${APPLICATION_DB_NAME:-mock_api_app}"
-      DB_USER: "${POSTGRES_USER:-user}"
-      DB_PASS: "${POSTGRES_PASSWORD:-password}"
+      APPLICATION_DB_NAME: "${APPLICATION_DB_NAME}"
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASS: "${POSTGRES_PASSWORD}"
       DB_HOST: postgres
       DB_PORT: "5432"
-      DB_NAME: "${APPLICATION_DB_NAME:-mock_api_app}"
-      API_GATEWAY_DB_USER: "${POSTGRES_USER:-user}"
-      API_GATEWAY_DB_PASS: "${POSTGRES_PASSWORD:-password}"
+      DB_NAME: "${APPLICATION_DB_NAME}"
+      API_GATEWAY_DB_USER: "${POSTGRES_USER}"
+      API_GATEWAY_DB_PASS: "${POSTGRES_PASSWORD}"
       API_GATEWAY_DB_HOST: postgres
       API_GATEWAY_DB_PORT: "5432"
-      API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME:-api_gateway}"
-      AGENT_ORCHESTRATION_DB_USER: "${POSTGRES_USER:-user}"
-      AGENT_ORCHESTRATION_DB_PASS: "${POSTGRES_PASSWORD:-password}"
+      API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME}"
+      AGENT_ORCHESTRATION_DB_USER: "${POSTGRES_USER}"
+      AGENT_ORCHESTRATION_DB_PASS: "${POSTGRES_PASSWORD}"
       AGENT_ORCHESTRATION_DB_HOST: postgres
       AGENT_ORCHESTRATION_DB_PORT: "5432"
-      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME:-agent_orchestration}"
+      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME}"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
-      REDIS_PASS: "${REDIS_PASSWORD:-redis-password}"
+      REDIS_PASS: "${REDIS_PASSWORD}"
+      PORTKEY_API_KEY: "${PORTKEY_API_KEY}"
+      PORTKEY_WORKERS_AI_PROVIDER: "${PORTKEY_WORKERS_AI_PROVIDER}"
+      CLOUDFLARE_ACCOUNT_ID: "${CLOUDFLARE_ACCOUNT_ID}"
+      CLOUDFLARE_API_TOKEN: "${CLOUDFLARE_API_TOKEN}"
     expose:
       - "3001"
     ports:
@@ -77,12 +81,12 @@ services:
     image: postgres:17-alpine
     container_name: mock-stack-postgres
     environment:
-      POSTGRES_DB: "${APPLICATION_DB_NAME:-mock_api_app}"
-      POSTGRES_USER: "${POSTGRES_USER:-user}"
-      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-password}"
-      APPLICATION_DB_NAME: "${APPLICATION_DB_NAME:-mock_api_app}"
-      API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME:-api_gateway}"
-      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME:-agent_orchestration}"
+      POSTGRES_DB: "${APPLICATION_DB_NAME}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      APPLICATION_DB_NAME: "${APPLICATION_DB_NAME}"
+      API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME}"
+      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME}"
     ports:
       - "5432:5432"
     volumes:
@@ -103,11 +107,11 @@ services:
     environment:
       PGHOST: postgres
       PGPORT: "5432"
-      PGUSER: "${POSTGRES_USER:-user}"
-      PGPASSWORD: "${POSTGRES_PASSWORD:-password}"
-      APPLICATION_DB_NAME: "${APPLICATION_DB_NAME:-mock_api_app}"
-      API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME:-api_gateway}"
-      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME:-agent_orchestration}"
+      PGUSER: "${POSTGRES_USER}"
+      PGPASSWORD: "${POSTGRES_PASSWORD}"
+      APPLICATION_DB_NAME: "${APPLICATION_DB_NAME}"
+      API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME}"
+      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME}"
     volumes:
       - ./docker/postgres/init-databases.sh:/init-databases.sh:ro
     command: ["sh", "/init-databases.sh"]
@@ -115,13 +119,13 @@ services:
   redis:
     image: redis:7.4-alpine
     container_name: mock-stack-redis
-    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-redis-password}"]
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis-password}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -133,7 +137,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      REDIS_HOSTS: "local:redis:6379:0:${REDIS_PASSWORD:-redis-password}"
+      REDIS_HOSTS: "local:redis:6379:0:${REDIS_PASSWORD}"
     ports:
       - "8081:8081"
 

@@ -20,6 +20,7 @@
     "build": "tsc -p tsconfig.build.json",
     "build:watch": "tsc -w -p tsconfig.build.json --preserveWatchOutput",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:generation": "tsx src/test.ts",
     "migrate:create": "tsx src/create_migration.ts",
     "migrate:latest": "tsx src/migrator.ts latest",
     "migrate:down": "tsx src/migrator.ts down"

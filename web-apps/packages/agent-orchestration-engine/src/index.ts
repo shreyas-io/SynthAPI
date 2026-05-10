@@ -7,6 +7,7 @@ import {
   createPostgresDatabase,
   type DatabaseClient,
 } from "./infrastructure/kysely";
+import { generateText } from "./infrastructure/ai";
 
 type ApplicationDependencies = {
   environment: Environment;
@@ -27,6 +28,7 @@ export const createApplication = (app: ApplicationDependencies) => {
   };
 
   return {
+    text_generation: generateText(ctx),
     async getHealth() {
       try {
         await database.checkHealth();
