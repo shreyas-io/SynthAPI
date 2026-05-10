@@ -12,3 +12,4 @@ create_database() {
 
 create_database "${APPLICATION_DB_NAME:-mock_api_app}"
 create_database "${API_GATEWAY_DB_NAME:-api_gateway}"
+create_database "${AGENT_ORCHESTRATION_DB_NAME:-agent_orchestration}"
