@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.join(dirname, "../migrations");
 
-const usage = "Usage: pnpm --filter @mock-stack/application migrate:create <name>";
+const usage = "Usage: pnpm --filter @mock-stack/mockapi-engine migrate:create <name>";
 
 const slugify = (value: string): string =>
   value

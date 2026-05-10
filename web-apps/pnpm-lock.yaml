@@ -13,9 +13,9 @@ importers:
       '@infisical/sdk':
         specifier: ^5.0.2
         version: 5.0.2
-      '@mock-stack/application':
+      '@mock-stack/mockapi-engine':
         specifier: workspace:*
-        version: link:../../packages/application
+        version: link:../../packages/mockapi-engine
       argon2:
         specifier: ^0.44.0
         version: 0.44.0
@@ -109,7 +109,7 @@ importers:
         specifier: 4.87.0
         version: 4.87.0
 
-  packages/application:
+  packages/mockapi-engine:
     dependencies:
       '@types/lodash':
         specifier: ^4.17.24

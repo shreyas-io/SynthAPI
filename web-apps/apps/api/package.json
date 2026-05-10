@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --inspect=0.0.0.0:9229 --watch --import tsx --enable-source-maps src/server.ts",
-    "build": "pnpm --filter @mock-stack/application run build && tsc -p tsconfig.build.json",
+    "build": "pnpm --filter @mock-stack/mockapi-engine run build && tsc -p tsconfig.build.json",
     "start": "node dist/server.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "migrate:latest": "tsx src/infrastructure/kysely/migrator.ts latest",
@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@infisical/sdk": "^5.0.2",
-    "@mock-stack/application": "workspace:*",
+    "@mock-stack/mockapi-engine": "workspace:*",
     "argon2": "^0.44.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",

@@ -1,5 +1,5 @@
 {
-  "name": "@mock-stack/application",
+  "name": "@mock-stack/mockapi-engine",
   "version": "0.1.0",
   "private": true,
   "type": "module",

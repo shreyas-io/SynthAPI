@@ -9,7 +9,7 @@ import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
 import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
-import { createApplication } from "@mock-stack/application";
+import { createApplication } from "@mock-stack/mockapi-engine";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import type { Kysely } from "kysely";
 import type { Database } from "./infrastructure/kysely/models/index";

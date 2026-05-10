@@ -1,6 +1,6 @@
-# Application Package
+# Mock API Engine Package
 
-`packages/application` contains the backend application logic. It is consumed by
+`packages/mockapi-engine` contains the backend application logic. It is consumed by
 the API server through dependency injection.
 
 The package is split into layers:
@@ -153,8 +153,8 @@ need the same type and the extraction makes the code easier to read.
 7. Add the repository factory in that folder's `index.ts`.
 8. Wire the repository into the relevant domain usecase.
 9. Expose behavior through the SDK handler if needed.
-10. Run `pnpm --filter @mock-stack/application run typecheck`.
-11. Run `pnpm --filter @mock-stack/application run build`.
+10. Run `pnpm --filter @mock-stack/mockapi-engine run typecheck`.
+11. Run `pnpm --filter @mock-stack/mockapi-engine run build`.
 
 ## Import Rules
 
