@@ -1,5 +1,6 @@
-import { useState, type DragEvent } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 
+import { JsonInput } from "../../../shared/components/JsonInput";
 import type { PredicateValue, RulePredicate, RuleTree } from "../../mock-api-responses/types";
 
 const operatorsWithoutExpected = [
@@ -524,18 +525,16 @@ function RuleConfigPanel({
         </select>
       </label>
       {operatorNeedsExpected(predicate.operator) && (
-        <label>
-          Expected value
-          <textarea
-            value={predicate.expected}
-            onChange={(event) =>
+        <JsonInput
+          label="Expected value"
+          value={predicate.expected}
+          onChange={(value) =>
               onChangePredicate(predicate.id, (current) => ({
                 ...current,
-                expected: event.target.value,
+                expected: value,
               }))
-            }
-          />
-        </label>
+          }
+        />
       )}
     </aside>
   );
@@ -556,6 +555,10 @@ export function RuleTreeEditor({
     type: "rule",
     ruleId: tree.id,
   });
+
+  useEffect(() => {
+    onChange(toRuleTree(tree));
+  }, [tree, onChange]);
 
   const changeRule = (ruleId: string, update: (rule: RuleBox) => RuleBox) => {
     setTree((current) => updateRule(current, ruleId, update));
@@ -618,9 +621,6 @@ export function RuleTreeEditor({
           <p className="eyebrow">Rule tree</p>
           <h2>Structured rule builder</h2>
         </div>
-        <button type="button" onClick={() => onChange(toRuleTree(tree))}>
-          Apply tree
-        </button>
       </header>
       <div className="rule-builder">
         <RulePalette

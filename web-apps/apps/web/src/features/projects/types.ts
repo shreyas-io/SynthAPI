@@ -9,6 +9,8 @@ export type Project = {
   slug: string;
   name: string;
   description: string;
+  globals?: Variable[] | null;
+  constants?: Variable[] | null;
 };
 
 export type ProjectInput = {

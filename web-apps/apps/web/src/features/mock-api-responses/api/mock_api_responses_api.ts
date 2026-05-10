@@ -26,3 +26,14 @@ export const createMockApiResponse = (
     body: input,
   });
 };
+
+export const updateMockApiResponse = (
+  mockApiId: string,
+  responseId: string,
+  input: Omit<MockApiResponseInput, "mock_api_id">,
+): Promise<void> => {
+  return apiRequest(`/api/v1/mock-apis/${mockApiId}/responses/${responseId}`, {
+    method: "PUT",
+    body: input,
+  });
+};

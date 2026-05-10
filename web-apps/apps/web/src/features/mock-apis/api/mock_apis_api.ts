@@ -20,3 +20,13 @@ export const createMockApi = (input: MockApiInput): Promise<MockApi> => {
 export const getMockApi = (id: string): Promise<MockApi> => {
   return apiRequest(`/api/v1/mock-apis/${id}`);
 };
+
+export const updateMockApi = (
+  id: string,
+  input: MockApiInput,
+): Promise<void> => {
+  return apiRequest(`/api/v1/mock-apis/${id}`, {
+    method: "PUT",
+    body: input,
+  });
+};

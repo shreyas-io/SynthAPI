@@ -15,3 +15,13 @@ export const createProject = (input: ProjectInput): Promise<Project> => {
 export const getProject = (id: string): Promise<Project> => {
   return apiRequest(`/api/v1/projects/${id}`);
 };
+
+export const updateProject = (
+  id: string,
+  input: ProjectInput,
+): Promise<void> => {
+  return apiRequest(`/api/v1/projects/${id}`, {
+    method: "PUT",
+    body: input,
+  });
+};

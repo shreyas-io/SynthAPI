@@ -28,7 +28,7 @@ export const createMockApiResponseDto = z.object({
   name: z.string().max(64),
   is_default: z.boolean().default(false),
   response: responseDto,
-  rule_tree: createMockApiRuleTreeDto.optional(),
+  rule_tree: createMockApiRuleTreeDto.nullable().optional(),
   post_response_actions: z.array(mockApiPostResponseAction).optional(),
 });
 
