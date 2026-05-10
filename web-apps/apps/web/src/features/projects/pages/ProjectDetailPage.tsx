@@ -13,6 +13,10 @@ export function ProjectDetailPage() {
   const queryClient = useQueryClient();
   const [globals, setGlobals] = useState<Variable[]>([]);
   const [constants, setConstants] = useState<Variable[]>([]);
+  const [variablesOpen, setVariablesOpen] = useState(false);
+  const [variablesTab, setVariablesTab] = useState<"globals" | "constants">(
+    "globals",
+  );
 
   if (!projectId) {
     return <main className="page">Missing project ID.</main>;
@@ -74,28 +78,67 @@ export function ProjectDetailPage() {
             </div>
             <button
               type="button"
+              onClick={() => setVariablesOpen(true)}
+            >
+              Edit variables
+            </button>
+          </div>
+        </section>
+      )}
+      {variablesOpen && (
+        <div className="variable-reference-modal-backdrop">
+          <section className="variable-reference-modal card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Variables</p>
+                <h2>Project variables</h2>
+              </div>
+              <button type="button" onClick={() => setVariablesOpen(false)}>
+                Close
+              </button>
+            </div>
+            <nav className="editor-tabs" aria-label="Project variable tabs">
+              <button
+                className={variablesTab === "globals" ? "active" : ""}
+                type="button"
+                onClick={() => setVariablesTab("globals")}
+              >
+                Globals
+              </button>
+              <button
+                className={variablesTab === "constants" ? "active" : ""}
+                type="button"
+                onClick={() => setVariablesTab("constants")}
+              >
+                Constants
+              </button>
+            </nav>
+            {variablesTab === "globals" && (
+              <VariablesEditor
+                title="Globals"
+                variables={globals}
+                onChange={setGlobals}
+              />
+            )}
+            {variablesTab === "constants" && (
+              <VariablesEditor
+                title="Constants"
+                variables={constants}
+                onChange={setConstants}
+              />
+            )}
+            {updateMutation.isError && (
+              <p className="error">{updateMutation.error.message}</p>
+            )}
+            <button
+              type="button"
               disabled={updateMutation.isPending}
               onClick={() => updateMutation.mutate()}
             >
               Save variables
             </button>
-          </div>
-          {updateMutation.isError && (
-            <p className="error">{updateMutation.error.message}</p>
-          )}
-          <div className="grid">
-            <VariablesEditor
-              title="Globals"
-              variables={globals}
-              onChange={setGlobals}
-            />
-            <VariablesEditor
-              title="Constants"
-              variables={constants}
-              onChange={setConstants}
-            />
-          </div>
-        </section>
+          </section>
+        </div>
       )}
       {mockApis.isPending && <p>Loading mock APIs...</p>}
       {mockApis.isError && <p className="error">{mockApis.error.message}</p>}
