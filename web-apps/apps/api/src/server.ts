@@ -9,6 +9,7 @@ import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
 import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
+import { createApplication as createAgentOrchestrationApplication } from "@mock-stack/agent-orchestration-engine";
 import { createApplication } from "@mock-stack/mockapi-engine";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import type { Kysely } from "kysely";
@@ -46,7 +47,18 @@ export const createApiApp = async (): Promise<ApiApp> => {
     keyValueStore,
   };
 
+  const agentOrchestrationDependencies = {
+    environment: {
+      DB_USER: secrets.AGENT_ORCHESTRATION_DB_USER,
+      DB_PASS: secrets.AGENT_ORCHESTRATION_DB_PASS,
+      DB_HOST: secrets.AGENT_ORCHESTRATION_DB_HOST,
+      DB_PORT: secrets.AGENT_ORCHESTRATION_DB_PORT,
+      DB_NAME: secrets.AGENT_ORCHESTRATION_DB_NAME,
+    },
+  };
+
   const application = createApplication(applicationDependencies);
+  const agentOrchestration = createAgentOrchestrationApplication(agentOrchestrationDependencies);
   const app = express();
 
   app.use(
@@ -71,6 +83,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
     async destroy() {
       await apiGatewayDatabase.destroy();
       await application.destroy();
+      await agentOrchestration.destroy();
       await keyValueStore.destroy();
     },
   };

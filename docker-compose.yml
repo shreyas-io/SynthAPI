@@ -8,7 +8,7 @@ services:
       sh -lc "
         CI=true pnpm install --frozen-lockfile &&
         pnpm --filter @mock-stack/api run migrate:latest &&
-        pnpm --filter @mock-stack/application run migrate:latest &&
+        pnpm --filter @mock-stack/mockapi-engine run migrate:latest &&
         pnpm dev:local
       "
     depends_on:
@@ -36,6 +36,11 @@ services:
       API_GATEWAY_DB_HOST: postgres
       API_GATEWAY_DB_PORT: "5432"
       API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME:-api_gateway}"
+      AGENT_ORCHESTRATION_DB_USER: "${POSTGRES_USER:-user}"
+      AGENT_ORCHESTRATION_DB_PASS: "${POSTGRES_PASSWORD:-password}"
+      AGENT_ORCHESTRATION_DB_HOST: postgres
+      AGENT_ORCHESTRATION_DB_PORT: "5432"
+      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME:-agent_orchestration}"
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       REDIS_PASS: "${REDIS_PASSWORD:-redis-password}"
@@ -49,7 +54,8 @@ services:
       - node-modules:/repo/web-apps/node_modules
       - api-node-modules:/repo/web-apps/apps/api/node_modules
       - web-node-modules:/repo/web-apps/apps/web/node_modules
-      - application-node-modules:/repo/web-apps/packages/application/node_modules
+      - mockapi-engine-node-modules:/repo/web-apps/packages/mockapi-engine/node_modules
+      - agent-orchestration-engine-node-modules:/repo/web-apps/packages/agent-orchestration-engine/node_modules
 
   gateway:
     image: kong:3.9
@@ -76,6 +82,7 @@ services:
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-password}"
       APPLICATION_DB_NAME: "${APPLICATION_DB_NAME:-mock_api_app}"
       API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME:-api_gateway}"
+      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME:-agent_orchestration}"
     ports:
       - "5432:5432"
     volumes:
@@ -100,6 +107,7 @@ services:
       PGPASSWORD: "${POSTGRES_PASSWORD:-password}"
       APPLICATION_DB_NAME: "${APPLICATION_DB_NAME:-mock_api_app}"
       API_GATEWAY_DB_NAME: "${API_GATEWAY_DB_NAME:-api_gateway}"
+      AGENT_ORCHESTRATION_DB_NAME: "${AGENT_ORCHESTRATION_DB_NAME:-agent_orchestration}"
     volumes:
       - ./docker/postgres/init-databases.sh:/init-databases.sh:ro
     command: ["sh", "/init-databases.sh"]
@@ -133,6 +141,7 @@ volumes:
   node-modules:
   api-node-modules:
   web-node-modules:
-  application-node-modules:
+  mockapi-engine-node-modules:
+  agent-orchestration-engine-node-modules:
   postgres-data:
   redis-data:

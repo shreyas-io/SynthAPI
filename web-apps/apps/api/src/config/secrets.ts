@@ -9,6 +9,13 @@ const secretsSchema = z.object({
     .union([z.string(), z.number().int()])
     .transform((v) => +v),
   APPLICATION_DB_NAME: z.string(),
+  AGENT_ORCHESTRATION_DB_USER: z.string(),
+  AGENT_ORCHESTRATION_DB_PASS: z.string(),
+  AGENT_ORCHESTRATION_DB_HOST: z.string(),
+  AGENT_ORCHESTRATION_DB_PORT: z
+    .union([z.string(), z.number().int()])
+    .transform((v) => +v),
+  AGENT_ORCHESTRATION_DB_NAME: z.string(),
   API_GATEWAY_DB_USER: z.string(),
   API_GATEWAY_DB_PASS: z.string(),
   API_GATEWAY_DB_HOST: z.string(),
