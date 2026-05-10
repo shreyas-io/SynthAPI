@@ -219,3 +219,28 @@ export function VariablesEditor({
     </section>
   );
 }
+
+export function VariablesViewer({
+  title,
+  variables,
+}: {
+  title: string;
+  variables: Variable[] | null | undefined;
+}) {
+  return (
+    <section className="variables-editor">
+      <h3>{title}</h3>
+      {!variables?.length && <p>No variables configured.</p>}
+      {variables?.map((variable) => (
+        <article className="variable-editor-row" key={variable.name}>
+          <div>
+            <strong>{variable.name}</strong>
+            <p>
+              {variable.type}: <code>{stringifyValue(variable.value)}</code>
+            </p>
+          </div>
+        </article>
+      ))}
+    </section>
+  );
+}
