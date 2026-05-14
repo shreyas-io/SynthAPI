@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "migrate:latest": "tsx src/infrastructure/kysely/migrator.ts latest",
     "migrate:down": "tsx src/infrastructure/kysely/migrator.ts down",
+    "seed:local": "tsx src/infrastructure/kysely/seed_local.ts",
     "docker:build": "docker build -f Dockerfile -t mock-stack-api ../.."
   },
   "dependencies": {

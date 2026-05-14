@@ -8,6 +8,7 @@ services:
       sh -lc "
         CI=true pnpm install --frozen-lockfile &&
         pnpm --filter @mock-stack/api run migrate:latest &&
+        pnpm --filter @mock-stack/api run seed:local &&
         pnpm --filter @mock-stack/mockapi-engine run migrate:latest &&
         pnpm dev:local
       "
@@ -20,6 +21,8 @@ services:
       PORT: "${API_PORT}"
       HOST: "0.0.0.0"
       CORS_WHITELISTED_DOMAINS: "${CORS_WHITELISTED_DOMAINS}"
+      LOCAL_TEST_USER_USERNAME: "${LOCAL_TEST_USER_USERNAME:-test_user}"
+      LOCAL_TEST_USER_PASSWORD: "${LOCAL_TEST_USER_PASSWORD:-password}"
       VITE_API_BASE_URL: "${VITE_API_BASE_URL}"
       APPLICATION_DB_USER: "${POSTGRES_USER}"
       APPLICATION_DB_PASS: "${POSTGRES_PASSWORD}"
