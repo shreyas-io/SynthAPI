@@ -1,4 +1,23 @@
-import { useEffect, useState, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ReactFlow,
+  Controls,
+  Background,
+  applyNodeChanges,
+  applyEdgeChanges,
+  addEdge,
+  Handle,
+  Position,
+  useNodesState,
+  useEdgesState,
+  type Node,
+  type Edge,
+  type Connection,
+  type NodeChange,
+  type EdgeChange,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import dagre from "dagre";
 
 import { JsonInput } from "../../../shared/components/JsonInput";
 import type { PredicateValue, RulePredicate, RuleTree } from "../../mock-api-responses/types";
@@ -12,6 +31,7 @@ const operatorsWithoutExpected = [
   "is_not_set",
   "string_empty",
   "string_not_empty",
+  "valid_json_schema",
 ] as const;
 
 const operatorsWithExpected = [
@@ -25,93 +45,185 @@ const operatorsWithExpected = [
   "array_includes",
   "string_includes",
   "string_not_includes",
-  "valid_json_schema",
 ] as const;
 
 const operators = [...operatorsWithoutExpected, ...operatorsWithExpected] as const;
 
-type PredicateBox = {
-  id: string;
-  label: string;
-  actual: string;
-  operator: string;
-  expected: string;
-};
-
-type RuleBox = {
-  id: string;
-  label: string;
-  type: "and" | "or";
-  predicates: PredicateBox[];
-  children: RuleBox[];
-};
-
-type PredicateTemplate = Omit<PredicateBox, "id">;
-
-type DraggedBox =
-  | { type: "predicate_template"; template: PredicateTemplate }
-  | { type: "rule_template"; ruleType: RuleBox["type"] };
-
-type SelectedBox =
-  | { type: "rule"; ruleId: string }
-  | { type: "predicate"; predicateId: string };
-
-const defaultPredicateTemplate: PredicateTemplate = {
-  label: "Header matches",
-  actual: "{{request.headers.content-type}}",
-  operator: "equals",
-  expected: "application/json",
-};
-
-const predicateTemplates: PredicateTemplate[] = [
-  defaultPredicateTemplate,
-  {
-    label: "Request body matches",
-    actual: "{{request.body.value.title}}",
-    operator: "equals",
-    expected: "Hello world",
-  },
-  {
-    label: "Query param matches",
-    actual: "{{request.query_params.status}}",
-    operator: "equals",
-    expected: "published",
-  },
-  {
-    label: "Cookie exists",
-    actual: "{{request.cookies.session}}",
-    operator: "is_set",
-    expected: "",
-  },
-  {
-    label: "Method matches",
-    actual: "{{request.method}}",
-    operator: "equals",
-    expected: "POST",
-  },
-];
+const operatorNeedsExpected = (operator: string) =>
+  (operatorsWithExpected as readonly string[]).includes(operator);
 
 const createId = () => crypto.randomUUID();
 
-const createPredicate = (template: PredicateTemplate): PredicateBox => ({
-  ...template,
-  id: createId(),
-});
+// --- DAGRE LAYOUT ---
+const nodeWidth = 320;
+const nodeHeight = 180; // Avg height
 
-const createRule = (type: RuleBox["type"]): RuleBox => ({
-  id: createId(),
-  label: `${type.toUpperCase()} group`,
-  type,
-  predicates: [],
-  children: [],
-});
+const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "TB") => {
+  const dagreGraph = new dagre.graphlib.Graph();
+  dagreGraph.setDefaultEdgeLabel(() => ({}));
+  dagreGraph.setGraph({ rankdir: direction });
 
-const initialRuleTree: RuleBox = {
-  id: createId(),
-  label: "Root rule",
-  type: "and",
-  predicates: [createPredicate(defaultPredicateTemplate)],
-  children: [],
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const newNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: nodeWithPosition.x - nodeWidth / 2,
+        y: nodeWithPosition.y - nodeHeight / 2,
+      },
+    };
+  });
+
+  return { nodes: newNodes, edges };
+};
+
+// --- CUSTOM NODES ---
+
+type LogicNodeData = {
+  type: "and" | "or";
+  isRoot?: boolean;
+  onChange: (type: "and" | "or") => void;
+  onRemove: () => void;
+};
+
+function LogicNode({ data }: { data: LogicNodeData }) {
+  return (
+    <div className="rf-node rf-node-logic">
+      {!data.isRoot && <Handle type="target" position={Position.Top} />}
+      <div className="rf-node-header">
+        <span className="eyebrow">{data.isRoot ? "ROOT" : "GROUP"}</span>
+        {!data.isRoot && (
+          <button className="rf-node-remove" onClick={data.onRemove} title="Remove Group">
+            ×
+          </button>
+        )}
+      </div>
+      <div className="rf-node-body">
+        <label>
+          Match
+          <select
+            value={data.type}
+            onChange={(e) => data.onChange(e.target.value as "and" | "or")}
+            className="rf-select"
+          >
+            <option value="and">ALL (AND)</option>
+            <option value="or">ANY (OR)</option>
+          </select>
+        </label>
+      </div>
+      <Handle type="source" position={Position.Bottom} />
+    </div>
+  );
+}
+
+type PredicateNodeData = {
+  actual: string;
+  operator: string;
+  expected: string;
+  onChange: (updates: Partial<PredicateNodeData>) => void;
+  onRemove: () => void;
+};
+
+const operatorAliases: Record<string, string> = {
+  null: "Is Null",
+  not_null: "Is Not Null",
+  empty_array: "Is Empty Array",
+  not_empty_array: "Is Not Empty Array",
+  is_set: "Is Set (Exists)",
+  is_not_set: "Is Not Set (Missing)",
+  string_empty: "Is Empty String",
+  string_not_empty: "Is Not Empty String",
+  equals: "Equals",
+  not_equals: "Does Not Equal",
+  regex: "Matches Regex",
+  gt: "Greater Than (>)",
+  gte: "Greater Than or Equal (>=)",
+  lt: "Less Than (<)",
+  lte: "Less Than or Equal (<=)",
+  array_includes: "Array Includes",
+  string_includes: "String Contains",
+  string_not_includes: "String Does Not Contain",
+  valid_json_schema: "Valid JSON",
+};
+
+function PredicateNode({ data }: { data: PredicateNodeData }) {
+  return (
+    <div className="rf-node rf-node-predicate">
+      <Handle type="target" position={Position.Top} />
+      <div className="rf-node-header">
+        <span className="eyebrow">CONDITION</span>
+        <button className="rf-node-remove" onClick={data.onRemove} title="Remove Condition">
+          ×
+        </button>
+      </div>
+      <div className="rf-node-body">
+        <label>
+          Actual Value
+          <input
+            placeholder="{{request.body.id}}"
+            value={data.actual}
+            onChange={(e) => data.onChange({ actual: e.target.value })}
+            className="rf-input"
+          />
+        </label>
+        <label>
+          Operator
+          <select
+            value={data.operator}
+            onChange={(e) => {
+              const op = e.target.value;
+              data.onChange({
+                operator: op,
+                expected: operatorNeedsExpected(op) ? data.expected : "",
+              });
+            }}
+            className="rf-select"
+          >
+            {operators.map((operator) => (
+              <option key={operator} value={operator}>
+                {operatorAliases[operator] || operator}
+              </option>
+            ))}
+          </select>
+        </label>
+        {operatorNeedsExpected(data.operator) && (
+          <div className="rf-expected-wrapper">
+            <JsonInput
+              label="Expected Value"
+              value={data.expected}
+              onChange={(value) => data.onChange({ expected: value || "" })}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const nodeTypes = {
+  logic: LogicNode,
+  predicate: PredicateNode,
+};
+
+// --- DATA MAPPING ---
+
+const parseExpected = (value: string): PredicateValue => {
+  if (!value.trim()) return "";
+  try {
+    return JSON.parse(value) as PredicateValue;
+  } catch {
+    return value;
+  }
 };
 
 const stringifyExpected = (value: PredicateValue | undefined): string => {
@@ -120,425 +232,103 @@ const stringifyExpected = (value: PredicateValue | undefined): string => {
   return JSON.stringify(value, null, 2);
 };
 
-const operatorNeedsExpected = (operator: string) =>
-  (operatorsWithExpected as readonly string[]).includes(operator);
+// Flatten RuleTree -> React Flow Nodes & Edges
+function treeToFlow(tree: RuleTree) {
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
 
-const parseExpected = (value: string): PredicateValue => {
-  if (!value.trim()) return "";
+  function traverse(node: RuleTree, parentId?: string) {
+    const id = createId();
 
-  try {
-    return JSON.parse(value) as PredicateValue;
-  } catch {
-    return value;
-  }
-};
+    nodes.push({
+      id,
+      type: "logic",
+      position: { x: 0, y: 0 },
+      data: {
+        type: node.type,
+        isRoot: !parentId,
+        // Handlers will be patched in by the component wrapper
+      },
+    });
 
-const toPredicate = (predicate: PredicateBox): RulePredicate => {
-  const next: RulePredicate = {
-    label: predicate.label,
-    type: "simple",
-    actual: predicate.actual,
-    operator: predicate.operator,
-  };
+    if (parentId) {
+      edges.push({
+        id: `e-${parentId}-${id}`,
+        source: parentId,
+        target: id,
+      });
+    }
 
-  if (operatorNeedsExpected(predicate.operator)) {
-    next.expected = parseExpected(predicate.expected);
-  }
+    node.predicates.forEach((pred) => {
+      const predId = createId();
+      nodes.push({
+        id: predId,
+        type: "predicate",
+        position: { x: 0, y: 0 },
+        data: {
+          actual: pred.actual,
+          operator: pred.operator,
+          expected: stringifyExpected(pred.expected),
+        },
+      });
+      edges.push({
+        id: `e-${id}-${predId}`,
+        source: id,
+        target: predId,
+      });
+    });
 
-  return next;
-};
-
-const toRuleTree = (rule: RuleBox): RuleTree => ({
-  label: rule.label,
-  type: rule.type,
-  predicates: rule.predicates.map(toPredicate),
-  children: rule.children.map(toRuleTree),
-});
-
-const fromPredicate = (predicate: RulePredicate): PredicateBox => ({
-  id: createId(),
-  label: predicate.label,
-  actual: predicate.actual,
-  operator: predicate.operator,
-  expected: stringifyExpected(predicate.expected),
-});
-
-const fromRuleTree = (rule: RuleTree): RuleBox => ({
-  id: createId(),
-  label: rule.label,
-  type: rule.type,
-  predicates: rule.predicates.map(fromPredicate),
-  children: (rule.children ?? []).map(fromRuleTree),
-});
-
-const updateRule = (
-  rule: RuleBox,
-  ruleId: string,
-  update: (rule: RuleBox) => RuleBox,
-): RuleBox => {
-  if (rule.id === ruleId) return update(rule);
-
-  return {
-    ...rule,
-    children: rule.children.map((child) => updateRule(child, ruleId, update)),
-  };
-};
-
-const updatePredicate = (
-  rule: RuleBox,
-  predicateId: string,
-  update: (predicate: PredicateBox) => PredicateBox,
-): RuleBox => ({
-  ...rule,
-  predicates: rule.predicates.map((predicate) => {
-    if (predicate.id === predicateId) return update(predicate);
-
-    return predicate;
-  }),
-  children: rule.children.map((child) => updatePredicate(child, predicateId, update)),
-});
-
-const removeRule = (rule: RuleBox, ruleId: string): RuleBox => ({
-  ...rule,
-  children: rule.children
-    .filter((child) => child.id !== ruleId)
-    .map((child) => removeRule(child, ruleId)),
-});
-
-const findRule = (rule: RuleBox, ruleId: string): RuleBox | null => {
-  if (rule.id === ruleId) return rule;
-
-  for (const child of rule.children) {
-    const found = findRule(child, ruleId);
-    if (found) return found;
+    node.children?.forEach((child) => traverse(child, id));
   }
 
-  return null;
-};
-
-const findPredicate = (rule: RuleBox, predicateId: string): PredicateBox | null => {
-  const predicate = rule.predicates.find((item) => item.id === predicateId);
-  if (predicate) return predicate;
-
-  for (const child of rule.children) {
-    const found = findPredicate(child, predicateId);
-    if (found) return found;
-  }
-
-  return null;
-};
-
-function RulePalette({
-  onDragPredicateTemplate,
-  onDragRuleTemplate,
-  onDragEnd,
-}: {
-  onDragPredicateTemplate: (template: PredicateTemplate) => void;
-  onDragRuleTemplate: (ruleType: RuleBox["type"]) => void;
-  onDragEnd: () => void;
-}) {
-  return (
-    <aside className="rule-palette">
-      <div>
-        <p className="eyebrow">Blocks</p>
-        <h3>Drag into a group</h3>
-      </div>
-      {predicateTemplates.map((template) => (
-        <button
-          className="palette-block"
-          draggable
-          key={template.label}
-          type="button"
-          onDragEnd={onDragEnd}
-          onDragStart={(event) => {
-            event.dataTransfer.effectAllowed = "copy";
-            event.dataTransfer.setData("text/plain", template.label);
-            onDragPredicateTemplate(template);
-          }}
-        >
-          <span>{template.label}</span>
-          <small>{template.actual}</small>
-        </button>
-      ))}
-      <div className="palette-section">
-        <h3>Child groups</h3>
-        {(["and", "or"] as const).map((ruleType) => (
-          <button
-            className="palette-block connection-block"
-            draggable
-            key={ruleType}
-            type="button"
-            onDragEnd={onDragEnd}
-            onDragStart={(event) => {
-              event.dataTransfer.effectAllowed = "copy";
-              event.dataTransfer.setData("text/plain", `${ruleType} group`);
-              onDragRuleTemplate(ruleType);
-            }}
-          >
-            <span>{ruleType === "and" ? "ALL conditions" : "ANY condition"}</span>
-            <small>Drop into a group</small>
-          </button>
-        ))}
-      </div>
-    </aside>
-  );
+  if (tree) traverse(tree);
+  return getLayoutedElements(nodes, edges);
 }
 
-function RuleTreeNode({
-  rule,
-  isRoot,
-  selected,
-  draggedBox,
-  onSelect,
-  onChangeRule,
-  onRemoveRule,
-  onDropRule,
-}: {
-  rule: RuleBox;
-  isRoot: boolean;
-  selected: SelectedBox;
-  draggedBox: DraggedBox | null;
-  onSelect: (selected: SelectedBox) => void;
-  onChangeRule: (ruleId: string, update: (rule: RuleBox) => RuleBox) => void;
-  onRemoveRule: (ruleId: string) => void;
-  onDropRule: (ruleId: string) => void;
-}) {
-  const isSelected = selected.type === "rule" && selected.ruleId === rule.id;
+// Reconstruct RuleTree from React Flow
+function flowToTree(nodes: Node[], edges: Edge[]): RuleTree | null {
+  const rootNode = nodes.find((n) => n.type === "logic" && n.data.isRoot);
+  if (!rootNode) return null;
 
-  const dropOnRule = (event: DragEvent<HTMLElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    onDropRule(rule.id);
-  };
+  function buildSubTree(nodeId: string): RuleTree {
+    const node = nodes.find((n) => n.id === nodeId)!;
+    const childrenEdges = edges.filter((e) => e.source === nodeId);
+    const childIds = childrenEdges.map((e) => e.target);
+    const childNodes = nodes.filter((n) => childIds.includes(n.id));
 
-  return (
-    <section className={`tree-rule-card ${isSelected ? "selected" : ""}`}>
-      <header className="tree-rule-header" onClick={() => onSelect({ type: "rule", ruleId: rule.id })}>
-        {isRoot && <span className="pill">Root</span>}
-        <span className="pill">{rule.type.toUpperCase()}</span>
-        <div>
-          <strong>{rule.label}</strong>
-          <small>
-            {rule.predicates.length} predicate{rule.predicates.length === 1 ? "" : "s"}
-            , {rule.children.length} group{rule.children.length === 1 ? "" : "s"}
-          </small>
-        </div>
-        {!isRoot && (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRemoveRule(rule.id);
-            }}
-          >
-            Remove
-          </button>
-        )}
-      </header>
+    const predicates: RulePredicate[] = [];
+    const children: RuleTree[] = [];
 
-      <div className="tree-children">
-        {rule.predicates.map((predicate) => (
-          <PredicateNode
-            key={predicate.id}
-            predicate={predicate}
-            selected={selected}
-            onSelect={onSelect}
-            onRemove={() => {
-              onChangeRule(rule.id, (current) => ({
-                ...current,
-                predicates: current.predicates.filter((item) => item.id !== predicate.id),
-              }));
-              onSelect({ type: "rule", ruleId: rule.id });
-            }}
-          />
-        ))}
-        {rule.children.map((child) => (
-          <RuleTreeNode
-            key={child.id}
-            rule={child}
-            isRoot={false}
-            selected={selected}
-            draggedBox={draggedBox}
-            onSelect={onSelect}
-            onChangeRule={onChangeRule}
-            onRemoveRule={onRemoveRule}
-            onDropRule={onDropRule}
-          />
-        ))}
-        <div
-          className={`tree-dropzone ${draggedBox ? "drag-active" : ""}`}
-          onDragOver={(event) => {
-            event.preventDefault();
-            event.dataTransfer.dropEffect =
-              draggedBox?.type === "predicate_template" ||
-              draggedBox?.type === "rule_template"
-                ? "copy"
-                : "move";
-          }}
-          onDrop={dropOnRule}
-        >
-          <span>Drop predicate or child group here</span>
-        </div>
-      </div>
-    </section>
-  );
-}
+    childNodes.forEach((child) => {
+      if (child.type === "predicate") {
+        const d = child.data as unknown as PredicateNodeData;
+        const pred: RulePredicate = {
+          label: d.actual || "Condition",
+          type: "simple",
+          actual: d.actual,
+          operator: d.operator,
+        };
+        if (operatorNeedsExpected(d.operator)) {
+          pred.expected = parseExpected(d.expected);
+        }
+        predicates.push(pred);
+      } else if (child.type === "logic") {
+        children.push(buildSubTree(child.id));
+      }
+    });
 
-function PredicateNode({
-  predicate,
-  selected,
-  onSelect,
-  onRemove,
-}: {
-  predicate: PredicateBox;
-  selected: SelectedBox;
-  onSelect: (selected: SelectedBox) => void;
-  onRemove: () => void;
-}) {
-  const isSelected = selected.type === "predicate" && selected.predicateId === predicate.id;
-
-  return (
-    <article
-      className={`tree-predicate-card ${isSelected ? "selected" : ""}`}
-      onClick={() => onSelect({ type: "predicate", predicateId: predicate.id })}
-    >
-      <div className="tree-predicate-header">
-        <div>
-          <strong>{predicate.label}</strong>
-          <small>{predicate.operator}</small>
-        </div>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            onRemove();
-          }}
-        >
-          Remove
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function RuleConfigPanel({
-  tree,
-  selected,
-  onChangeRule,
-  onChangePredicate,
-}: {
-  tree: RuleBox;
-  selected: SelectedBox;
-  onChangeRule: (ruleId: string, update: (rule: RuleBox) => RuleBox) => void;
-  onChangePredicate: (
-    predicateId: string,
-    update: (predicate: PredicateBox) => PredicateBox,
-  ) => void;
-}) {
-  if (selected.type === "rule") {
-    const rule = findRule(tree, selected.ruleId);
-    if (!rule) return null;
-
-    return (
-      <aside className="rule-config">
-        <p className="eyebrow">Configure group</p>
-        <h3>{rule.label}</h3>
-        <label>
-          Label
-          <input
-            value={rule.label}
-            onChange={(event) =>
-              onChangeRule(rule.id, (current) => ({
-                ...current,
-                label: event.target.value,
-              }))
-            }
-          />
-        </label>
-        <label>
-          Match strategy
-          <select
-            value={rule.type}
-            onChange={(event) =>
-              onChangeRule(rule.id, (current) => ({
-                ...current,
-                type: event.target.value as RuleBox["type"],
-              }))
-            }
-          >
-            <option value="and">ALL predicates must match</option>
-            <option value="or">ANY predicate can match</option>
-          </select>
-        </label>
-      </aside>
-    );
+    return {
+      label: node.data.type === "and" ? "ALL Conditions" : "ANY Condition",
+      type: node.data.type as "and" | "or",
+      predicates,
+      children,
+    };
   }
 
-  const predicate = findPredicate(tree, selected.predicateId);
-  if (!predicate) return null;
-
-  return (
-    <aside className="rule-config">
-      <p className="eyebrow">Configure predicate</p>
-      <h3>{predicate.label}</h3>
-      <label>
-        Label
-        <input
-          value={predicate.label}
-          onChange={(event) =>
-            onChangePredicate(predicate.id, (current) => ({
-              ...current,
-              label: event.target.value,
-            }))
-          }
-        />
-      </label>
-      <label>
-        Actual value
-        <input
-          value={predicate.actual}
-          onChange={(event) =>
-            onChangePredicate(predicate.id, (current) => ({
-              ...current,
-              actual: event.target.value,
-            }))
-          }
-        />
-      </label>
-      <label>
-        Operator
-        <select
-          value={predicate.operator}
-          onChange={(event) =>
-            onChangePredicate(predicate.id, (current) => ({
-              ...current,
-              operator: event.target.value,
-              expected: operatorNeedsExpected(event.target.value) ? current.expected : "",
-            }))
-          }
-        >
-          {operators.map((operator) => (
-            <option key={operator} value={operator}>
-              {operator}
-            </option>
-          ))}
-        </select>
-      </label>
-      {operatorNeedsExpected(predicate.operator) && (
-        <JsonInput
-          label="Expected value"
-          value={predicate.expected}
-          onChange={(value) =>
-              onChangePredicate(predicate.id, (current) => ({
-                ...current,
-                expected: value,
-              }))
-          }
-        />
-      )}
-    </aside>
-  );
+  return buildSubTree(rootNode.id);
 }
+
+// --- MAIN COMPONENT ---
 
 export function RuleTreeEditor({
   initialTree,
@@ -547,112 +337,152 @@ export function RuleTreeEditor({
   initialTree?: RuleTree | null;
   onChange: (tree: RuleTree) => void;
 }) {
-  const [tree, setTree] = useState<RuleBox>(() =>
-    initialTree ? fromRuleTree(initialTree) : initialRuleTree,
-  );
-  const [draggedBox, setDraggedBox] = useState<DraggedBox | null>(null);
-  const [selected, setSelected] = useState<SelectedBox>({
-    type: "rule",
-    ruleId: tree.id,
-  });
+  const defaultTree: RuleTree = { type: "and", label: "ALL Conditions", predicates: [], children: [] };
+  const initialFlow = useMemo(() => treeToFlow(initialTree || defaultTree), []);
 
+  const [nodes, setNodes] = useNodesState(initialFlow.nodes);
+  const [edges, setEdges] = useEdgesState(initialFlow.edges);
+
+  // Notify parent of changes when nodes/edges structurally update or data changes
   useEffect(() => {
-    onChange(toRuleTree(tree));
-  }, [tree, onChange]);
+    const newTree = flowToTree(nodes, edges);
+    if (newTree) onChange(newTree);
+  }, [nodes, edges, onChange]);
 
-  const changeRule = (ruleId: string, update: (rule: RuleBox) => RuleBox) => {
-    setTree((current) => updateRule(current, ruleId, update));
+  const onNodesChangeHandler = useCallback(
+    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
+    [setNodes]
+  );
+  const onEdgesChangeHandler = useCallback(
+    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
+    [setEdges]
+  );
+
+  const onConnect = useCallback(
+    (params: Connection) => {
+      const targetNode = nodes.find(n => n.id === params.target);
+      const sourceNode = nodes.find(n => n.id === params.source);
+      // Basic rule: only logic can be source
+      if (sourceNode?.type !== "logic") return;
+      setEdges((eds) => addEdge(params, eds));
+    },
+    [setEdges, nodes]
+  );
+
+  const handleLayout = useCallback(() => {
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+    setNodes([...layoutedNodes]);
+    setEdges([...layoutedEdges]);
+  }, [nodes, edges, setNodes, setEdges]);
+
+  // Actions
+  const addLogicNode = () => {
+    const id = createId();
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "logic",
+        position: { x: 50, y: 50 },
+        data: { type: "and" },
+      },
+    ]);
   };
 
-  const changePredicate = (
-    predicateId: string,
-    update: (predicate: PredicateBox) => PredicateBox,
-  ) => {
-    setTree((current) => updatePredicate(current, predicateId, update));
+  const addPredicateNode = () => {
+    const id = createId();
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "predicate",
+        position: { x: 50, y: 50 },
+        data: {
+          actual: "{{request.headers.content-type}}",
+          operator: "equals",
+          expected: "application/json",
+        },
+      },
+    ]);
   };
 
-  const dropOnRule = (targetRuleId: string) => {
-    const box = draggedBox;
-
-    if (!box) {
-      const childRule = createRule("and");
-      setTree((current) =>
-        updateRule(current, targetRuleId, (rule) => ({
-          ...rule,
-          children: [...rule.children, childRule],
-        })),
-      );
-      setSelected({ type: "rule", ruleId: childRule.id });
-      return;
-    }
-
-    if (box.type === "predicate_template") {
-      const predicate = createPredicate(box.template);
-      setTree((current) =>
-        updateRule(current, targetRuleId, (rule) => ({
-          ...rule,
-          predicates: [...rule.predicates, predicate],
-        })),
-      );
-      setSelected({ type: "predicate", predicateId: predicate.id });
-      setDraggedBox(null);
-      return;
-    }
-
-    if (box.type === "rule_template") {
-      const childRule = createRule(box.ruleType);
-      setTree((current) =>
-        updateRule(current, targetRuleId, (rule) => ({
-          ...rule,
-          children: [...rule.children, childRule],
-        })),
-      );
-      setSelected({ type: "rule", ruleId: childRule.id });
-      setDraggedBox(null);
-      return;
-    }
-
-  };
+  // Enhance nodes with up-to-date dispatch actions
+  const enhancedNodes = useMemo(() => {
+    return nodes.map((node) => {
+      if (node.type === "logic") {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            onChange: (type: "and" | "or") => {
+              setNodes((nds) =>
+                nds.map((n) => (n.id === node.id ? { ...n, data: { ...n.data, type } } : n))
+              );
+            },
+            onRemove: () => {
+              setNodes((nds) => nds.filter((n) => n.id !== node.id));
+              setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+            },
+          },
+        };
+      }
+      if (node.type === "predicate") {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            onChange: (updates: Partial<PredicateNodeData>) => {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === node.id ? { ...n, data: { ...n.data, ...updates } } : n
+                )
+              );
+            },
+            onRemove: () => {
+              setNodes((nds) => nds.filter((n) => n.id !== node.id));
+              setEdges((eds) => eds.filter((e) => e.target !== node.id));
+            },
+          },
+        };
+      }
+      return node;
+    });
+  }, [nodes, setNodes, setEdges]);
 
   return (
     <section className="card rule-editor">
-      <header className="editor-toolbar">
-        <div>
+      <header className="editor-toolbar" style={{ display: "flex", gap: "1rem" }}>
+        <div style={{ flex: 1 }}>
           <p className="eyebrow">Rule tree</p>
-          <h2>Structured rule builder</h2>
+          <h2>React Flow Builder</h2>
+        </div>
+        <div className="rf-toolbar-actions">
+          <button type="button" onClick={addPredicateNode} className="rf-btn">
+            + Condition
+          </button>
+          <button type="button" onClick={addLogicNode} className="rf-btn">
+            + Logic Group
+          </button>
+          <button type="button" onClick={handleLayout} className="rf-btn rf-btn-secondary">
+            Auto Layout
+          </button>
         </div>
       </header>
-      <div className="rule-builder">
-        <RulePalette
-          onDragPredicateTemplate={(template) =>
-            setDraggedBox({ type: "predicate_template", template })
-          }
-          onDragRuleTemplate={(ruleType) =>
-            setDraggedBox({ type: "rule_template", ruleType })
-          }
-          onDragEnd={() => setDraggedBox(null)}
-        />
-        <div className="rule-canvas">
-          <RuleTreeNode
-            rule={tree}
-            isRoot
-            selected={selected}
-            draggedBox={draggedBox}
-            onSelect={setSelected}
-            onChangeRule={changeRule}
-            onRemoveRule={(ruleId) => {
-              setTree((current) => removeRule(current, ruleId));
-              setSelected({ type: "rule", ruleId: tree.id });
-            }}
-            onDropRule={dropOnRule}
-          />
-        </div>
-        <RuleConfigPanel
-          tree={tree}
-          selected={selected}
-          onChangeRule={changeRule}
-          onChangePredicate={changePredicate}
-        />
+
+      <div style={{ width: "100%", height: "600px", border: "1px solid rgba(24,34,53,0.1)", borderRadius: "18px", overflow: "hidden", background: "#fcfaf7" }}>
+        <ReactFlow
+          nodes={enhancedNodes}
+          edges={edges}
+          onNodesChange={onNodesChangeHandler}
+          onEdgesChange={onEdgesChangeHandler}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          fitView
+          minZoom={0.2}
+        >
+          <Background color="#ccc" gap={16} />
+          <Controls />
+        </ReactFlow>
       </div>
     </section>
   );

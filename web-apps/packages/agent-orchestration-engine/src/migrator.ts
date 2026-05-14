@@ -5,8 +5,6 @@ import { fileURLToPath } from "node:url";
 import { FileMigrationProvider, Kysely, Migrator, PostgresDialect } from "kysely";
 import pg from "pg";
 
-import { parseEnvironment } from "./environment.js";
-
 const { Pool } = pg;
 
 type Database = Record<string, never>;
@@ -14,14 +12,13 @@ type Database = Record<string, never>;
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationFolder = path.join(dirname, "../migrations");
 
-const getEnvironment = () =>
-  parseEnvironment({
-    DB_USER: required("DB_USER"),
-    DB_PASS: required("DB_PASS"),
-    DB_HOST: required("DB_HOST"),
-    DB_PORT: Number(required("DB_PORT")),
-    DB_NAME: required("DB_NAME"),
-  });
+const getEnvironment = () => ({
+  DB_USER: required("DB_USER"),
+  DB_PASS: required("DB_PASS"),
+  DB_HOST: required("DB_HOST"),
+  DB_PORT: Number(required("DB_PORT")),
+  DB_NAME: required("DB_NAME"),
+});
 
 const required = (key: string): string => {
   const value = process.env[key];
