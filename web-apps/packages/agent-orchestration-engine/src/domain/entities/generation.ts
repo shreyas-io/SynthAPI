@@ -17,8 +17,9 @@ type TextMessageContent = {
 };
 
 type LLMConfig = {
-  model_host: "portkey" | "workers_ai";
-  model_provider: "qwen" | "openai";
+  model_host: "openrouter" | "ollama" | "workers_ai";
+  model_provider: "nvidia" | "google" | "meta";
+  model_gateway: "cloudflare_aig" | null;
   model_id: string;
   input_messages: Array<
     | {

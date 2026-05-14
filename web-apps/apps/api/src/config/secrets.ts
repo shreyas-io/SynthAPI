@@ -26,10 +26,11 @@ const secretsSchema = z.object({
   REDIS_HOST: z.string(),
   REDIS_PORT: z.union([z.string(), z.number().int()]).transform((v) => +v),
   REDIS_PASS: z.string(),
-  PORTKEY_API_KEY: z.string(),
-  PORTKEY_WORKERS_AI_PROVIDER: z.string(),
   CLOUDFLARE_ACCOUNT_ID: z.string(),
-  CLOUDFLARE_API_TOKEN: z.string(),
+  CLOUDFLARE_AI_GATEWAY_ID: z.string(),
+  CLOUDFLARE_AI_GATEWAY_TOKEN: z.string(),
+  OPENROUTER_API_KEY: z.string(),
+  OLLAMA_BASE_URL: z.string().optional(),
   CORS_WHITELISTED_DOMAINS: z.string().transform((v) => {
     try {
       return v.split(",");
