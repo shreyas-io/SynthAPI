@@ -16,6 +16,7 @@ async function smokeTestTextOnly() {
       model_provider: "google",
       model_gateway: null,
       model_id: "@cf/google/gemma-4-26b-a4b-it",
+      system_prompt: "You are a concise assistant.",
       input_messages: [
         {
           role: "user",
@@ -50,6 +51,7 @@ const toolConfig: GenerationRequest["config"] = {
   model_provider: "google",
   model_gateway: null,
   model_id: "@cf/google/gemma-4-26b-a4b-it",
+  system_prompt: "You are a concise weather assistant. Use tools when needed.",
   input_messages: [
     {
       role: "user",
@@ -134,7 +136,7 @@ async function smokeTestWithTools() {
           {
             role: "tool_call_response",
             content: toolRequests.map((toolRequest) => ({
-              tool_ref_id: toolRequest.tool_ref_id,
+              tool_use_id: toolRequest.tool_use_id,
               name: toolRequest.name,
               output: executeTool(toolRequest.name, toolRequest.input),
             })),
