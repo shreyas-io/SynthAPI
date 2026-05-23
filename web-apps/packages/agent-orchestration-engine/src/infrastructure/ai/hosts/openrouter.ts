@@ -7,6 +7,7 @@ import { AgentOrchestrationException } from "../../../exceptions/exception";
 
 export type OpenRouterInput = {
   model: string;
+  system: string;
   messages: Array<ModelMessage>;
   tools?: ToolSet;
   temperature?: number;
@@ -38,6 +39,7 @@ export async function generateTextViaOpenRouter(
 
     return await generateText({
       model,
+      system: input.system,
       messages: input.messages,
       tools: input.tools,
       temperature: input.temperature,

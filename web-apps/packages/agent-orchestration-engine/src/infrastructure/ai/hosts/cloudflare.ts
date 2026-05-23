@@ -6,6 +6,7 @@ import { AgentOrchestrationException } from "../../../exceptions/exception";
 
 export type CloudflareWorkersAiInput = {
   model: string;
+  system: string;
   messages: Array<ModelMessage>;
   tools?: ToolSet;
   temperature?: number;
@@ -27,6 +28,7 @@ export async function generateTextViaCloudflareWorkersAi(
 
     return await generateText({
       model: provider(input.model),
+      system: input.system,
       messages: input.messages,
       tools: input.tools,
       temperature: input.temperature,

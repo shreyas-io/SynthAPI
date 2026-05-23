@@ -1,26 +1,27 @@
-type ToolCallRequest = {
-  tool_ref_id: string; // vendor tool reference ID
+export type ToolCallRequest = {
+  tool_use_id: string; // vendor tool reference ID
   name: string;
   input: string;
   metadata?: unknown; // any vendor specific metadata if needed
 };
 
-type ToolCallResponse = {
-  tool_ref_id: string;
+export type ToolCallResponse = {
+  tool_use_id: string;
   name: string;
   output: string;
 };
 
-type TextMessageContent = {
+export type TextMessageContent = {
   type: "text";
   text: string;
 };
 
-type LLMConfig = {
+export type LLMConfig = {
   model_host: "openrouter" | "ollama" | "workers_ai";
   model_provider: "nvidia" | "google" | "meta";
   model_gateway: "cloudflare_aig" | null;
   model_id: string;
+  system_prompt: string;
   input_messages: Array<
     | {
         role: "user";

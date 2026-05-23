@@ -22,6 +22,16 @@ export type AgentConfigsTable = {
     JsonValue | string,
     JsonValue | string
   >;
+  compaction_config: ColumnType<
+    JsonValue,
+    JsonValue | string,
+    JsonValue | string
+  >;
+  compaction_threshold_tokens: ColumnType<
+    number,
+    number | undefined,
+    number
+  >;
   enabled: ColumnType<boolean, boolean | undefined, boolean>;
   created_at: Timestamp;
   updated_at: Timestamp;

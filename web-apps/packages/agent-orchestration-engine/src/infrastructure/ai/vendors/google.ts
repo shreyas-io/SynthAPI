@@ -61,7 +61,7 @@ const toModelMessages = (request: GenerationRequest): ModelMessage[] => {
           content: [
             {
               type: "tool-result",
-              toolCallId: toolResponse.tool_ref_id,
+              toolCallId: toolResponse.tool_use_id,
               toolName: toolResponse.name,
               output: { type: "text" as const, value: toolResponse.output },
             },
@@ -125,7 +125,7 @@ const toGenerationResponse = (
     content.push({
       role: "tool_call_request",
       content: result.toolCalls.map((tc: { toolCallId: string; toolName: string; input: unknown }) => ({
-        tool_ref_id: tc.toolCallId,
+        tool_use_id: tc.toolCallId,
         name: tc.toolName,
         input: JSON.stringify(tc.input),
         metadata: tc,
@@ -161,6 +161,7 @@ export function generateTextViaGoogle(ctx: AppContext): ITextGeneration {
         request.config.model_host === "workers_ai"
           ? await generateTextViaCloudflareWorkersAi(ctx, {
               model: request.config.model_id,
+              system: request.config.system_prompt,
               messages: [...getRawContext(request).messages, ...inputMessages],
               tools: toToolSet(request.config.tools),
               temperature: request.config.temperature,
@@ -168,6 +169,7 @@ export function generateTextViaGoogle(ctx: AppContext): ITextGeneration {
             })
           : await generateTextViaOpenRouter(ctx, {
               model: request.config.model_id,
+              system: request.config.system_prompt,
               messages: [...getRawContext(request).messages, ...inputMessages],
               tools: toToolSet(request.config.tools),
               temperature: request.config.temperature,

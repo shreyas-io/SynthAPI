@@ -6,6 +6,7 @@ import { AgentOrchestrationException } from "../../../exceptions/exception";
 
 export type OllamaInput = {
   model: string;
+  system: string;
   messages: Array<ModelMessage>;
   tools?: ToolSet;
   temperature?: number;
@@ -30,6 +31,7 @@ export async function generateTextViaOllama(
 
     const val = await generateText({
       model: provider(input.model),
+      system: input.system,
       messages: input.messages,
       tools: input.tools,
       temperature: input.temperature,
