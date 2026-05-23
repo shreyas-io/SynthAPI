@@ -1,6 +1,13 @@
 import type { LLMConfig } from "./generation";
 
-type AgentPricingConfig = Record<string, number>;
+type AgentConfigPricing = Record<string, number>;
+
+type AgentPricingConfig = {
+  chat_config: AgentConfigPricing;
+  chat_fallback_config: AgentConfigPricing;
+  planning_config: AgentConfigPricing;
+  compaction_config: AgentConfigPricing;
+};
 
 export type AgentConfigEt = {
   id: string;

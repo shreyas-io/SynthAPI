@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 
-import type { ChatTurnBlobMimeType } from "../../../../domain/entities/chat";
+import type { ChatTurnBlobMimeType } from "../../../../domain/entities/chat_turn_blob";
 import type { IChatTurnBlobsRepository } from "../../../../domain/entities/interfaces/repositories/chat_turn_blobs";
 import type { DatabaseClient } from "../../index";
 

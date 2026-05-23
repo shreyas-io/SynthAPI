@@ -5,6 +5,8 @@ import type { DatabaseClient } from "../../index";
 type ChatSessionFilters = {
   ids?: string[];
   agent_config_ids?: string[];
+  name?: string;
+  description?: string;
   statuses?: Array<ChatSessionEt["status"]>;
 };
 
@@ -14,7 +16,7 @@ type ChatSessionPagination = {
 };
 
 type ChatSessionSort = {
-  by: "created_at";
+  by: "name" | "created_at";
   order: "asc" | "desc";
 };
 
@@ -43,7 +45,14 @@ export const list = (client: DatabaseClient): IChatSessionsRepository["list"] =>
     pagination?: ChatSessionPagination;
     sort?: ChatSessionSort;
   }): Promise<ChatSessionEt[] | Pick<ChatSessionEt, C[number]>[]> {
-    if (!filters.ids?.length && !filters.agent_config_ids?.length && !filters.statuses?.length && !pagination)
+    if (
+      !filters.ids?.length &&
+      !filters.agent_config_ids?.length &&
+      !filters.name &&
+      !filters.description &&
+      !filters.statuses?.length &&
+      !pagination
+    )
       return [];
 
     let query = client.db.selectFrom("chat_sessions");
@@ -60,6 +69,14 @@ export const list = (client: DatabaseClient): IChatSessionsRepository["list"] =>
 
     if (filters.agent_config_ids?.length) {
       query = query.where("agent_config_id", "in", filters.agent_config_ids);
+    }
+
+    if (filters.name) {
+      query = query.where("name", "ilike", `%${filters.name}%`);
+    }
+
+    if (filters.description) {
+      query = query.where("description", "ilike", `%${filters.description}%`);
     }
 
     if (filters.statuses?.length) {

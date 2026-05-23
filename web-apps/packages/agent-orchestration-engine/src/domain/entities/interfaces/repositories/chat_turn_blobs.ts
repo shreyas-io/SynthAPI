@@ -1,5 +1,5 @@
 import type { ChatTurnBlobEt } from "../../chat_turn_blob";
-import type { ChatTurnBlobMimeType } from "../../chat";
+import type { ChatTurnBlobMimeType } from "../../chat_turn_blob";
 
 type ChatTurnBlobInput = Pick<
   ChatTurnBlobEt,

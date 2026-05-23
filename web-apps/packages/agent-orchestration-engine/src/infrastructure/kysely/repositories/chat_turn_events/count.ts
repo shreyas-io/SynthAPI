@@ -1,6 +1,6 @@
 import { sql } from "kysely";
 
-import type { ChatTurnEventType } from "../../../../domain/entities/chat";
+import type { ChatTurnEventType } from "../../../../domain/entities/chat_turn_event";
 import type { IChatTurnEventsRepository } from "../../../../domain/entities/interfaces/repositories/chat_turn_events";
 import type { DatabaseClient } from "../../index";
 

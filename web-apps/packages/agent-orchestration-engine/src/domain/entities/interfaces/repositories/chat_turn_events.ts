@@ -1,5 +1,5 @@
 import type { ChatTurnEventEt } from "../../chat_turn_event";
-import type { ChatTurnEventType } from "../../chat";
+import type { ChatTurnEventType } from "../../chat_turn_event";
 
 type ChatTurnEventInput = Pick<
   ChatTurnEventEt,
