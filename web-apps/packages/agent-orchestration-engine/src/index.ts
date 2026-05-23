@@ -7,10 +7,9 @@ import {
   createPostgresDatabase,
   type DatabaseClient,
 } from "./infrastructure/kysely";
-import { AgentConfigs } from "./sdk/handlers/agent_configs";
 import { ChatSessions } from "./sdk/handlers/chat_sessions";
-import { ChatSessionTurns } from "./sdk/handlers/chat_session_turns";
 import { ChatTurnBlobs } from "./sdk/handlers/chat_turn_blobs";
+import { ChatTurnEvents } from "./sdk/handlers/chat_turn_events";
 import { TextGeneration } from "./sdk/handlers/text_generation";
 
 type ApplicationDependencies = {
@@ -32,10 +31,9 @@ export const createApplication = (app: ApplicationDependencies) => {
   };
 
   return {
-    agent_configs: AgentConfigs(ctx),
     chat_sessions: ChatSessions(ctx),
-    chat_session_turns: ChatSessionTurns(ctx),
     chat_turn_blobs: ChatTurnBlobs(ctx),
+    chat_turn_events: ChatTurnEvents(ctx),
     text_generation: TextGeneration(ctx),
     async getHealth() {
       try {

@@ -1,29 +1,29 @@
 import type { AppContext } from "../..";
-import { ChatTurnBlobsUsecase } from "../../domain/usecases/chat_turn_blobs";
+import { ChatTurnEventsUsecase } from "../../domain/usecases/chat_turn_events";
 import { AgentOrchestrationException } from "../../exceptions/exception";
 import {
-  createChatTurnBlobDto,
-  listChatTurnBlobsFilterDto,
-  listChatTurnBlobsPaginationDto,
-  listChatTurnBlobsSortDto,
-} from "../dto/chat_turn_blobs";
+  createChatTurnEventDto,
+  listChatTurnEventsFilterDto,
+  listChatTurnEventsPaginationDto,
+  listChatTurnEventsSortDto,
+} from "../dto/chat_turn_events";
 
-export function ChatTurnBlobs(ctx: AppContext) {
-  const chat_turn_blobs = ChatTurnBlobsUsecase(ctx);
+export function ChatTurnEvents(ctx: AppContext) {
+  const chat_turn_events = ChatTurnEventsUsecase(ctx);
 
   return {
-    createChatTurnBlob: (data: unknown) => {
-      const { data: v, success, error } = createChatTurnBlobDto.safeParse(data);
+    createChatTurnEvent: (data: unknown) => {
+      const { data: v, success, error } = createChatTurnEventDto.safeParse(data);
 
       if (!success)
         throw new AgentOrchestrationException({
           public_message: JSON.stringify(error.issues),
         });
 
-      return chat_turn_blobs.createChatTurnBlob(v);
+      return chat_turn_events.createChatTurnEvent(v);
     },
-    getChatTurnBlob: (id: string) => chat_turn_blobs.getChatTurnBlob(id),
-    listChatTurnBlobs: (
+    getChatTurnEvent: (id: string) => chat_turn_events.getChatTurnEvent(id),
+    listChatTurnEvents: (
       filters: unknown,
       pagination: unknown,
       sort: unknown,
@@ -32,7 +32,7 @@ export function ChatTurnBlobs(ctx: AppContext) {
         data: f,
         success: s_0,
         error: e_0,
-      } = listChatTurnBlobsFilterDto.safeParse(filters);
+      } = listChatTurnEventsFilterDto.safeParse(filters);
       if (!s_0)
         throw new AgentOrchestrationException({
           public_message: JSON.stringify(e_0.issues),
@@ -42,7 +42,7 @@ export function ChatTurnBlobs(ctx: AppContext) {
         data: p,
         success: s_1,
         error: e_1,
-      } = listChatTurnBlobsPaginationDto.safeParse(pagination);
+      } = listChatTurnEventsPaginationDto.safeParse(pagination);
       if (!s_1)
         throw new AgentOrchestrationException({
           public_message: JSON.stringify(e_1.issues),
@@ -52,25 +52,26 @@ export function ChatTurnBlobs(ctx: AppContext) {
         data: s,
         success: s_2,
         error: e_2,
-      } = listChatTurnBlobsSortDto.safeParse(sort);
+      } = listChatTurnEventsSortDto.safeParse(sort);
       if (!s_2)
         throw new AgentOrchestrationException({
           public_message: JSON.stringify(e_2.issues),
         });
 
-      return chat_turn_blobs.getChatTurnBlobs(f, p, s);
+      return chat_turn_events.getChatTurnEvents(f, p, s);
     },
-    countChatTurnBlobs: (filters: unknown) => {
+    countChatTurnEvents: (filters: unknown) => {
       const { data: f, success, error } =
-        listChatTurnBlobsFilterDto.safeParse(filters);
+        listChatTurnEventsFilterDto.safeParse(filters);
 
       if (!success)
         throw new AgentOrchestrationException({
           public_message: JSON.stringify(error.issues),
         });
 
-      return chat_turn_blobs.countChatTurnBlobs(f);
+      return chat_turn_events.countChatTurnEvents(f);
     },
-    deleteChatTurnBlob: (id: string) => chat_turn_blobs.deleteChatTurnBlob(id),
+    deleteChatTurnEvent: (id: string) =>
+      chat_turn_events.deleteChatTurnEvent(id),
   };
 }

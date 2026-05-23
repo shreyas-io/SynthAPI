@@ -1,6 +1,6 @@
 import type { AppContext } from "../..";
+import { ChatSessionsUsecase } from "../../domain/usecases/chat_sessions";
 import { AgentOrchestrationException } from "../../exceptions/exception";
-import { ChatSessionsRepository } from "../../infrastructure/kysely/repositories/chat_sessions";
 import {
   createChatSessionDto,
   listChatSessionsFilterDto,
@@ -10,7 +10,7 @@ import {
 } from "../dto/chat_sessions";
 
 export function ChatSessions(ctx: AppContext) {
-  const chat_sessions = ChatSessionsRepository(ctx.database);
+  const chat_sessions = ChatSessionsUsecase(ctx);
 
   return {
     createChatSession: (data: unknown) => {
@@ -21,8 +21,9 @@ export function ChatSessions(ctx: AppContext) {
           public_message: JSON.stringify(error.issues),
         });
 
-      return chat_sessions.create(v);
+      return chat_sessions.createChatSession(v);
     },
+    getChatSession: (id: string) => chat_sessions.getChatSession(id),
     listChatSessions: (filters: unknown, pagination: unknown, sort: unknown) => {
       const {
         data: f,
@@ -54,7 +55,7 @@ export function ChatSessions(ctx: AppContext) {
           public_message: JSON.stringify(e_2.issues),
         });
 
-      return chat_sessions.list({ filters: f, pagination: p, sort: s });
+      return chat_sessions.getChatSessions(f, p, s);
     },
     countChatSessions: (filters: unknown) => {
       const { data: f, success, error } =
@@ -65,7 +66,7 @@ export function ChatSessions(ctx: AppContext) {
           public_message: JSON.stringify(error.issues),
         });
 
-      return chat_sessions.count({ filters: f });
+      return chat_sessions.countChatSessions(f);
     },
     updateChatSession: (id: string, data: unknown) => {
       const { data: v, success, error } = updateChatSessionDto.safeParse(data);
@@ -75,8 +76,8 @@ export function ChatSessions(ctx: AppContext) {
           public_message: JSON.stringify(error.issues),
         });
 
-      return chat_sessions.update(id, v);
+      return chat_sessions.updateChatSession(id, v);
     },
-    deleteChatSession: (id: string) => chat_sessions.delete(id),
+    deleteChatSession: (id: string) => chat_sessions.deleteChatSession(id),
   };
 }
