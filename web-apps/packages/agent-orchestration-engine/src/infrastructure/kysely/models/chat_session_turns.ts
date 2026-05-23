@@ -6,11 +6,6 @@ export type ChatSessionTurnsTable = {
   chat_session_id: string;
   mode: string;
   user_input: ColumnType<JsonValue, JsonValue | string, JsonValue | string>;
-  output: ColumnType<
-    JsonValue | null,
-    JsonValue | string | null | undefined,
-    JsonValue | string | null
-  >;
   conversation_context: ColumnType<
     JsonValue | null,
     JsonValue | string | null | undefined,

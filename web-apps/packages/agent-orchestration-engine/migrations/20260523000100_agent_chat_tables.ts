@@ -67,7 +67,6 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       chat_session_id uuid not null references chat_sessions(id) on delete cascade,
       mode varchar(32) not null,
       user_input jsonb not null,
-      output jsonb,
       conversation_context jsonb,
       status varchar(32) not null default 'in_progress',
       created_at timestamptz not null default now(),
