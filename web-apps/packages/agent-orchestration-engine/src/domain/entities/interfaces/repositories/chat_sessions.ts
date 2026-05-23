@@ -36,7 +36,7 @@ export interface IChatSessionsRepository {
         offset: number;
       };
       sort?: {
-        by: "created_at";
+        by: "name" | "created_at";
         order: "asc" | "desc";
       };
     }): Promise<ChatSessionEt[]>;
@@ -54,7 +54,7 @@ export interface IChatSessionsRepository {
         offset: number;
       };
       sort?: {
-        by: "created_at";
+        by: "name" | "created_at";
         order: "asc" | "desc";
       };
     }): Promise<Pick<ChatSessionEt, C[number]>[]>;

@@ -7,7 +7,11 @@ import {
   createPostgresDatabase,
   type DatabaseClient,
 } from "./infrastructure/kysely";
-import { generateText } from "./infrastructure/ai";
+import { AgentConfigs } from "./sdk/handlers/agent_configs";
+import { ChatSessions } from "./sdk/handlers/chat_sessions";
+import { ChatSessionTurns } from "./sdk/handlers/chat_session_turns";
+import { ChatTurnBlobs } from "./sdk/handlers/chat_turn_blobs";
+import { TextGeneration } from "./sdk/handlers/text_generation";
 
 type ApplicationDependencies = {
   environment: Environment;
@@ -28,7 +32,11 @@ export const createApplication = (app: ApplicationDependencies) => {
   };
 
   return {
-    text_generation: generateText(ctx),
+    agent_configs: AgentConfigs(ctx),
+    chat_sessions: ChatSessions(ctx),
+    chat_session_turns: ChatSessionTurns(ctx),
+    chat_turn_blobs: ChatTurnBlobs(ctx),
+    text_generation: TextGeneration(ctx),
     async getHealth() {
       try {
         await database.checkHealth();
