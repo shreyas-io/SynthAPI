@@ -7,6 +7,7 @@ import { signout } from "../../features/auth/api/auth_api";
 export function AppLayout() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
   const signoutMutation = useMutation({
     mutationFn: signout,
     async onSuccess() {
@@ -19,12 +20,16 @@ export function AppLayout() {
     <div className="app-shell">
       <div className="app-main">
         <header className="top-header">
-          <Link className="button" to="/projects">
-            Projects
-          </Link>
-          <button onClick={() => signoutMutation.mutate()}>Sign out</button>
+          <div className="header-left">
+            <Link className="brand" to="/projects">
+              synthapi
+            </Link>
+          </div>
+          <button className="button secondary-btn" onClick={() => signoutMutation.mutate()}>Sign out</button>
         </header>
-        <Outlet />
+        <div className="app-content-wrapper">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

@@ -17,8 +17,6 @@ import type {
   VariableScope,
 } from "../types";
 
-type EditorTab = "response" | "rule_tree" | "post_actions";
-
 type KeyValueRow = {
   id: string;
   key: string;
@@ -48,65 +46,45 @@ const createId = () => crypto.randomUUID();
 
 const stringifyValue = (value: unknown): string => {
   if (typeof value === "string") return value;
-  if (value === undefined) return "";
-  return JSON.stringify(value, null, 2);
+  return JSON.stringify(value);
 };
 
-const parseValue = (value: string): PostResponseActionValue => {
-  if (!value.trim()) return "";
-
-  return JSON.parse(value) as PostResponseActionValue;
+const parseValue = (value: string): unknown => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 };
 
-const rowsFromRecord = (record: Record<string, unknown>): KeyValueRow[] => {
-  const rows = Object.entries(record).map(([key, value]) => ({
+const rowsFromRecord = (record: Record<string, unknown>): KeyValueRow[] =>
+  Object.entries(record).map(([key, value]) => ({
     id: createId(),
     key,
     value: stringifyValue(value),
   }));
 
-  return rows.length ? rows : [{ id: createId(), key: "", value: "" }];
-};
-
-const recordFromRows = (rows: KeyValueRow[]): Record<string, string> => {
-  return Object.fromEntries(
-    rows
-      .map((row) => [row.key.trim(), row.value] as const)
-      .filter(([key]) => key.length > 0),
-  );
-};
+const recordFromRows = (rows: KeyValueRow[]): Record<string, unknown> =>
+  rows.reduce((acc, { key, value }) => {
+    if (!key.trim()) return acc;
+    return { ...acc, [key]: parseValue(value) };
+  }, {});
 
 const bodyTextFromResponse = (body: ResponseBody): string => {
   if (body.type === "empty") return "";
-  if (body.type === "text") return body.value;
-  return JSON.stringify(body.value, null, 2);
-};
-
-type LegacyRulePredicate = RuleTree["predicates"][number] & {
-  children?: RuleTree[];
+  if (body.type === "json") return JSON.stringify(body.value, null, 2);
+  return body.value;
 };
 
 const normalizeRuleTree = (ruleTree: RuleTree | null): RuleTree | null => {
   if (!ruleTree) return null;
 
-  const predicates = ruleTree.predicates.map((predicate) => {
-    const { children: _children, ...next } = predicate as LegacyRulePredicate;
-
-    return next;
-  });
-  const predicateBranches = ruleTree.predicates
-    .map((predicate) => predicate as LegacyRulePredicate)
-    .filter((predicate) => predicate.children?.length)
-    .map((predicate) => {
-      const { children, ...next } = predicate;
-
-      return {
-        label: `${predicate.label} branch`,
-        type: "and" as const,
-        predicates: [next],
-        children: (children ?? []).map(normalizeRuleTree).filter(Boolean),
-      } as RuleTree;
-    });
+  const predicates = ruleTree.predicates.filter((pred) => pred.actual.trim());
+  const predicateBranches = predicates.map((pred) => ({
+    label: pred.label,
+    type: "and" as const,
+    predicates: [pred],
+  }));
 
   return {
     label: ruleTree.label,
@@ -175,140 +153,45 @@ function KeyValueRows({
         <h3>{label}</h3>
         <button
           type="button"
+          className="secondary-btn"
+          style={{ padding: "0.2rem 0.5rem" }}
           onClick={() => onChange([...rows, { id: createId(), key: "", value: "" }])}
         >
           Add
         </button>
       </div>
-      {rows.map((row) => (
-        <div className="key-value-row" key={row.id}>
+      {rows.map((row, index) => (
+        <div key={row.id} className="key-value-row">
           <input
             placeholder="key"
             value={row.key}
-            onChange={(event) =>
+            onChange={(e) =>
               onChange(
-                rows.map((item) =>
-                  item.id === row.id ? { ...item, key: event.target.value } : item,
-                ),
+                rows.map((r) => (r.id === row.id ? { ...r, key: e.target.value } : r)),
               )
             }
           />
           <input
             placeholder="value"
             value={row.value}
-            onChange={(event) =>
+            onChange={(e) =>
               onChange(
-                rows.map((item) =>
-                  item.id === row.id
-                    ? { ...item, value: event.target.value }
-                    : item,
+                rows.map((r) =>
+                  r.id === row.id ? { ...r, value: e.target.value } : r,
                 ),
               )
             }
           />
           <button
             type="button"
-            onClick={() => onChange(rows.filter((item) => item.id !== row.id))}
+            className="secondary-btn icon-btn"
+            onClick={() => onChange(rows.filter((r) => r.id !== row.id))}
           >
-            Remove
+            ×
           </button>
         </div>
       ))}
     </section>
-  );
-}
-
-function VariablesList({
-  title,
-  prefix,
-  variables,
-}: {
-  title: string;
-  prefix: "constants" | "globals" | "variables";
-  variables: Variable[] | null | undefined;
-}) {
-  return (
-    <section className="variable-reference-section">
-      <h3>{title}</h3>
-      {!variables?.length && <p>No variables configured.</p>}
-      {variables?.map((variable) => (
-        <div className="variable-reference-card" key={variable.name}>
-          <strong>{variable.name}</strong>
-          <small>
-            {variable.type} · {`{{${prefix}.${variable.name}}}`}
-          </small>
-          <code>{stringifyValue(variable.value)}</code>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function VariablesReference({ mockApiId }: { mockApiId: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const mockApi = useQuery({
-    queryKey: queryKeys.mockApi(mockApiId),
-    queryFn: () => getMockApi(mockApiId),
-  });
-  const project = useQuery({
-    queryKey: queryKeys.project(mockApi.data?.project_id ?? ""),
-    enabled: Boolean(mockApi.data?.project_id),
-    queryFn: () => {
-      if (!mockApi.data?.project_id) {
-        throw new Error("Missing project ID");
-      }
-
-      return getProject(mockApi.data.project_id);
-    },
-  });
-
-  return (
-    <>
-      <button
-        className="variable-reference-toggle"
-        type="button"
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <span>
-          <span className="eyebrow">Variables</span>
-          <strong>Template references</strong>
-        </span>
-        <span>Open</span>
-      </button>
-      {isOpen && (
-        <div className="variable-reference-modal-backdrop">
-          <aside className="variable-reference-modal card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Variables</p>
-                <h2>Template references</h2>
-              </div>
-              <button type="button" onClick={() => setIsOpen(false)}>
-                Close
-              </button>
-            </div>
-            {(mockApi.isPending || project.isPending) && <p>Loading variables...</p>}
-            {mockApi.isError && <p className="error">{mockApi.error.message}</p>}
-            {project.isError && <p className="error">{project.error.message}</p>}
-            <VariablesList
-              title="Constants"
-              prefix="constants"
-              variables={project.data?.constants}
-            />
-            <VariablesList
-              title="Globals"
-              prefix="globals"
-              variables={project.data?.globals}
-            />
-            <VariablesList
-              title="Local variables"
-              prefix="variables"
-              variables={mockApi.data?.variables}
-            />
-          </aside>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -321,132 +204,133 @@ function PostActionForm({
   onChange: (action: PostResponseAction) => void;
   onRemove: () => void;
 }) {
-  const [valueText, setValueText] = useState(
-    "value" in action ? stringifyValue(action.value) : "",
-  );
-  const [valueError, setValueError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setValueText("value" in action ? stringifyValue(action.value) : "");
-    setValueError(null);
-  }, [action]);
-
   return (
-    <article className="post-action-card">
+    <div className="post-action-card form">
       <div className="section-heading">
-        <h3>{action.type}</h3>
-        <button type="button" onClick={onRemove}>
-          Remove
+        <select
+          value={action.type}
+          onChange={(e) =>
+            onChange(
+              createAction(e.target.value as PostResponseAction["type"], action.order),
+            )
+          }
+        >
+          {actionTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="icon-btn" onClick={onRemove}>
+          ×
         </button>
-      </div>
-      <div className="form-grid">
-        <label>
-          Type
-          <select
-            value={action.type}
-            onChange={(event) =>
-              onChange(
-                createAction(
-                  event.target.value as PostResponseAction["type"],
-                  action.order,
-                ),
-              )
-            }
-          >
-            {actionTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Order
-          <input
-            type="number"
-            value={action.order}
-            onChange={(event) =>
-              onChange({ ...action, order: Number(event.target.value) })
-            }
-          />
-        </label>
       </div>
 
       {action.type === "script" ? (
-        <label>
-          Python code
-          <textarea
-            value={action.code}
-            onChange={(event) => onChange({ ...action, code: event.target.value })}
-          />
-        </label>
+        <JsonInput
+          label="Python script"
+          value={action.code}
+          onChange={(value) => onChange({ ...action, code: value })}
+        />
       ) : (
-        <>
-          <div className="form-grid">
-            <label>
-              Scope
-              <select
-                value={action.scope}
-                onChange={(event) =>
-                  onChange({
-                    ...action,
-                    scope: event.target.value as VariableScope,
-                  })
-                }
-              >
-                <option value="local">local</option>
-                <option value="global">global</option>
-              </select>
-            </label>
-            <label>
-              Key
-              <input
-                value={action.key}
-                onChange={(event) =>
-                  onChange({ ...action, key: event.target.value })
-                }
-              />
-            </label>
-          </div>
-
-          {(action.type === "increment" || action.type === "decrement") && (
+        <div className="form-grid">
+          <label>
+            Scope
+            <select
+              value={action.scope}
+              onChange={(e) =>
+                onChange({ ...action, scope: e.target.value as VariableScope })
+              }
+            >
+              <option value="local">local</option>
+              <option value="global">global</option>
+            </select>
+          </label>
+          <label>
+            Key
+            <input
+              placeholder="e.g. counter"
+              value={action.key}
+              onChange={(e) => onChange({ ...action, key: e.target.value })}
+            />
+          </label>
+          {action.type === "increment" || action.type === "decrement" ? (
             <label>
               Amount
               <input
                 type="number"
                 value={action.amount}
-                onChange={(event) =>
-                  onChange({ ...action, amount: Number(event.target.value) })
-                }
+                onChange={(e) => onChange({ ...action, amount: Number(e.target.value) })}
+              />
+            </label>
+          ) : action.type === "unset" ? null : (
+            <label>
+              Value
+              <input
+                placeholder="e.g. {{request.body.id}}"
+                value={String((action as any).value ?? "")}
+                onChange={(e) => onChange({ ...action, value: e.target.value } as PostResponseAction)}
               />
             </label>
           )}
-
-          {(action.type === "set" ||
-            action.type === "append" ||
-            action.type === "remove") && (
-            <JsonInput
-              label="Value"
-              value={valueText}
-              error={valueError}
-              onChange={(value) => {
-                setValueText(value);
-
-                try {
-                  onChange({
-                    ...action,
-                    value: parseValue(value),
-                  });
-                  setValueError(null);
-                } catch {
-                  setValueError("Invalid JSON.");
-                }
-              }}
-            />
-          )}
-        </>
+        </div>
       )}
-    </article>
+    </div>
+  );
+}
+
+function VariablesReference({ mockApiId }: { mockApiId: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const mockApi = useQuery({
+    queryKey: queryKeys.mockApi(mockApiId),
+    queryFn: () => getMockApi(mockApiId),
+  });
+
+  const project = useQuery({
+    queryKey: queryKeys.project(mockApi.data?.project_id ?? ""),
+    queryFn: () => getProject(mockApi.data?.project_id ?? ""),
+    enabled: !!mockApi.data?.project_id,
+  });
+
+  const renderVars = (title: string, vars?: Variable[] | null) => {
+    if (!vars?.length) return null;
+    return (
+      <div className="variable-reference-section">
+        <h3>{title}</h3>
+        {vars.map((v) => (
+          <div key={v.name} className="variable-reference-card">
+            <small>{v.name}</small>
+            <code>{`{{${title === "Local variables" ? "variables" : title === "Constants" ? "constants" : "globals"}.${v.name}}}`}</code>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <button type="button" onClick={() => setIsOpen(true)} className="secondary-btn" style={{ padding: "0.2rem 0.5rem" }}>
+        Variables Ref
+      </button>
+
+      {isOpen && (
+        <div className="variable-reference-modal-backdrop">
+          <section className="variable-reference-modal card">
+            <div className="section-heading">
+              <h2>Variables Reference</h2>
+              <button type="button" onClick={() => setIsOpen(false)}>
+                Close
+              </button>
+            </div>
+            <p>You can use these variables in your templates (body, headers, expected values, etc).</p>
+            {renderVars("Project globals", project.data?.globals)}
+            {renderVars("Constants", project.data?.constants)}
+            {renderVars("Local variables", mockApi.data?.variables)}
+          </section>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -462,8 +346,9 @@ export function MockApiResponseEditor({
     type: "json" as const,
     value: { ok: true },
   };
-  const [activeTab, setActiveTab] = useState<EditorTab>("response");
+
   const [name, setName] = useState(initialResponse?.name ?? "");
+  const [leftTab, setLeftTab] = useState<"response" | "actions">("response");
   const [isDefault, setIsDefault] = useState(initialResponse?.is_default ?? false);
   const [statusCode, setStatusCode] = useState(
     initialResponse?.response.status_code ?? 200,
@@ -533,7 +418,6 @@ export function MockApiResponseEditor({
       }
     } catch {
       setBodyJsonError("Invalid JSON.");
-      setActiveTab("response");
       return;
     }
 
@@ -553,36 +437,40 @@ export function MockApiResponseEditor({
 
   return (
     <form className="response-editor-shell" onSubmit={submit}>
-      <section className="response-editor-main card">
-        <div className="editor-toolbar">
-          <div>
-            <p className="eyebrow">Mock API response</p>
-            <h1>{initialResponse ? initialResponse.name : "Create mock response"}</h1>
+      <div className="editor-toolbar" style={{ padding: "0.5rem", background: "transparent", border: "none" }}>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center", width: "100%" }}>
+          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>{initialResponse ? initialResponse.name : "Create mock response"}</h2>
+          <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
+             <VariablesReference mockApiId={mockApiId} />
+             <button disabled={isPending || !mockApiId} style={{ padding: "0.2rem 0.5rem" }}>{submitLabel}</button>
           </div>
-          <VariablesReference mockApiId={mockApiId} />
-          <button disabled={isPending || !mockApiId}>{submitLabel}</button>
         </div>
+      </div>
 
-        <nav className="editor-tabs" aria-label="Response editor tabs">
-          {[
-            ["response", "Mock API Response"],
-            ["rule_tree", "Rule Tree"],
-            ["post_actions", "Post Actions"],
-          ].map(([tab, label]) => (
+      <section className="response-editor-main" style={{ display: "grid", gridTemplateColumns: "350px 1fr", gap: "1.5rem" }}>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div className="editor-tabs" style={{ gap: "0.5rem", flexWrap: "wrap", borderBottom: "none", paddingBottom: 0 }}>
             <button
-              className={activeTab === tab ? "active" : ""}
-              key={tab}
+              className={leftTab === "response" ? "active" : "secondary-btn"}
               type="button"
-              onClick={() => setActiveTab(tab as EditorTab)}
+              onClick={() => setLeftTab("response")}
+              style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem", borderRadius: "4px" }}
             >
-              {label}
+              Response Config
             </button>
-          ))}
-        </nav>
+            <button
+              className={leftTab === "actions" ? "active" : "secondary-btn"}
+              type="button"
+              onClick={() => setLeftTab("actions")}
+              style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem", borderRadius: "4px" }}
+            >
+              Post Actions
+            </button>
+          </div>
 
-        {activeTab === "response" && (
-          <section className="editor-tab-panel form">
-            <div className="form-grid">
+          {leftTab === "response" && (
+            <div className="card form">
               <label>
                 Name
                 <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -595,109 +483,113 @@ export function MockApiResponseEditor({
                   onChange={(e) => setStatusCode(Number(e.target.value))}
                 />
               </label>
-            </div>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={isDefault}
-                onChange={(e) => setIsDefault(e.target.checked)}
-              />
-              Default response
-            </label>
-            <label>
-              Body type
-              <select
-                value={bodyType}
-                onChange={(event) =>
-                  setBodyType(event.target.value as ResponseBody["type"])
-                }
-              >
-                <option value="json">json</option>
-                <option value="text">text</option>
-                <option value="empty">empty</option>
-              </select>
-            </label>
-            {bodyType !== "empty" && (
-              bodyType === "json" ? (
-                <JsonInput
-                  label="Response body"
-                  value={bodyText}
-                  error={bodyJsonError}
-                  onChange={(value) => {
-                    setBodyText(value);
-                    setBodyJsonError(null);
-                  }}
+              <label className="checkbox">
+                <input
+                  type="checkbox"
+                  checked={isDefault}
+                  onChange={(e) => setIsDefault(e.target.checked)}
                 />
-              ) : (
-                <label>
-                  Response body
-                  <textarea
+                Default response
+              </label>
+              <label>
+                Body type
+                <select
+                  value={bodyType}
+                  onChange={(event) =>
+                    setBodyType(event.target.value as ResponseBody["type"])
+                  }
+                >
+                  <option value="json">json</option>
+                  <option value="text">text</option>
+                  <option value="empty">empty</option>
+                </select>
+              </label>
+              {bodyType !== "empty" && (
+                bodyType === "json" ? (
+                  <JsonInput
+                    label="Response body"
                     value={bodyText}
-                    onChange={(e) => setBodyText(e.target.value)}
+                    error={bodyJsonError}
+                    onChange={(value) => {
+                      setBodyText(value);
+                      setBodyJsonError(null);
+                    }}
                   />
-                </label>
-              )
-            )}
-            <KeyValueRows label="Headers" rows={headers} onChange={setHeaders} />
-            <KeyValueRows label="Cookies" rows={cookies} onChange={setCookies} />
-          </section>
-        )}
-
-        {activeTab === "rule_tree" && (
-          <section className="editor-tab-panel">
-            {isDefault && !ruleTree ? (
-              <div className="empty-state">
-                Default responses do not use rule trees.
-              </div>
-            ) : (
-              <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
-            )}
-          </section>
-        )}
-
-        {activeTab === "post_actions" && (
-          <section className="editor-tab-panel post-actions-panel">
-            <div className="section-heading">
-              <div>
-                <h2>Post response actions</h2>
-                <p>Actions run after the mock response is selected.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setPostActions([
-                    ...postActions,
-                    createAction("set", postActions.length + 1),
-                  ])
-                }
-              >
-                Add action
-              </button>
+                ) : (
+                  <label>
+                    Response body
+                    <textarea
+                      value={bodyText}
+                      onChange={(e) => setBodyText(e.target.value)}
+                    />
+                  </label>
+                )
+              )}
+              <KeyValueRows label="Headers" rows={headers} onChange={setHeaders} />
+              <KeyValueRows label="Cookies" rows={cookies} onChange={setCookies} />
             </div>
-            {!postActions.length && <p>No post response actions configured.</p>}
-            {postActions.map((action, index) => (
-              <PostActionForm
-                action={action}
-                key={index}
-                onChange={(nextAction) =>
-                  setPostActions(
-                    postActions.map((item, itemIndex) =>
-                      itemIndex === index ? nextAction : item,
-                    ),
-                  )
-                }
-                onRemove={() =>
-                  setPostActions(
-                    postActions.filter((_item, itemIndex) => itemIndex !== index),
-                  )
-                }
-              />
-            ))}
-          </section>
-        )}
+          )}
+
+          {leftTab === "actions" && (
+            <div className="card post-actions-panel">
+              <div className="section-heading" style={{ marginBottom: "1rem" }}>
+                <div>
+                  <h3 style={{ margin: 0 }}>Post response actions</h3>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-btn"
+                  style={{ padding: "0.2rem 0.5rem" }}
+                  onClick={() =>
+                    setPostActions([
+                      ...postActions,
+                      createAction("set", postActions.length + 1),
+                    ])
+                  }
+                >
+                  + Add
+                </button>
+              </div>
+              {!postActions.length && <p style={{ fontSize: "0.8rem", opacity: 0.7 }}>No post response actions configured.</p>}
+              {postActions.map((action, index) => (
+                <PostActionForm
+                  action={action}
+                  key={index}
+                  onChange={(nextAction) =>
+                    setPostActions(
+                      postActions.map((item, itemIndex) =>
+                        itemIndex === index ? nextAction : item,
+                      ),
+                    )
+                  }
+                  onRemove={() =>
+                    setPostActions(
+                      postActions.filter((_item, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="card" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 12rem)" }}>
+          <div className="section-heading" style={{ marginBottom: "0.5rem" }}>
+            <h3 style={{ margin: 0 }}>Rule Tree</h3>
+          </div>
+          {isDefault && !ruleTree ? (
+            <div className="empty-state">
+              Default responses do not use rule trees.
+            </div>
+          ) : (
+            <div style={{ flex: 1, minHeight: 0 }}>
+              <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
+            </div>
+          )}
+        </div>
 
         {(formError || errorMessage) && (
-          <p className="error">{formError ?? errorMessage}</p>
+          <p className="error" style={{ gridColumn: "1 / -1" }}>{formError ?? errorMessage}</p>
         )}
       </section>
     </form>

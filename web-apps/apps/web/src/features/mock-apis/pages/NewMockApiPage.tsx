@@ -16,6 +16,7 @@ export function NewMockApiPage() {
   const [method, setMethod] = useState<HttpMethod>("POST");
   const [path, setPath] = useState("/posts");
   const [description, setDescription] = useState("");
+  
   const mutation = useMutation({
     mutationFn: createMockApi,
     async onSuccess(mockApi) {
@@ -24,7 +25,7 @@ export function NewMockApiPage() {
           queryKey: queryKeys.mockApis(projectId),
         });
       }
-      navigate(`/mock-apis/${mockApi.id}`);
+      navigate(`/projects/${projectId}/mock-apis/${mockApi.id}`);
     },
   });
 
@@ -43,7 +44,7 @@ export function NewMockApiPage() {
   };
 
   return (
-    <main className="page narrow">
+    <main className="page-content" style={{ padding: "0 1rem", maxWidth: "600px" }}>
       <form className="card form" onSubmit={submit}>
         <p className="eyebrow">New mock API</p>
         <h1>Create endpoint</h1>
