@@ -1,48 +1,25 @@
 import "dotenv/config";
 
-import { promises as fs } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-import {
-  FileMigrationProvider,
-  Kysely,
-  Migrator,
-  PostgresDialect,
-} from "kysely";
+import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 
 import { getSecrets } from "../../config/secrets";
+import { rollbackMigrations, runMigrations } from "./run_migrations";
 
 const { Pool } = pg;
 
 type Database = Record<string, never>;
 
-const dirname = path.dirname(fileURLToPath(import.meta.url));
-const migrationFolder = path.join(dirname, "../../../migrations");
-
 const buildConnectionString = (
   secrets: Awaited<ReturnType<typeof getSecrets>>,
 ) => {
-  const user = encodeURIComponent(secrets.API_GATEWAY_DB_USER);
-  const password = encodeURIComponent(secrets.API_GATEWAY_DB_PASS);
-  const host = secrets.API_GATEWAY_DB_HOST;
-  const port = String(secrets.API_GATEWAY_DB_PORT);
-  const name = secrets.API_GATEWAY_DB_NAME;
+  const user = encodeURIComponent(secrets.DB_USER);
+  const password = encodeURIComponent(secrets.DB_PASS);
+  const host = secrets.DB_HOST;
+  const port = String(secrets.DB_PORT);
+  const name = secrets.DB_NAME;
 
   return `postgres://${user}:${password}@${host}:${port}/${name}`;
-};
-
-const logResults = (
-  results: Awaited<ReturnType<Migrator["migrateToLatest"]>>["results"],
-) => {
-  results?.forEach((result) => {
-    if (result.status === "Success") {
-      console.log(`migration "${result.migrationName}" succeeded`);
-    } else if (result.status === "Error") {
-      console.error(`migration "${result.migrationName}" failed`);
-    }
-  });
 };
 
 const run = async () => {
@@ -61,26 +38,12 @@ const run = async () => {
       }),
     }),
   });
-  const migrator = new Migrator({
-    db,
-    provider: new FileMigrationProvider({
-      fs,
-      path,
-      migrationFolder,
-    }),
-  });
 
   try {
-    const result =
-      command === "latest"
-        ? await migrator.migrateToLatest()
-        : await migrator.migrateDown();
-
-    logResults(result.results);
-
-    if (result.error) {
-      console.error(result.error);
-      process.exitCode = 1;
+    if (command === "latest") {
+      await runMigrations(db);
+    } else {
+      await rollbackMigrations(db);
     }
   } finally {
     await db.destroy();

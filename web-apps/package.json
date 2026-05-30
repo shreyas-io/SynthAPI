@@ -2,14 +2,13 @@
   "name": "mock-stack",
   "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@10.15.1",
+  "packageManager": "pnpm@11.1.1",
   "scripts": {
     "dev": "pnpm dev:local",
     "dev:local": "pnpm --filter @mock-stack/agent-orchestration-engine run build && pnpm --filter @mock-stack/mockapi-engine run build && pnpm --parallel --stream --filter @mock-stack/agent-orchestration-engine --filter @mock-stack/mockapi-engine --filter @mock-stack/api --filter @mock-stack/web run \"/^dev$|^build:watch$/\"",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "docker:api": "docker build -f apps/api/Dockerfile -t mock-stack-api .",
     "deploy:web": "pnpm --filter @mock-stack/web run deploy"
   }
 }

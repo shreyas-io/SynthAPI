@@ -1,17 +1,13 @@
-import { type ModelMessage } from "ai";
+import { type ModelMessage, type StreamTextResult } from "ai";
 
 import { AppContext } from "../../..";
-import {
-  GenerationRequest,
-  GenerationResponse,
-} from "../../../domain/entities/generation";
-import { ITextGeneration } from "../../../domain/entities/interfaces/text_generation";
+import { GenerationRequest } from "../../../domain/entities/generation";
 import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import { generateTextViaCloudflareWorkersAi } from "../hosts/cloudflare";
-import { generateTextViaOpenRouter } from "../hosts/openrouter";
+import { streamTextViaCloudflareWorkersAi } from "../hosts/cloudflare_stream";
+import { streamTextViaOpenRouter } from "../hosts/openrouter_stream";
 import { toModelMessages } from "../to_model_messages";
 import { toToolSet } from "../to_tool_set";
 
@@ -46,47 +42,11 @@ const getRawContext = (request: GenerationRequest): RawContext => {
   });
 };
 
-const toGenerationResponse = (
-  request: GenerationRequest,
-  result: Awaited<ReturnType<typeof generateTextViaOpenRouter>>,
-): GenerationResponse => {
-  const content: GenerationResponse["content"] = [];
-  const inputMessages = toModelMessages(request);
-  const rawMessages = [...getRawContext(request).messages, ...inputMessages];
-
-  const text = result.text?.trim();
-  if (text) {
-    content.push({
-      role: "assistant",
-      content: [{ type: "text", text }],
-    });
-  }
-
-  if (result.toolCalls?.length) {
-    content.push({
-      role: "tool_call_request",
-      content: result.toolCalls.map((tc: { toolCallId: string; toolName: string; input: unknown }) => ({
-        tool_use_id: tc.toolCallId,
-        name: tc.toolName,
-        input: JSON.stringify(tc.input),
-        metadata: tc,
-      })),
-    });
-  }
-
+export function streamTextViaGoogle(ctx: AppContext) {
   return {
-    content,
-    raw: {
-      model_provider: "google",
-      model_host: request.config.model_host,
-      messages: [...rawMessages, ...(result.response.messages as ModelMessage[])],
-    },
-  };
-};
-
-export function generateTextViaGoogle(ctx: AppContext): ITextGeneration {
-  return {
-    generateText: async (request: GenerationRequest) => {
+    streamText: async (
+      request: GenerationRequest,
+    ): Promise<StreamTextResult<any, any>> => {
       if (
         request.config.model_host !== "openrouter" &&
         request.config.model_host !== "workers_ai"
@@ -100,7 +60,7 @@ export function generateTextViaGoogle(ctx: AppContext): ITextGeneration {
 
       const result =
         request.config.model_host === "workers_ai"
-          ? await generateTextViaCloudflareWorkersAi(ctx, {
+          ? await streamTextViaCloudflareWorkersAi(ctx, {
               model: request.config.model_id,
               system: request.config.system_prompt,
               messages: [...getRawContext(request).messages, ...inputMessages],
@@ -108,7 +68,7 @@ export function generateTextViaGoogle(ctx: AppContext): ITextGeneration {
               temperature: request.config.temperature,
               maxOutputTokens: request.config.max_tokens,
             })
-          : await generateTextViaOpenRouter(ctx, {
+          : await streamTextViaOpenRouter(ctx, {
               model: request.config.model_id,
               system: request.config.system_prompt,
               messages: [...getRawContext(request).messages, ...inputMessages],
@@ -118,7 +78,7 @@ export function generateTextViaGoogle(ctx: AppContext): ITextGeneration {
               model_gateway: request.config.model_gateway,
             });
 
-      return toGenerationResponse(request, result);
+      return result;
     },
   };
 }

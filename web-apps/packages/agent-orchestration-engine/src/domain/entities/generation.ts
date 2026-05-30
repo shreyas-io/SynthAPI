@@ -1,3 +1,5 @@
+import type { ToolDefinition } from "./tool";
+
 export type ToolCallRequest = {
   tool_use_id: string; // vendor tool reference ID
   name: string;
@@ -37,6 +39,7 @@ export type LLMConfig = {
       }
   >;
   tools: Array<unknown>;
+  custom_tools: Array<ToolDefinition>;
   temperature: number;
   max_tokens: number;
 };

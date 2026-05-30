@@ -3,7 +3,7 @@ _transform: true
 
 services:
   - name: mock-stack-backend
-    url: http://web-apps:3001
+    url: http://api:3001
     routes:
       - name: api-control-plane
         paths:
@@ -29,3 +29,12 @@ services:
                   if slug then
                     kong.service.request.set_header("x-project-slug", slug)
                   end
+
+  - name: mock-stack-web
+    url: http://web:5173
+    routes:
+      - name: web-ui
+        paths:
+          - /
+        strip_path: false
+        preserve_host: true

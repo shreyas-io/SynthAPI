@@ -1,16 +1,12 @@
-import { type ModelMessage } from "ai";
+import { type ModelMessage, type StreamTextResult } from "ai";
 
 import { AppContext } from "../../..";
-import {
-  GenerationRequest,
-  GenerationResponse,
-} from "../../../domain/entities/generation";
-import { ITextGeneration } from "../../../domain/entities/interfaces/text_generation";
+import { GenerationRequest } from "../../../domain/entities/generation";
 import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import { generateTextViaOllama } from "../hosts/ollama";
+import { streamTextViaOllama } from "../hosts/ollama_stream";
 import { toModelMessages } from "../to_model_messages";
 import { toToolSet } from "../to_tool_set";
 
@@ -45,47 +41,11 @@ const getRawContext = (request: GenerationRequest): RawContext => {
   });
 };
 
-const toGenerationResponse = (
-  request: GenerationRequest,
-  result: Awaited<ReturnType<typeof generateTextViaOllama>>,
-): GenerationResponse => {
-  const content: GenerationResponse["content"] = [];
-  const inputMessages = toModelMessages(request);
-  const rawMessages = [...getRawContext(request).messages, ...inputMessages];
-
-  const text = result.text?.trim();
-  if (text) {
-    content.push({
-      role: "assistant",
-      content: [{ type: "text", text }],
-    });
-  }
-
-  if (result.toolCalls?.length) {
-    content.push({
-      role: "tool_call_request",
-      content: result.toolCalls.map((tc: { toolCallId: string; toolName: string; input: unknown }) => ({
-        tool_use_id: tc.toolCallId,
-        name: tc.toolName,
-        input: JSON.stringify(tc.input),
-        metadata: tc,
-      })),
-    });
-  }
-
+export function streamTextViaMeta(ctx: AppContext) {
   return {
-    content,
-    raw: {
-      model_provider: "meta",
-      model_host: "ollama",
-      messages: [...rawMessages, ...(result.response.messages as ModelMessage[])],
-    },
-  };
-};
-
-export function generateTextViaMeta(ctx: AppContext): ITextGeneration {
-  return {
-    generateText: async (request: GenerationRequest) => {
+    streamText: async (
+      request: GenerationRequest,
+    ): Promise<StreamTextResult<any, any>> => {
       if (request.config.model_host !== "ollama") {
         throw new AgentOrchestrationException({
           public_message: `Host '${request.config.model_host}' is not supported for provider '${request.config.model_provider}'.`,
@@ -94,7 +54,7 @@ export function generateTextViaMeta(ctx: AppContext): ITextGeneration {
 
       const inputMessages = toModelMessages(request);
 
-      const result = await generateTextViaOllama(ctx, {
+      const result = await streamTextViaOllama(ctx, {
         model: request.config.model_id,
         system: request.config.system_prompt,
         messages: [...getRawContext(request).messages, ...inputMessages],
@@ -103,7 +63,7 @@ export function generateTextViaMeta(ctx: AppContext): ITextGeneration {
         maxOutputTokens: request.config.max_tokens,
       });
 
-      return toGenerationResponse(request, result);
+      return result;
     },
   };
 }

@@ -36,6 +36,19 @@ const inputMessageDto = z.discriminatedUnion("role", [
   }),
 ]);
 
+import { toolKeys } from "../../domain/entities/tool_keys";
+
+const toolDefinitionDto = z.object({
+  name: z.enum(toolKeys),
+  description: z.string(),
+  input_schema: z.object({
+    type: z.literal("object"),
+    description: z.string(),
+    properties: z.record(z.string(), z.any()),
+    required: z.array(z.string()),
+  }),
+});
+
 export const llmConfigDto = z.object({
   model_host: agentModelHostDto,
   model_provider: agentModelProviderDto,
@@ -44,6 +57,7 @@ export const llmConfigDto = z.object({
   system_prompt: z.string(),
   input_messages: inputMessageDto.array(),
   tools: z.unknown().array(),
+  custom_tools: toolDefinitionDto.array(),
   temperature: z.number(),
   max_tokens: z.number(),
 });

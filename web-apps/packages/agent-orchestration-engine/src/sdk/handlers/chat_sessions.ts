@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { AppContext } from "../..";
 import { ChatSessionsUsecase } from "../../domain/usecases/chat_sessions";
 import { AgentOrchestrationException } from "../../exceptions/exception";
@@ -24,7 +25,11 @@ export function ChatSessions(ctx: AppContext) {
       return chat_sessions.createChatSession(v);
     },
     getChatSession: (id: string) => chat_sessions.getChatSession(id),
-    listChatSessions: (filters: unknown, pagination: unknown, sort: unknown) => {
+    listChatSessions: (
+      filters: unknown,
+      pagination: unknown,
+      sort: unknown,
+    ) => {
       const {
         data: f,
         success: s_0,
@@ -57,9 +62,12 @@ export function ChatSessions(ctx: AppContext) {
 
       return chat_sessions.getChatSessions(f, p, s);
     },
-    countChatSessions: (filters: unknown) => {
-      const { data: f, success, error } =
-        listChatSessionsFilterDto.safeParse(filters);
+    countChatSessions: (filters: z.infer<typeof listChatSessionsFilterDto>) => {
+      const {
+        data: f,
+        success,
+        error,
+      } = listChatSessionsFilterDto.safeParse(filters);
 
       if (!success)
         throw new AgentOrchestrationException({

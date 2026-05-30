@@ -12,6 +12,7 @@ import {
   createPyodideWorkerPool,
   type PyodideWorkerPool,
 } from "./infrastructure/pyodide";
+import { runMigrations } from "./run_migrations";
 import { MockApiResponses } from "./sdk/handlers/mock_api_responses";
 import { MockApis } from "./sdk/handlers/mock_apis";
 import { Projects } from "./sdk/handlers/projects";
@@ -27,7 +28,7 @@ export type AppContext = Omit<ApplicationDependencies, "environment"> & {
   pyodide: PyodideWorkerPool;
 };
 
-export const createApplication = (app: ApplicationDependencies) => {
+export const createApplication = async (app: ApplicationDependencies) => {
   const environment = parseEnvironment(app.environment);
   const pyodide = createPyodideWorkerPool({
     size: 1,
@@ -36,6 +37,7 @@ export const createApplication = (app: ApplicationDependencies) => {
     worker_boot_timeout_ms: 10_000,
   });
   const database = createPostgresDatabase({ app: { environment } });
+  await runMigrations(database.db);
   const ctx: AppContext = {
     ...app,
     environment,

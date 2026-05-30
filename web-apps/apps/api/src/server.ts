@@ -5,12 +5,13 @@ import express, { type Express } from "express";
 
 import { getSecrets } from "./config/secrets";
 import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
+import { runMigrations } from "./infrastructure/kysely/run_migrations";
 import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
 import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
 import { createApplication as createAgentOrchestrationApplication } from "@mock-stack/agent-orchestration-engine";
-import { createApplication } from "@mock-stack/mockapi-engine";
+import { createApplication as createMockApiApplication } from "@mock-stack/mockapi-engine";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import type { Kysely } from "kysely";
 import type { Database } from "./infrastructure/kysely/models/index";
@@ -24,36 +25,41 @@ export type ServerContext = {
   db: Kysely<Database>;
 };
 
+export type OrchestrationEngine = Awaited<
+  ReturnType<typeof createAgentOrchestrationApplication>
+>;
+
 export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
   const apiGatewayDatabase = createApiGatewayDatabase(secrets);
+  await runMigrations(apiGatewayDatabase.db);
   const serverContext: ServerContext = {
     db: apiGatewayDatabase.db,
   };
 
   const keyValueStore = RedisKeyValueStore({
     redis_host: secrets.REDIS_HOST,
-    redis_pass: secrets.REDIS_PASS,
+    redis_pass: secrets.REDIS_PASSWORD,
     redis_port: secrets.REDIS_PORT,
   });
-  const applicationDependencies = {
+  const mockApiApplicationDependencies = {
     environment: {
-      DB_USER: secrets.APPLICATION_DB_USER,
-      DB_PASS: secrets.APPLICATION_DB_PASS,
-      DB_HOST: secrets.APPLICATION_DB_HOST,
-      DB_PORT: secrets.APPLICATION_DB_PORT,
-      DB_NAME: secrets.APPLICATION_DB_NAME,
+      DB_USER: secrets.DB_USER,
+      DB_PASS: secrets.DB_PASS,
+      DB_HOST: secrets.DB_HOST,
+      DB_PORT: secrets.DB_PORT,
+      DB_NAME: secrets.DB_NAME,
     },
     keyValueStore,
   };
 
   const agentOrchestrationDependencies = {
     environment: {
-      DB_USER: secrets.AGENT_ORCHESTRATION_DB_USER,
-      DB_PASS: secrets.AGENT_ORCHESTRATION_DB_PASS,
-      DB_HOST: secrets.AGENT_ORCHESTRATION_DB_HOST,
-      DB_PORT: secrets.AGENT_ORCHESTRATION_DB_PORT,
-      DB_NAME: secrets.AGENT_ORCHESTRATION_DB_NAME,
+      DB_USER: secrets.DB_USER,
+      DB_PASS: secrets.DB_PASS,
+      DB_HOST: secrets.DB_HOST,
+      DB_PORT: secrets.DB_PORT,
+      DB_NAME: secrets.DB_NAME,
       CLOUDFLARE_ACCOUNT_ID: secrets.CLOUDFLARE_ACCOUNT_ID,
       CLOUDFLARE_AI_GATEWAY_ID: secrets.CLOUDFLARE_AI_GATEWAY_ID,
       CLOUDFLARE_AI_GATEWAY_TOKEN: secrets.CLOUDFLARE_AI_GATEWAY_TOKEN,
@@ -62,8 +68,13 @@ export const createApiApp = async (): Promise<ApiApp> => {
     },
   };
 
-  const application = createApplication(applicationDependencies);
-  const agentOrchestration = createAgentOrchestrationApplication(agentOrchestrationDependencies);
+  const application = await createMockApiApplication(
+    mockApiApplicationDependencies,
+  );
+  const agent_orchestration = await createAgentOrchestrationApplication(
+    agentOrchestrationDependencies,
+  );
+
   const app = express();
 
   app.use(
@@ -80,7 +91,14 @@ export const createApiApp = async (): Promise<ApiApp> => {
   addPublicMockApiRoutes(app, application.mock_apis);
   app.use(responseMiddleware);
 
-  addRoutes(app, application, serverContext);
+  addRoutes(
+    app,
+    {
+      ...application,
+      agent_orchestration,
+    },
+    serverContext,
+  );
   app.use(errorMiddleware);
 
   return {
@@ -88,7 +106,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
     async destroy() {
       await apiGatewayDatabase.destroy();
       await application.destroy();
-      await agentOrchestration.destroy();
+      await agent_orchestration.destroy();
       await keyValueStore.destroy();
     },
   };

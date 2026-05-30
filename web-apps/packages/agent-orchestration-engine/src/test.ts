@@ -1,7 +1,7 @@
 import { createApplication } from "./index";
 import type { GenerationRequest } from "./domain/entities/generation";
 
-const app = createApplication({
+const app = await createApplication({
   environment: process.env as any,
 });
 
@@ -27,6 +27,7 @@ async function smokeTestTextOnly() {
         },
       ],
       tools: [],
+      custom_tools: [],
       temperature: 0.1,
       max_tokens: 50,
     },
@@ -51,36 +52,35 @@ const toolConfig: GenerationRequest["config"] = {
   model_provider: "google",
   model_gateway: null,
   model_id: "@cf/google/gemma-4-26b-a4b-it",
-  system_prompt: "You are a concise weather assistant. Use tools when needed.",
+  system_prompt: "You are a concise assistant. Use tools when needed.",
   input_messages: [
     {
       role: "user",
       content: {
         type: "text",
-        text: "What is the weather in Bengaluru today?",
+        text: "Get me details of project 123.",
       },
     },
   ],
-  tools: [
+  tools: [],
+  custom_tools: [
     {
-      type: "function",
-      function: {
-        name: "get_weather",
-        description: "Get current weather for a location.",
-        parameters: {
-          type: "object",
-          properties: {
-            location: {
-              type: "string",
-              description: "City and region, for example Bengaluru, India.",
-            },
-            unit: {
-              type: "string",
-              enum: ["celsius", "fahrenheit"],
-            },
+      name: "get_project",
+      description: "Get details of a specific project by ID.",
+      input_schema: {
+        type: "object",
+        description: "",
+        properties: {
+          location: {
+            type: "string",
+            description: "City and region, for example Bengaluru, India.",
           },
-          required: ["location"],
+          unit: {
+            type: "string",
+            description: "Temperature unit",
+          },
         },
+        required: ["location"],
       },
     },
   ],
@@ -90,16 +90,14 @@ const toolConfig: GenerationRequest["config"] = {
 
 const executeTool = (name: string, input: string) => {
   switch (name) {
-    case "get_weather": {
+    case "get_project": {
       const args = JSON.parse(input || "{}") as {
-        location?: string;
-        unit?: "celsius" | "fahrenheit";
+        project_id?: string;
       };
       return JSON.stringify({
-        location: args.location ?? "Bengaluru, India",
-        unit: args.unit ?? "celsius",
-        temperature: 27,
-        condition: "partly cloudy",
+        id: args.project_id ?? "123",
+        name: "Example Project",
+        description: "A sample project for testing.",
       });
     }
     default:
