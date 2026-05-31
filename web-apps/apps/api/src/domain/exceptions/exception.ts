@@ -34,3 +34,10 @@ export class MockApiException extends ApiGatewayException {
     this.name = "MockApiException";
   }
 }
+
+export class AgentOrchestrationException extends ApiGatewayException {
+  constructor(input: ApiGatewayExceptionInput) {
+    super(input);
+    this.name = "AgentOrchestrationException";
+  }
+}

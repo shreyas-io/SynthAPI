@@ -7,7 +7,6 @@ RUN corepack enable && corepack prepare pnpm@10.15.1 --activate
 COPY web-apps/package.json web-apps/pnpm-lock.yaml web-apps/pnpm-workspace.yaml web-apps/tsconfig.base.json ./
 COPY web-apps/apps/api/package.json apps/api/package.json
 COPY web-apps/apps/web/package.json apps/web/package.json
-COPY web-apps/packages/agent-orchestration-engine/package.json packages/agent-orchestration-engine/package.json
 
 RUN pnpm install --frozen-lockfile
 

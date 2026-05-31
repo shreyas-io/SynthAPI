@@ -4,6 +4,7 @@ import cors from "cors";
 import express, { type Express } from "express";
 
 import { getSecrets } from "./config/secrets";
+import { createAgentOrchestrationApplication } from "./application/agent_orchestration";
 import { createMockApiApplication } from "./application/mockapi";
 import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
 import { runMigrations } from "./infrastructure/kysely/run_migrations";
@@ -11,7 +12,6 @@ import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
 import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
-import { createApplication as createAgentOrchestrationApplication } from "@mock-stack/agent-orchestration-engine";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import type { Kysely } from "kysely";
 import type { Database } from "./infrastructure/kysely/models/index";
@@ -28,28 +28,6 @@ export type ServerContext = {
 export type OrchestrationEngine = Awaited<
   ReturnType<typeof createAgentOrchestrationApplication>
 >;
-
-const createLocalEventBus = () => {
-  const handlers = new Map<string, Set<(event: any) => void>>();
-
-  return {
-    publish(turn_id: string, event: any) {
-      handlers.get(turn_id)?.forEach((handler) => handler(event));
-    },
-    subscribe(turn_id: string, handler: (event: any) => void) {
-      const turn_handlers = handlers.get(turn_id) ?? new Set();
-      turn_handlers.add(handler);
-      handlers.set(turn_id, turn_handlers);
-
-      return () => {
-        turn_handlers.delete(handler);
-        if (turn_handlers.size === 0) {
-          handlers.delete(turn_id);
-        }
-      };
-    },
-  };
-};
 
 export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
@@ -70,25 +48,20 @@ export const createApiApp = async (): Promise<ApiApp> => {
   };
 
   const agentOrchestrationDependencies = {
+    database: apiGatewayDatabase,
     environment: {
-      DB_USER: secrets.DB_USER,
-      DB_PASS: secrets.DB_PASS,
-      DB_HOST: secrets.DB_HOST,
-      DB_PORT: secrets.DB_PORT,
-      DB_NAME: secrets.DB_NAME,
       CLOUDFLARE_ACCOUNT_ID: secrets.CLOUDFLARE_ACCOUNT_ID,
       CLOUDFLARE_AI_GATEWAY_ID: secrets.CLOUDFLARE_AI_GATEWAY_ID,
       CLOUDFLARE_AI_GATEWAY_TOKEN: secrets.CLOUDFLARE_AI_GATEWAY_TOKEN,
       OPENROUTER_API_KEY: secrets.OPENROUTER_API_KEY,
       OLLAMA_BASE_URL: secrets.OLLAMA_BASE_URL,
     },
-    eventBus: createLocalEventBus(),
   };
 
   const application = await createMockApiApplication(
     mockApiApplicationDependencies,
   );
-  const agent_orchestration = await createAgentOrchestrationApplication(
+  const agent_orchestration = createAgentOrchestrationApplication(
     agentOrchestrationDependencies,
   );
 
