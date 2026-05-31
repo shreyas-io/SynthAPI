@@ -1,4 +1,4 @@
-import type { MockApiContext } from "../../../../application/mockapi/context";
+import type { AppContext } from "../../../../application/agent_orchestration/context";
 import {
   ExecutionContextEt,
   QueryParams,
@@ -26,7 +26,7 @@ export const getGlobalVarKey = (
 };
 
 export async function upsertMockApiVariables(
-  ctx: MockApiContext,
+  ctx: AppContext,
   mock_api: Pick<MockApiEt, "id" | "variables">,
   project: Pick<ProjectEt, "id" | "globals">,
 ) {
@@ -77,7 +77,7 @@ type MockApiExecutionRequest = {
 };
 
 export async function getMockApiExecutionContext(
-  ctx: MockApiContext,
+  ctx: AppContext,
   mock_api: Pick<MockApiEt, "id" | "variables">,
   project: Pick<ProjectEt, "id" | "globals" | "constants">,
   request?: MockApiExecutionRequest,

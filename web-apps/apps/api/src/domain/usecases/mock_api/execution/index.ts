@@ -1,4 +1,4 @@
-import type { MockApiContext } from "../../../../application/mockapi/context";
+import type { AppContext } from "../../../../application/agent_orchestration/context";
 import {
   HttpStatusCode,
   MockApiException,
@@ -181,7 +181,7 @@ const getBestMatch = (
 };
 
 export async function executePublicMockApi(
-  ctx: MockApiContext,
+  ctx: AppContext,
   request_data: PublicMockApiRequest,
 ) {
   const mock_api_repo = MockApisRepository(ctx.database);
@@ -307,7 +307,7 @@ export async function executePublicMockApi(
   };
 }
 
-// async function executeMockApi(ctx: MockApiContext, id: string, request_data: any) {
+// async function executeMockApi(ctx: AppContext, id: string, request_data: any) {
 //   /**
 //    * First, get the mock api response with this id and then fetch the mock api
 //    * Second, check redis if all variables for this mock api exist...

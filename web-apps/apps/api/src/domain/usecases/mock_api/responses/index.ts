@@ -1,4 +1,4 @@
-import type { MockApiContext } from "../../../../application/mockapi/context";
+import type { AppContext } from "../../../../application/agent_orchestration/context";
 import {
   HttpStatusCode,
   MockApiException,
@@ -32,7 +32,7 @@ type MockApiResponseSort = {
   order: "asc" | "desc";
 };
 
-export const MockApiResponsesUsecase = (ctx: MockApiContext) => {
+export const MockApiResponsesUsecase = (ctx: AppContext) => {
   const mock_api_responses_repository = MockApiResponsesRepository(
     ctx.database,
   );

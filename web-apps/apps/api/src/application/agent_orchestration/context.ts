@@ -1,6 +1,7 @@
 import type { IEventBus } from "../../domain/interfaces/agent_orchestration/event_bus";
-import type { IToolExecutor } from "../../domain/interfaces/agent_orchestration/tool_executor";
+import type { IKeyValueStore } from "../../domain/interfaces/kv_store";
 import type { ApiGatewayDatabase } from "../../infrastructure/kysely";
+import type { PyodideWorkerPool } from "../../infrastructure/pyodide";
 
 export type AgentOrchestrationEnvironment = {
   CLOUDFLARE_ACCOUNT_ID: string;
@@ -12,7 +13,8 @@ export type AgentOrchestrationEnvironment = {
 
 export type AppContext = {
   database: ApiGatewayDatabase;
+  keyValueStore: IKeyValueStore;
+  pyodide: PyodideWorkerPool;
   environment: AgentOrchestrationEnvironment;
   eventBus: IEventBus;
-  toolExecutor?: IToolExecutor | undefined;
 };

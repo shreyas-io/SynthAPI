@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import type { MockApiContext } from "../../../../application/mockapi/context";
+import type { AppContext } from "../../../../application/agent_orchestration/context";
 import {
   HttpStatusCode,
   MockApiException,
@@ -52,7 +52,7 @@ const getVariableContext = (
 };
 
 const executeVariableAction = async (
-  ctx: MockApiContext,
+  ctx: AppContext,
   input: Pick<
     ExecutePostResponseActionsInput,
     "project_id" | "mock_api_id" | "execution_context"
@@ -108,7 +108,7 @@ const executeVariableAction = async (
 };
 
 export const executePostResponseActions = async (
-  ctx: MockApiContext,
+  ctx: AppContext,
   input: ExecutePostResponseActionsInput,
 ) => {
   if (!input.actions?.length) return;

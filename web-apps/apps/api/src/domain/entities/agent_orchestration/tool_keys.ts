@@ -7,12 +7,10 @@ export const toolKeys = [
   "get_mock_api",
   "create_mock_api",
   "update_mock_api",
-  "delete_mock_api",
   "list_mock_api_responses",
   "get_mock_api_response",
   "create_mock_api_response",
   "update_mock_api_response",
-  "delete_mock_api_response",
 ] as const;
 
 export type ToolKey = (typeof toolKeys)[number];

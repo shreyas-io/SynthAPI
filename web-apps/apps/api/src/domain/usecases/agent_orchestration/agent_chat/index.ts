@@ -15,6 +15,9 @@ import {
   HttpStatusCode,
 } from "../../../exceptions/exception";
 import { createChatTurn } from "./create";
+import { AgentToolRegistry } from "../tools/registry";
+import type { ToolKey } from "../../../entities/agent_orchestration/tool_keys";
+import type { ToolWorkspaceContext } from "../tools/types";
 
 export const AgentChatUsecase = (ctx: AppContext) => {
   const chat_sessions_repo = ChatSessionsRepository(ctx.database);
@@ -23,6 +26,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   const agent_configs = AgentConfigsRepository(ctx.database);
   const llm = streamText(ctx);
   const eventBus = ctx.eventBus;
+  const toolRegistry = AgentToolRegistry();
 
   const createAndPublishEvent = async (input: {
     chat_turn_id: string;
@@ -57,6 +61,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     executeChatTurn: async (
       chat_session_id: string,
       turn_id: string,
+      workspace?: ToolWorkspaceContext,
     ): Promise<void> => {
       const count = await chat_sessions_repo.count({
         filters: { ids: [chat_session_id] },
@@ -102,6 +107,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         turn.mode === "planning"
           ? (agentConfig.planning_config as unknown as LLMConfig)
           : (agentConfig.chat_config as unknown as LLMConfig);
+      const llmConfigWithTools: LLMConfig = {
+        ...llmConfig,
+        custom_tools: toolRegistry.getAllToolDefinitions(),
+      };
 
       const existingEvents = await chat_events.list({
         filters: { chat_turn_ids: [turn_id] },
@@ -126,12 +135,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         config: {
           ...llmConfig,
           input_messages: [
-            ...(llmConfig.input_messages || []),
+            ...(llmConfigWithTools.input_messages || []),
             {
               role: "user" as const,
               content: { type: "text" as const, text: userText },
             },
           ],
+          custom_tools: llmConfigWithTools.custom_tools,
         },
         raw: null,
       };
@@ -208,23 +218,25 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           const toolArgs = toolCall.args as Record<string, unknown>;
           const toolCallId = toolCall.toolCallId as string;
 
-          if (!ctx.toolExecutor) {
+          if (!workspace) {
             throw new AgentOrchestrationException({
-              public_message: "Tool executor not configured.",
+              public_message: "Tool workspace context not configured.",
             });
           }
 
-          const toolCallback = (ctx.toolExecutor.tools as any)[toolName];
-          if (!toolCallback) {
+          const tool = toolRegistry.getToolByName(toolName as ToolKey);
+          if (!tool) {
             throw new AgentOrchestrationException({
               public_message: `Tool '${toolName}' is not available.`,
             });
           }
 
           let toolResult: unknown;
+          let toolStatus: "success" | "failed" = "success";
           try {
-            toolResult = await toolCallback(toolArgs);
+            toolResult = await tool.execute(ctx, workspace, toolArgs);
           } catch (error) {
+            toolStatus = "failed";
             toolResult = { error: String(error) };
           }
 
@@ -238,7 +250,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
                 tool_use_id: toolCallId,
                 label: toolName,
                 content: { result: toolResult },
-                status: "success",
+                status: toolStatus,
               },
             },
           });

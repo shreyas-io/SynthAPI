@@ -1,10 +1,10 @@
-import type { MockApiContext } from "../../../../../application/mockapi/context";
+import type { AppContext } from "../../../../../application/agent_orchestration/context";
 import { ExecutionContextEt } from "../../../../entities/execution_context";
 import { MockApiRuleTreeEt } from "../../../../entities/mock_api_response/rule_tree";
 import { executePredicate } from "./rule_predicates_execution_factory";
 
 export async function executeRuleTree(
-  app: MockApiContext,
+  app: AppContext,
   tree: MockApiRuleTreeEt,
   execution_context: ExecutionContextEt,
 ): Promise<{ result: boolean }> {

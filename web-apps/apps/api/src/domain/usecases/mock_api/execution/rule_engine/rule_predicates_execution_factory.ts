@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import _ from "lodash";
 
-import type { MockApiContext } from "../../../../../application/mockapi/context";
+import type { AppContext } from "../../../../../application/agent_orchestration/context";
 import { MockApiException } from "../../../../exceptions/exception";
 import { ExecutionContextEt } from "../../../../entities/execution_context";
 import { MockApiPredicateEt } from "../../../../entities/mock_api_response/rule_tree";
@@ -94,7 +94,7 @@ const executeSimplePredicate = (
 };
 
 export async function executePredicate(
-  ctx: MockApiContext,
+  ctx: AppContext,
   predicate: MockApiPredicateEt,
   execution_context: ExecutionContextEt,
 ): Promise<boolean> {

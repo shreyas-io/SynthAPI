@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { MockApiException } from "../../domain/exceptions/exception";
 import { ProjectsUsecase } from "../../domain/usecases/mock_api/projects";
-import type { MockApiContext } from "./context";
+import type { AppContext } from "../agent_orchestration/context";
 import {
   createProjectDto,
   listProjectsFilterDto,
@@ -31,7 +31,7 @@ const getProjectSlug = (name: string): string => {
   return `${getSlugBase(name)}-${randomBytes(5).toString("hex")}`;
 };
 
-export function ProjectsApplication(ctx: MockApiContext) {
+export function ProjectsApplication(ctx: AppContext) {
   const projects = ProjectsUsecase(ctx);
 
   return {

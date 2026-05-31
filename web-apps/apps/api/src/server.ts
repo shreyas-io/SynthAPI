@@ -8,6 +8,7 @@ import { createAgentOrchestrationApplication } from "./application/agent_orchest
 import { createMockApiApplication } from "./application/mockapi";
 import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
 import { runMigrations } from "./infrastructure/kysely/run_migrations";
+import { createPyodideWorkerPool } from "./infrastructure/pyodide";
 import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
@@ -42,13 +43,22 @@ export const createApiApp = async (): Promise<ApiApp> => {
     redis_pass: secrets.REDIS_PASSWORD,
     redis_port: secrets.REDIS_PORT,
   });
+  const pyodide = createPyodideWorkerPool({
+    size: 1,
+    max_queue_size: 100,
+    worker_memory_limit_mb: 28,
+    worker_boot_timeout_ms: 10_000,
+  });
   const mockApiApplicationDependencies = {
     database: apiGatewayDatabase,
     keyValueStore,
+    pyodide,
   };
 
   const agentOrchestrationDependencies = {
     database: apiGatewayDatabase,
+    keyValueStore,
+    pyodide,
     environment: {
       CLOUDFLARE_ACCOUNT_ID: secrets.CLOUDFLARE_ACCOUNT_ID,
       CLOUDFLARE_AI_GATEWAY_ID: secrets.CLOUDFLARE_AI_GATEWAY_ID,
@@ -98,6 +108,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
       await application.destroy();
       await agent_orchestration.destroy();
       await keyValueStore.destroy();
+      await pyodide.destroy();
     },
   };
 };

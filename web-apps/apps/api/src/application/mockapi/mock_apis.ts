@@ -1,7 +1,7 @@
 import { MockApiException } from "../../domain/exceptions/exception";
 import { executePublicMockApi } from "../../domain/usecases/mock_api/execution";
 import { MockApisUsecase } from "../../domain/usecases/mock_api/apis";
-import type { MockApiContext } from "./context";
+import type { AppContext } from "../agent_orchestration/context";
 import {
   createMockApiDto,
   executeMockApiDto,
@@ -20,7 +20,7 @@ type MockApiFilters = {
   description?: string;
 };
 
-export function MockApisApplication(ctx: MockApiContext) {
+export function MockApisApplication(ctx: AppContext) {
   const mock_apis = MockApisUsecase(ctx);
 
   return {

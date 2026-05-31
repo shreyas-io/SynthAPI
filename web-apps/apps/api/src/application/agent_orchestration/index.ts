@@ -1,5 +1,7 @@
 import type { ApiGatewayDatabase } from "../../infrastructure/kysely";
 import { InMemoryEventBus } from "../../infrastructure/agent_orchestration/event_bus";
+import type { IKeyValueStore } from "../../domain/interfaces/kv_store";
+import type { PyodideWorkerPool } from "../../infrastructure/pyodide";
 import { AgentChatApplication } from "./agent_chat";
 import { ChatSessionsApplication } from "./chat_sessions";
 import { ChatTurnBlobsApplication } from "./chat_turn_blobs";
@@ -11,9 +13,10 @@ import type {
 
 type AgentOrchestrationDependencies = {
   database: ApiGatewayDatabase;
+  keyValueStore: IKeyValueStore;
+  pyodide: PyodideWorkerPool;
   environment: AgentOrchestrationEnvironment;
   eventBus?: AppContext["eventBus"];
-  toolExecutor?: AppContext["toolExecutor"];
 };
 
 export const createAgentOrchestrationApplication = (
@@ -21,12 +24,11 @@ export const createAgentOrchestrationApplication = (
 ) => {
   const ctx: AppContext = {
     database: dependencies.database,
+    keyValueStore: dependencies.keyValueStore,
+    pyodide: dependencies.pyodide,
     environment: dependencies.environment,
     eventBus: dependencies.eventBus ?? InMemoryEventBus(),
   };
-  if (dependencies.toolExecutor !== undefined) {
-    ctx.toolExecutor = dependencies.toolExecutor;
-  }
 
   return {
     agent_chat: AgentChatApplication(ctx),

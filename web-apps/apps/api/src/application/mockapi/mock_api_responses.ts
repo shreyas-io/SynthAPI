@@ -1,6 +1,6 @@
 import { MockApiException } from "../../domain/exceptions/exception";
 import { MockApiResponsesUsecase } from "../../domain/usecases/mock_api/responses";
-import type { MockApiContext } from "./context";
+import type { AppContext } from "../agent_orchestration/context";
 import {
   createMockApiResponseDto,
   listMockApiResponsesFilterDto,
@@ -14,7 +14,7 @@ type MockApiResponseFilters = {
   name?: string;
 };
 
-export function MockApiResponsesApplication(ctx: MockApiContext) {
+export function MockApiResponsesApplication(ctx: AppContext) {
   const mock_api_responses = MockApiResponsesUsecase(ctx);
 
   return {
