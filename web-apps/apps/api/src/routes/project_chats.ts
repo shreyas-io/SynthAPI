@@ -43,6 +43,22 @@ const validateChatOwnership = async (
   }
 };
 
+const validateTurnOwnership = async (
+  agent_orchestration: OrchestrationEngine,
+  chat_id: string,
+  turn_id: string,
+) => {
+  const turnStatus = await agent_orchestration.agent_chat.getTurnStatus(turn_id);
+
+  if (turnStatus.chat_session_id !== chat_id) {
+    throw Object.assign(new Error(`Turn not found with ID '${turn_id}'`), {
+      status_code: 404,
+    });
+  }
+
+  return turnStatus;
+};
+
 export const addProjectChatRoutes = (
   app: Express,
   agent_orchestration: OrchestrationEngine,
@@ -133,8 +149,11 @@ export const addProjectChatRoutes = (
 
       await validateChatOwnership(agent_orchestration, project_id, chat_id);
 
-      const status =
-        await agent_orchestration.agent_chat.getTurnStatus(turn_id);
+      const status = await validateTurnOwnership(
+        agent_orchestration,
+        chat_id,
+        turn_id,
+      );
 
       res.json(status);
     }),
@@ -172,6 +191,7 @@ export const addProjectChatRoutes = (
       const turn_id = req.params.turn_id as string;
 
       await validateChatOwnership(agent_orchestration, project_id, chat_id);
+      await validateTurnOwnership(agent_orchestration, chat_id, turn_id);
 
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
@@ -189,14 +209,12 @@ export const addProjectChatRoutes = (
         res.write(`data: ${JSON.stringify(event)}\n\n`);
       }
 
-      // 2. Check if already completed
-      const isCompleted =
-        existingEvents.records.length > 0 &&
-        existingEvents.records[existingEvents.records.length - 1]
-          ?.event_type === "assistant-message";
+      // 2. Check if already settled
+      const isSettled = existingEvents.records.some(
+        (event) => event.event_type === "turn-settled",
+      );
 
-      if (isCompleted) {
-        res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+      if (isSettled) {
         res.end();
         return;
       }
@@ -209,28 +227,15 @@ export const addProjectChatRoutes = (
           turn_id,
           (event) => {
             res.write(`data: ${JSON.stringify(event)}\n\n`);
+
+            if (event.type === "turn-settled") {
+              unsubscribe();
+              res.end();
+            }
           },
         );
 
-        // 4. Poll for completion every 500ms
-        const pollInterval = setInterval(async () => {
-          const latestEvents =
-            await agent_orchestration.chat_turn_events.listChatTurnEvents(
-              { chat_turn_ids: [turn_id] },
-              { limit: 1, offset: 0 },
-              { by: "sequence", order: "desc" },
-            );
-          const lastEvent = latestEvents.records[0];
-          if (lastEvent?.event_type === "assistant-message") {
-            clearInterval(pollInterval);
-            unsubscribe();
-            res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
-            res.end();
-          }
-        }, 500);
-
         req.on("close", () => {
-          clearInterval(pollInterval);
           unsubscribe();
         });
       } catch (error) {

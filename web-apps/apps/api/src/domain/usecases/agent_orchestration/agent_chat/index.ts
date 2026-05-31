@@ -1,6 +1,9 @@
 import type { AppContext } from "../../../../application/agent_orchestration/context";
 import type { LLMConfig } from "../../../entities/agent_orchestration/generation";
-import type { ChatTurnUserInput } from "../../../entities/agent_orchestration/chat_session_turn";
+import type {
+  ChatSessionTurnEt,
+  ChatTurnUserInput,
+} from "../../../entities/agent_orchestration/chat_session_turn";
 import type {
   ChatTurnEventPayload,
   ChatTurnEventType,
@@ -36,6 +39,41 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   }) => {
     await chat_events.create(input);
     eventBus.publish(input.chat_turn_id, input.payload);
+  };
+
+  const getNextSequence = async (chat_turn_id: string) => {
+    const events = await chat_events.list({
+      filters: { chat_turn_ids: [chat_turn_id] },
+      columns: ["sequence"],
+      sort: { by: "sequence", order: "desc" },
+      pagination: { limit: 1, offset: 0 },
+    });
+
+    return (events[0]?.sequence ?? 0) + 1;
+  };
+
+  const settleTurn = async (input: {
+    chat_turn_id: string;
+    sequence: number;
+    status: "completed" | "failed";
+    conversation_context: ChatSessionTurnEt["conversation_context"];
+    error?: string;
+  }) => {
+    await chat_turns.update(input.chat_turn_id, {
+      conversation_context: input.conversation_context,
+      status: input.status,
+    });
+
+    await createAndPublishEvent({
+      chat_turn_id: input.chat_turn_id,
+      sequence: input.sequence,
+      event_type: "turn-settled",
+      payload: {
+        type: "turn-settled",
+        status: input.status,
+        ...(input.error ? { error: input.error } : {}),
+      },
+    });
   };
 
   const getAgentConfig = async (id: string) => {
@@ -86,10 +124,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         });
       }
 
-      if (turn.status === "completed") {
+      if (turn.status !== "in_progress") {
         return;
       }
 
+      let sequence = await getNextSequence(turn_id);
+
+      try {
       const previousTurns = await chat_turns.list({
         filters: {
           chat_session_ids: [chat_session_id],
@@ -123,15 +164,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         ...llmConfig,
         custom_tools: toolRegistry.getAllToolDefinitions(),
       };
-
-      const existingEvents = await chat_events.list({
-        filters: { chat_turn_ids: [turn_id] },
-        sort: { by: "sequence", order: "asc" },
-      });
-      let sequence =
-        existingEvents.length > 0
-          ? Math.max(...existingEvents.map((e) => e.sequence)) + 1
-          : 1;
 
       const userText = turn.user_input
         .filter(
@@ -320,7 +352,9 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         },
       });
 
-      await chat_turns.update(turn_id, {
+      await settleTurn({
+        chat_turn_id: turn_id,
+        sequence: sequence++,
         conversation_context: currentRequest.raw
           ? {
               model_host: currentRequest.config.model_host,
@@ -332,6 +366,17 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           : null,
         status: "completed",
       });
+      } catch (error) {
+        await settleTurn({
+          chat_turn_id: turn_id,
+          sequence: await getNextSequence(turn_id),
+          conversation_context: null,
+          status: "failed",
+          error: error instanceof Error ? error.message : String(error),
+        });
+
+        throw error;
+      }
     },
   };
 };

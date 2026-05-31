@@ -20,6 +20,7 @@ export const chatTurnEventTypeDto = z.enum([
   "assistant-message",
   "tool-input",
   "tool-response",
+  "turn-settled",
 ]);
 
 const chatTurnEventPayloadDto = z.discriminatedUnion("type", [
@@ -41,6 +42,11 @@ const chatTurnEventPayloadDto = z.discriminatedUnion("type", [
       status: z.enum(["success", "failed"]),
     }),
   }),
+  z.object({
+    type: z.literal("turn-settled"),
+    status: z.enum(["completed", "failed"]),
+    error: z.string().optional(),
+  }),
 ]);
 
 export const createChatTurnEventDto = z.object({
@@ -53,6 +59,7 @@ export const createChatTurnEventDto = z.object({
 export const listChatTurnEventsFilterDto = z.object({
   ids: z.uuidv7().array().optional(),
   chat_turn_ids: z.uuidv7().array().optional(),
+  chat_session_ids: z.uuidv7().array().optional(),
   event_types: chatTurnEventTypeDto.array().optional(),
 });
 

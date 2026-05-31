@@ -10,7 +10,8 @@ export type ChatTurnEventType =
   | "user-input"
   | "assistant-message"
   | "tool-input"
-  | "tool-response";
+  | "tool-response"
+  | "turn-settled";
 
 type ChatTurnStreamingEventType =
   | ChatTurnEventType
@@ -36,6 +37,11 @@ export type ChatTurnEventPayload =
       output: ToolUseDisplayBlock & {
         status: "success" | "failed";
       };
+    }
+  | {
+      type: "turn-settled";
+      status: "completed" | "failed";
+      error?: string | undefined;
     };
 
 export type ChatTurnStreamingEventPayload =

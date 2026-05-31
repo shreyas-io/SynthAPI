@@ -59,12 +59,6 @@ export const list = (
 
     let query = client.db.selectFrom("chat_turn_events");
 
-    if (columns?.length) {
-      query = query.select(columns);
-    } else {
-      query = query.selectAll();
-    }
-
     if (filters.ids?.length) {
       query = query.where("id", "in", filters.ids);
     }
@@ -75,8 +69,16 @@ export const list = (
 
     if (filters.chat_session_ids?.length) {
       query = query
-        .innerJoin("chat_session_turns", "chat_turn_events.chat_turn_id", "chat_session_turns.id")
-        .where("chat_session_turns.chat_session_id", "in", filters.chat_session_ids);
+        .innerJoin(
+          "chat_session_turns",
+          "chat_turn_events.chat_turn_id",
+          "chat_session_turns.id",
+        )
+        .where(
+          "chat_session_turns.chat_session_id",
+          "in",
+          filters.chat_session_ids,
+        );
     }
 
     if (filters.event_types?.length) {
@@ -88,6 +90,14 @@ export const list = (
         query = query.orderBy(sql`chat_session_turns.created_at`, "asc");
       }
       query = query.orderBy(sort.by, sort.order);
+    }
+
+    if (columns?.length) {
+      query = query.select(columns);
+    } else if (filters.chat_session_ids?.length) {
+      query = query.selectAll("chat_turn_events");
+    } else {
+      query = query.selectAll();
     }
 
     if (pagination?.limit) {
