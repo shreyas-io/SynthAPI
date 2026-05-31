@@ -13,8 +13,11 @@ export function ChatTurnEventsApplication(ctx: AppContext) {
 
   return {
     createChatTurnEvent: (data: unknown) => {
-      const { data: input, success, error } =
-        createChatTurnEventDto.safeParse(data);
+      const {
+        data: input,
+        success,
+        error,
+      } = createChatTurnEventDto.safeParse(data);
 
       if (!success) {
         throw new AgentOrchestrationException({
@@ -70,8 +73,11 @@ export function ChatTurnEventsApplication(ctx: AppContext) {
       );
     },
     countChatTurnEvents: (filters: unknown) => {
-      const { data: parsed_filters, success, error } =
-        listChatTurnEventsFilterDto.safeParse(filters);
+      const {
+        data: parsed_filters,
+        success,
+        error,
+      } = listChatTurnEventsFilterDto.safeParse(filters);
 
       if (!success) {
         throw new AgentOrchestrationException({

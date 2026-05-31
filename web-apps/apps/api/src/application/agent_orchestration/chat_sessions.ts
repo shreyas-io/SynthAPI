@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { AgentOrchestrationException } from "../../domain/exceptions/exception";
+import { AgentOrchestrationException, HttpStatusCode } from "../../domain/exceptions/exception";
 import { ChatSessionsUsecase } from "../../domain/usecases/agent_orchestration/chat_sessions";
+import { AgentConfigsRepository } from "../../infrastructure/kysely/repositories/agent_orchestration/agent_configs";
 import type { AppContext } from "./context";
 import {
   createChatSessionDto,
@@ -14,7 +15,45 @@ import {
 export function ChatSessionsApplication(ctx: AppContext) {
   const chat_sessions = ChatSessionsUsecase(ctx);
 
+  const agent_configs_repo = AgentConfigsRepository(ctx.database);
+
+  const createChatSessionWithDefaultAgentConfig = async (data: {
+    project_id: string;
+    name: string;
+    description?: string | null;
+  }) => {
+    const configs = await agent_configs_repo.list({
+      filters: { keys: ["local-default"], enabled: true },
+    });
+    let agentConfigId: string;
+    if (configs.length > 0) {
+      agentConfigId = configs[0]!.id;
+    } else {
+      const fallback = await agent_configs_repo.list({
+        filters: { enabled: true },
+        sort: { by: "created_at", order: "asc" },
+        pagination: { limit: 1, offset: 0 },
+      });
+      if (fallback.length === 0) {
+        throw new AgentOrchestrationException({
+          public_message: "No enabled agent configuration found. Please create one first.",
+          status_code: HttpStatusCode.PRECONDITION_FAILED,
+        });
+      }
+      agentConfigId = fallback[0]!.id;
+    }
+
+    return chat_sessions.createChatSession({
+      agent_config_id: agentConfigId,
+      project_id: data.project_id,
+      name: data.name,
+      description: data.description ?? null,
+      status: "active",
+    });
+  };
+
   return {
+    createChatSessionWithDefaultAgentConfig,
     createChatSession: (data: unknown) => {
       const { data: input, success, error } =
         createChatSessionDto.safeParse(data);

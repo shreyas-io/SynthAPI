@@ -5,7 +5,7 @@ import type { DatabaseClient } from "../../../index";
 
 type ChatSessionInput = Pick<
   ChatSessionEt,
-  "agent_config_id" | "name" | "description" | "status"
+  "agent_config_id" | "project_id" | "name" | "description" | "status"
 >;
 
 export const createChatSession =
@@ -18,6 +18,7 @@ export const createChatSession =
       .values({
         id,
         agent_config_id: input.agent_config_id,
+        project_id: input.project_id,
         name: input.name,
         description: input.description,
         status: input.status,

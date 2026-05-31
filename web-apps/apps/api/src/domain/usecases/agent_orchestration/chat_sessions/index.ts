@@ -8,7 +8,7 @@ import type { ChatSessionEt } from "../../../entities/agent_orchestration/chat_s
 
 type ChatSessionInput = Pick<
   ChatSessionEt,
-  "agent_config_id" | "name" | "description" | "status"
+  "agent_config_id" | "project_id" | "name" | "description" | "status"
 >;
 type ChatSessionUpdateInput = Pick<
   ChatSessionEt,
@@ -17,6 +17,7 @@ type ChatSessionUpdateInput = Pick<
 type ChatSessionFilters = {
   ids?: string[] | undefined;
   agent_config_ids?: string[] | undefined;
+  project_ids?: string[] | undefined;
   name?: string | undefined;
   description?: string | undefined;
   statuses?: Array<ChatSessionEt["status"]> | undefined;

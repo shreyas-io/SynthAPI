@@ -7,6 +7,7 @@ import type { DatabaseClient } from "../../../index";
 type ChatSessionFilters = {
   ids?: string[] | undefined;
   agent_config_ids?: string[] | undefined;
+  project_ids?: string[] | undefined;
   name?: string | undefined;
   description?: string | undefined;
   statuses?: Array<ChatSessionEt["status"]> | undefined;
@@ -18,6 +19,7 @@ export const count =
     if (
       !filters.ids?.length &&
       !filters.agent_config_ids?.length &&
+      !filters.project_ids?.length &&
       !filters.name &&
       !filters.description &&
       !filters.statuses?.length
@@ -34,6 +36,10 @@ export const count =
 
     if (filters.agent_config_ids?.length) {
       query = query.where("agent_config_id", "in", filters.agent_config_ids);
+    }
+
+    if (filters.project_ids?.length) {
+      query = query.where("project_id", "in", filters.project_ids);
     }
 
     if (filters.name) {

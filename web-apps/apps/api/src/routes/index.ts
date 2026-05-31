@@ -1,7 +1,6 @@
 import type { Express } from "express";
 
 import type { OrchestrationEngine, ServerContext } from "../server";
-import { addAgentChatRoutes, type AgentChatSdk } from "./agent_chat";
 import { addAuthRoutes } from "./auth";
 import { addHealthRoutes } from "./health";
 import { authMiddleware } from "../middleware/auth";
@@ -10,6 +9,7 @@ import {
   type MockApiResponsesSdk,
 } from "./mock_api_responses";
 import { addMockApiRoutes, type MockApisSdk } from "./mock_apis";
+import { addProjectChatRoutes } from "./project_chats";
 import { addProjectRoutes, type ProjectsSdk } from "./projects";
 
 export const addRoutes = (
@@ -26,7 +26,7 @@ export const addRoutes = (
   addHealthRoutes(app, application);
   addAuthRoutes(app, serverContext);
   app.use("/api/v1", authMiddleware(serverContext));
-  addAgentChatRoutes(app, application.agent_orchestration);
+  addProjectChatRoutes(app, application.agent_orchestration);
   addMockApiRoutes(app, application.mock_apis);
   addMockApiResponseRoutes(app, application.mock_api_responses);
   addProjectRoutes(app, application.projects);

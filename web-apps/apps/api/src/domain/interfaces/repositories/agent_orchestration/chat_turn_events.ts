@@ -12,6 +12,7 @@ export interface IChatTurnEventsRepository {
     filters: {
       ids?: string[] | undefined;
       chat_turn_ids?: string[] | undefined;
+      chat_session_ids?: string[] | undefined;
       event_types?: ChatTurnEventType[] | undefined;
     };
   }) => Promise<number>;
@@ -21,6 +22,7 @@ export interface IChatTurnEventsRepository {
       filters: {
         ids?: string[] | undefined;
         chat_turn_ids?: string[] | undefined;
+        chat_session_ids?: string[] | undefined;
         event_types?: ChatTurnEventType[] | undefined;
       };
       pagination?: {
@@ -36,6 +38,7 @@ export interface IChatTurnEventsRepository {
       filters: {
         ids?: string[] | undefined;
         chat_turn_ids?: string[] | undefined;
+        chat_session_ids?: string[] | undefined;
         event_types?: ChatTurnEventType[] | undefined;
       };
       columns: C;
