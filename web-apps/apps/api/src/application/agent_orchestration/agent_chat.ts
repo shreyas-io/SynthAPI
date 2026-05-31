@@ -11,6 +11,7 @@ import { createChatTurnDto } from "./validation/agent_chat";
 export function AgentChatApplication(ctx: AppContext) {
   const agent_chat = AgentChatUsecase(ctx);
   const chat_turns_repo = ChatSessionTurnsRepository(ctx.database);
+  const runningTurns = new Set<string>();
 
   return {
     createChatTurn: async (
@@ -26,15 +27,26 @@ export function AgentChatApplication(ctx: AppContext) {
         });
       }
 
-      const turn_id = await agent_chat.createChatTurn(chat_session_id, input);
+      return agent_chat.createChatTurn(chat_session_id, input);
+    },
+    executeChatTurn: (
+      chat_session_id: string,
+      turn_id: string,
+      workspace?: ToolWorkspaceContext,
+    ) => {
+      if (runningTurns.has(turn_id)) {
+        return;
+      }
 
+      runningTurns.add(turn_id);
       agent_chat
         .executeChatTurn(chat_session_id, turn_id, workspace)
         .catch((error) => {
           console.error("Chat turn execution failed:", error);
+        })
+        .finally(() => {
+          runningTurns.delete(turn_id);
         });
-
-      return turn_id;
     },
     getTurnStatus: async (turn_id: string) => {
       const turns = await chat_turns_repo.list({

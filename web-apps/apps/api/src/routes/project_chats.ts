@@ -194,8 +194,10 @@ export const addProjectChatRoutes = (
       await validateTurnOwnership(agent_orchestration, chat_id, turn_id);
 
       res.setHeader("Content-Type", "text/event-stream");
-      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Cache-Control", "no-cache, no-transform");
       res.setHeader("Connection", "keep-alive");
+      res.setHeader("X-Accel-Buffering", "no");
+      res.flushHeaders?.();
 
       // 1. Replay existing events from the database
       const existingEvents =
@@ -233,6 +235,12 @@ export const addProjectChatRoutes = (
               res.end();
             }
           },
+        );
+
+        agent_orchestration.agent_chat.executeChatTurn(
+          chat_id,
+          turn_id,
+          { project_id },
         );
 
         req.on("close", () => {

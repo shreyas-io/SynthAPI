@@ -3,13 +3,16 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
 import { queryKeys } from "../../shared/api/query_keys";
+import { ProjectAgentChatPanel } from "../../features/agent-chat/components/ProjectAgentChatPanel";
 import { getProject } from "../../features/projects/api/projects_api";
 import { listMockApis } from "../../features/mock-apis/api/mock_apis_api";
 
 export function ProjectWorkspaceLayout() {
   const { projectId } = useParams();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<"apis" | "agent">("apis");
+  const [activeTab, setActiveTab] = useState<"apis" | "agent">(() =>
+    new URLSearchParams(location.search).has("chat_id") ? "agent" : "apis",
+  );
 
   if (!projectId) {
     return <main className="page">Missing project ID.</main>;
@@ -47,7 +50,11 @@ export function ProjectWorkspaceLayout() {
       </nav>
 
       {/* 2. Unified Sidebar */}
-      <aside className="project-sidebar">
+      <aside
+        className={`project-sidebar ${
+          activeTab === "agent" ? "project-sidebar-agent" : ""
+        }`}
+      >
         {activeTab === "apis" ? (
           <>
             <div className="project-sidebar-header">
@@ -81,19 +88,7 @@ export function ProjectWorkspaceLayout() {
             </div>
           </>
         ) : (
-          <>
-            <div className="agent-sidebar-header">
-              <h3 style={{ margin: 0, color: '#C69749' }}>Chat Agent</h3>
-            </div>
-            <div className="agent-sidebar-body" style={{ flex: 1, padding: "1rem", overflowY: "auto" }}>
-              <p className="agent-placeholder" style={{ color: '#735F32', fontStyle: 'italic', fontSize: '0.85rem' }}>
-                Hello! I am your AI assistant. How can I help you build your mock API today?
-              </p>
-            </div>
-            <div className="agent-sidebar-footer" style={{ padding: "0.75rem", borderTop: "1px solid #735F32" }}>
-               <input type="text" placeholder="Ask me anything..." className="agent-input" style={{ width: "100%", padding: "0.5rem", borderRadius: "6px", background: "#000000", border: "1px solid #735F32", color: "#C69749" }} />
-            </div>
-          </>
+          <ProjectAgentChatPanel projectId={projectId} />
         )}
       </aside>
 

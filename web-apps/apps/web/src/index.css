@@ -112,6 +112,7 @@ textarea {
 
 .app-shell {
   display: flex;
+  height: 100vh;
   min-height: 100vh;
   width: 100vw;
   overflow: hidden;
@@ -136,6 +137,7 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-bottom: 1px solid #735F32;
 }
@@ -163,10 +165,308 @@ textarea {
   border-top: 1px solid #735F32;
 }
 
+.agent-new-chat-btn {
+  padding: 0.25rem 0.45rem;
+  font-size: 0.68rem;
+}
+
+.agent-chat-selector {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.agent-chat-selector-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 1.85rem;
+  border: 1px solid #735F32;
+  background: #282A3A;
+  color: #C69749;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  text-align: left;
+  text-transform: none;
+}
+
+.agent-chat-selector-toggle span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-chat-selector-toggle:hover {
+  background: #282A3A;
+  color: #C69749;
+}
+
+.agent-chat-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  left: 0;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid #735F32;
+  border-radius: 6px;
+  padding: 0.6rem;
+  background: #000000;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.agent-chat-list-item {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  width: 100%;
+  min-height: 2rem;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #C69749;
+  padding: 0.45rem 0.6rem;
+  font-size: 0.76rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: left;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.agent-chat-list-item:hover {
+  border-color: #735F32;
+  background: #282A3A;
+  color: #C69749;
+}
+
+.agent-chat-list-item.active {
+  border-color: #C69749;
+  background: #C69749;
+  color: #000000;
+}
+
+.agent-chat-list-item.active:hover {
+  background: #C69749;
+  color: #000000;
+}
+
+.agent-chat-transcript {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.6rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.75rem;
+  font-size: 0.78rem;
+}
+
+.agent-message {
+  max-width: 100%;
+  border: 1px solid #282A3A;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.agent-message-user {
+  align-self: flex-end;
+  max-width: 88%;
+  background: #735F32;
+  color: #000000;
+}
+
+.agent-message-assistant {
+  align-self: flex-start;
+  max-width: 92%;
+  background: #282A3A;
+}
+
+.agent-message-tool,
+.agent-message-system {
+  align-self: stretch;
+  color: #C69749;
+  background: #000000;
+}
+
+.agent-message-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+  color: #735F32;
+  font-size: 0.68rem;
+}
+
+.agent-tool-spinner {
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 1px solid #735F32;
+  border-top-color: #C69749;
+  border-radius: 999px;
+  animation: agentToolSpin 0.8s linear infinite;
+  flex: 0 0 auto;
+}
+
+.agent-tool-status {
+  display: inline-grid;
+  width: 0.75rem;
+  height: 0.75rem;
+  place-items: center;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  line-height: 1;
+  flex: 0 0 auto;
+}
+
+.agent-tool-status-success {
+  color: #000000;
+  background: #7cb342;
+}
+
+.agent-tool-status-failed {
+  color: #000000;
+  background: #ff6b6b;
+}
+
+@keyframes agentToolSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.agent-message-event-type {
+  margin-bottom: 0.25rem;
+  color: #735F32;
+  font-size: 0.62rem;
+  text-transform: uppercase;
+}
+
+.agent-tool-details {
+  border-top: 1px solid #282A3A;
+  padding-top: 0.35rem;
+}
+
+.agent-tool-details summary {
+  color: #735F32;
+  cursor: pointer;
+  font-size: 0.68rem;
+}
+
+.agent-tool-details pre {
+  margin-top: 0.4rem;
+}
+
+.agent-message-transient {
+  border-style: dashed;
+}
+
+.agent-message pre {
+  overflow-x: auto;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.agent-markdown {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.agent-markdown h1,
+.agent-markdown h2,
+.agent-markdown h3,
+.agent-markdown p,
+.agent-markdown ul,
+.agent-markdown ol,
+.agent-markdown blockquote {
+  margin: 0;
+}
+
+.agent-markdown h1 {
+  font-size: 1rem;
+}
+
+.agent-markdown h2 {
+  font-size: 0.92rem;
+}
+
+.agent-markdown h3 {
+  font-size: 0.84rem;
+}
+
+.agent-markdown ul,
+.agent-markdown ol {
+  display: grid;
+  gap: 0.2rem;
+  padding-left: 1.2rem;
+}
+
+.agent-markdown blockquote {
+  border-left: 2px solid #735F32;
+  color: #C69749;
+  padding-left: 0.6rem;
+}
+
+.agent-markdown code {
+  border-radius: 4px;
+  padding: 0.08rem 0.25rem;
+  background: #000000;
+  border: 1px solid #735F32;
+}
+
+.agent-markdown-code {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid #735F32;
+  border-radius: 6px;
+  padding: 0.55rem;
+  background: #000000;
+}
+
+.agent-markdown-code span {
+  color: #735F32;
+  font-size: 0.68rem;
+}
+
+.agent-markdown-code code {
+  overflow-x: auto;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.agent-muted {
+  color: #735F32;
+  font-size: 0.74rem;
+}
+
+.agent-sidebar-footer {
+  flex-shrink: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.agent-input {
+  min-height: 4.5rem;
+  font-size: 0.78rem;
+  resize: vertical;
+  background: #000000;
+}
+
 .app-main {
   flex: 1;
   display: flex;
   flex-direction: column;
+  min-height: 0;
   min-width: 0;
 }
 
@@ -196,6 +496,7 @@ textarea {
 
 .app-content-wrapper {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -702,6 +1003,7 @@ h3 { font-size: 1rem; }
 .project-workspace {
   display: flex;
   height: 100%;
+  min-height: 0;
   width: 100%;
   overflow: hidden;
 }
@@ -712,7 +1014,13 @@ h3 { font-size: 1rem; }
   border-right: 1px solid #735F32;
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.project-sidebar-agent {
+  width: min(33.333vw, 560px);
+  min-width: 420px;
 }
 
 .project-sidebar-header {
@@ -757,6 +1065,7 @@ h3 { font-size: 1rem; }
 
 .project-main-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   background: #000000;
 }

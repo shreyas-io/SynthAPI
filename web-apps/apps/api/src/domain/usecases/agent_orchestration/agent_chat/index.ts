@@ -131,241 +131,243 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       let sequence = await getNextSequence(turn_id);
 
       try {
-      const previousTurns = await chat_turns.list({
-        filters: {
-          chat_session_ids: [chat_session_id],
-          statuses: ["completed"],
-        },
-        columns: ["conversation_context"],
-        sort: { by: "created_at", order: "desc" },
-        pagination: { limit: 1, offset: 0 },
-      });
-      const initialRaw =
-        previousTurns[0]?.conversation_context?.raw_context ?? null;
-
-      const session = await chat_sessions_repo.list({
-        filters: { ids: [turn.chat_session_id] },
-      });
-      const chatSession = session.at(0);
-      if (!chatSession) {
-        throw new AgentOrchestrationException({
-          public_message: "Chat session not found.",
-          status_code: HttpStatusCode.NOT_FOUND,
+        const previousTurns = await chat_turns.list({
+          filters: {
+            chat_session_ids: [chat_session_id],
+            statuses: ["completed"],
+          },
+          columns: ["conversation_context"],
+          sort: { by: "created_at", order: "desc" },
+          pagination: { limit: 1, offset: 0 },
         });
-      }
+        const initialRaw =
+          previousTurns[0]?.conversation_context?.raw_context ?? null;
 
-      const agentConfig = await getAgentConfig(chatSession.agent_config_id);
+        const session = await chat_sessions_repo.list({
+          filters: { ids: [turn.chat_session_id] },
+        });
+        const chatSession = session.at(0);
+        if (!chatSession) {
+          throw new AgentOrchestrationException({
+            public_message: "Chat session not found.",
+            status_code: HttpStatusCode.NOT_FOUND,
+          });
+        }
 
-      const llmConfig =
-        turn.mode === "planning"
-          ? (agentConfig.planning_config as unknown as LLMConfig)
-          : (agentConfig.chat_config as unknown as LLMConfig);
-      const llmConfigWithTools: LLMConfig = {
-        ...llmConfig,
-        custom_tools: toolRegistry.getAllToolDefinitions(),
-      };
+        const agentConfig = await getAgentConfig(chatSession.agent_config_id);
 
-      const userText = turn.user_input
-        .filter(
-          (
-            item,
-          ): item is { type: "text"; source: { type: "text"; text: string } } =>
-            item.type === "text",
-        )
-        .map((item) => item.source.text)
-        .join("\n");
-
-      const userMessage = { role: "user" as const, content: userText };
-      const initialRawMessages = Array.isArray(initialRaw)
-        ? [...initialRaw, userMessage]
-        : [userMessage];
-
-      let currentRequest = {
-        config: {
+        const llmConfig =
+          turn.mode === "planning"
+            ? (agentConfig.planning_config as unknown as LLMConfig)
+            : (agentConfig.chat_config as unknown as LLMConfig);
+        const llmConfigWithTools: LLMConfig = {
           ...llmConfig,
-          input_messages: [],
-          custom_tools: llmConfigWithTools.custom_tools,
-        },
-        raw: initialRawMessages,
-      };
+          custom_tools: toolRegistry.getAllToolDefinitions(),
+        };
 
-      let iteration = 0;
-      const maxIterations = 20;
-      let fullText = "";
+        const userText = turn.user_input
+          .filter(
+            (
+              item,
+            ): item is {
+              type: "text";
+              source: { type: "text"; text: string };
+            } => item.type === "text",
+          )
+          .map((item) => item.source.text)
+          .join("\n");
 
-      while (iteration < maxIterations) {
-        iteration++;
-        const result = await llm.streamText(currentRequest);
-        for await (const event of result.fullStream) {
-          switch (event.type) {
-            case "text-delta":
-              fullText += event.text;
-              eventBus.publish(turn_id, {
-                type: "assistant-delta",
-                text: event.text,
-              });
-              continue;
-            case "reasoning-delta":
-              eventBus.publish(turn_id, {
-                type: event.type,
-                text: event.text,
-              });
-              continue;
-            case "tool-input-start":
-              eventBus.publish(turn_id, {
-                type: "tool-input-start",
-                text: event.toolName,
-              });
-              continue;
-            case "tool-call":
-              await createAndPublishEvent({
-                chat_turn_id: turn_id,
-                sequence: sequence++,
-                event_type: "tool-input",
-                payload: {
-                  type: "tool-input",
-                  input: {
+        const userMessage = { role: "user" as const, content: userText };
+        const initialRawMessages = Array.isArray(initialRaw)
+          ? [...initialRaw, userMessage]
+          : [userMessage];
+
+        let currentRequest = {
+          config: {
+            ...llmConfig,
+            input_messages: [],
+            custom_tools: llmConfigWithTools.custom_tools,
+          },
+          raw: initialRawMessages,
+        };
+
+        let iteration = 0;
+        const maxIterations = 20;
+        let fullText = "";
+
+        while (iteration < maxIterations) {
+          iteration++;
+          const result = await llm.streamText(currentRequest);
+          for await (const event of result.fullStream) {
+            switch (event.type) {
+              case "text-delta":
+                fullText += event.text;
+                eventBus.publish(turn_id, {
+                  type: "assistant-delta",
+                  text: event.text,
+                });
+                continue;
+              case "reasoning-delta":
+                eventBus.publish(turn_id, {
+                  type: event.type,
+                  text: event.text,
+                });
+                continue;
+              case "tool-input-start":
+                eventBus.publish(turn_id, {
+                  type: "tool-input-start",
+                  text: event.toolName,
+                });
+                continue;
+              case "tool-call":
+                await createAndPublishEvent({
+                  chat_turn_id: turn_id,
+                  sequence: sequence++,
+                  event_type: "tool-input",
+                  payload: {
+                    type: "tool-input",
+                    input: {
+                      tool_use_id: event.toolCallId,
+                      label: event.toolName,
+                      content: event.input as Record<string, any>,
+                    },
+                  },
+                });
+                continue;
+              case "tool-result":
+                eventBus.publish(turn_id, {
+                  type: "tool-result",
+                  output: {
                     tool_use_id: event.toolCallId,
                     label: event.toolName,
-                    content: event.input as Record<string, any>,
+                    content: event.output as Record<string, any>,
+                    status: "success",
                   },
-                },
+                });
+                continue;
+              default:
+                continue;
+            }
+          }
+
+          const response = await result.response;
+          const rawMessages = response.messages;
+
+          const toolCalls = await result.toolCalls;
+
+          if (!toolCalls || toolCalls.length === 0) {
+            currentRequest = {
+              ...currentRequest,
+              raw: [...(currentRequest?.raw ?? []), ...(rawMessages ?? [])],
+            };
+            break;
+          }
+
+          const toolResponses = [];
+
+          for (const toolCall of toolCalls) {
+            const toolName = toolCall.toolName as string;
+            const toolArgs = toolCall.input as Record<string, unknown>;
+            const toolCallId = toolCall.toolCallId as string;
+
+            if (!workspace) {
+              throw new AgentOrchestrationException({
+                public_message: "Tool workspace context not configured.",
               });
-              continue;
-            case "tool-result":
-              eventBus.publish(turn_id, {
+            }
+
+            const tool = toolRegistry.getToolByName(toolName as ToolKey);
+            if (!tool) {
+              throw new AgentOrchestrationException({
+                public_message: `Tool '${toolName}' is not available.`,
+              });
+            }
+
+            let toolResult: unknown;
+            let toolStatus: "success" | "failed" = "success";
+            try {
+              toolResult = await tool.execute(ctx, workspace, toolArgs);
+            } catch (error) {
+              toolStatus = "failed";
+              toolResult = { error: String(error) };
+            }
+
+            await createAndPublishEvent({
+              chat_turn_id: turn_id,
+              sequence: sequence++,
+              event_type: "tool-response",
+              payload: {
                 type: "tool-result",
                 output: {
-                  tool_use_id: event.toolCallId,
-                  label: event.toolName,
-                  content: event.output as Record<string, any>,
-                  status: "success",
+                  tool_use_id: toolCallId,
+                  label: toolName,
+                  content: { result: toolResult },
+                  status: toolStatus,
                 },
-              });
-              continue;
-            default:
-              continue;
-          }
-        }
-
-        const response = await result.response;
-        const rawMessages = response.messages;
-
-        const toolCalls = await (result as any).toolCalls;
-
-        if (!toolCalls || toolCalls.length === 0) {
-          currentRequest = {
-            ...currentRequest,
-            raw: [...(currentRequest?.raw ?? []), ...(rawMessages ?? [])],
-          };
-          break;
-        }
-
-        const toolResponses = [];
-
-        for (const toolCall of toolCalls) {
-          const toolName = toolCall.toolName as string;
-          const toolArgs = toolCall.args as Record<string, unknown>;
-          const toolCallId = toolCall.toolCallId as string;
-
-          if (!workspace) {
-            throw new AgentOrchestrationException({
-              public_message: "Tool workspace context not configured.",
-            });
-          }
-
-          const tool = toolRegistry.getToolByName(toolName as ToolKey);
-          if (!tool) {
-            throw new AgentOrchestrationException({
-              public_message: `Tool '${toolName}' is not available.`,
-            });
-          }
-
-          let toolResult: unknown;
-          let toolStatus: "success" | "failed" = "success";
-          try {
-            toolResult = await tool.execute(ctx, workspace, toolArgs);
-          } catch (error) {
-            toolStatus = "failed";
-            toolResult = { error: String(error) };
-          }
-
-          await createAndPublishEvent({
-            chat_turn_id: turn_id,
-            sequence: sequence++,
-            event_type: "tool-response",
-            payload: {
-              type: "tool-result",
-              output: {
-                tool_use_id: toolCallId,
-                label: toolName,
-                content: { result: toolResult },
-                status: toolStatus,
               },
-            },
-          });
+            });
 
-          toolResponses.push({
-            tool_use_id: toolCallId,
-            name: toolName,
-            output: JSON.stringify(toolResult),
-          });
+            toolResponses.push({
+              tool_use_id: toolCallId,
+              name: toolName,
+              output: JSON.stringify(toolResult),
+            });
+          }
+
+          const toolResultMessages = toolResponses.map((tr) => ({
+            role: "tool" as const,
+            content: [
+              {
+                type: "tool-result" as const,
+                toolCallId: tr.tool_use_id,
+                toolName: tr.name,
+                output: { type: "text" as const, value: tr.output },
+              },
+            ],
+          }));
+
+          currentRequest = {
+            config: {
+              ...currentRequest.config,
+              input_messages: [],
+            },
+            raw: [
+              ...(currentRequest?.raw ?? []),
+              ...rawMessages,
+              ...toolResultMessages,
+            ],
+          };
         }
 
-        const toolResultMessages = toolResponses.map((tr) => ({
-          role: "tool" as const,
-          content: [
-            {
-              type: "tool-result" as const,
-              toolCallId: tr.tool_use_id,
-              toolName: tr.name,
-              output: { type: "text" as const, value: tr.output },
-            },
-          ],
-        }));
-
-        currentRequest = {
-          config: {
-            ...currentRequest.config,
-            input_messages: [],
+        await createAndPublishEvent({
+          chat_turn_id: turn_id,
+          sequence: sequence++,
+          event_type: "assistant-message",
+          payload: {
+            type: "assistant-message",
+            content: [
+              {
+                type: "text",
+                source: { type: "text", text: fullText },
+              },
+            ],
           },
-          raw: [
-            ...(currentRequest?.raw ?? []),
-            ...rawMessages,
-            ...toolResultMessages,
-          ],
-        };
-      }
+        });
 
-      await createAndPublishEvent({
-        chat_turn_id: turn_id,
-        sequence: sequence++,
-        event_type: "assistant-message",
-        payload: {
-          type: "assistant-message",
-          content: [
-            {
-              type: "text",
-              source: { type: "text", text: fullText },
-            },
-          ],
-        },
-      });
-
-      await settleTurn({
-        chat_turn_id: turn_id,
-        sequence: sequence++,
-        conversation_context: currentRequest.raw
-          ? {
-              model_host: currentRequest.config.model_host,
-              model_provider: currentRequest.config.model_provider,
-              model_gateway: currentRequest.config.model_gateway,
-              model_id: currentRequest.config.model_id,
-              raw_context: currentRequest.raw,
-            }
-          : null,
-        status: "completed",
-      });
+        await settleTurn({
+          chat_turn_id: turn_id,
+          sequence: sequence++,
+          conversation_context: currentRequest.raw
+            ? {
+                model_host: currentRequest.config.model_host,
+                model_provider: currentRequest.config.model_provider,
+                model_gateway: currentRequest.config.model_gateway,
+                model_id: currentRequest.config.model_id,
+                raw_context: currentRequest.raw,
+              }
+            : null,
+          status: "completed",
+        });
       } catch (error) {
         await settleTurn({
           chat_turn_id: turn_id,

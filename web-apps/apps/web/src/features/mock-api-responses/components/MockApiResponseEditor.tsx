@@ -28,7 +28,7 @@ type MockApiResponseEditorProps = {
   initialResponse?: MockApiResponse;
   submitLabel: string;
   isPending: boolean;
-  errorMessage?: string;
+  errorMessage?: string | undefined;
   onSubmit: (input: Omit<MockApiResponseInput, "mock_api_id">) => void;
 };
 
