@@ -1,5 +1,9 @@
 import type { ColumnType } from "kysely";
 
+import type { MockApiResponsesTable } from "./mock_api_responses";
+import type { MockApisTable } from "./mock_apis";
+import type { ProjectsTable } from "./projects";
+
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 
 export type UsersTable = {
@@ -24,4 +28,7 @@ export type AuthorizedSessionsTable = {
 export type Database = {
   users: UsersTable;
   authorized_sessions: AuthorizedSessionsTable;
+  projects: ProjectsTable;
+  mock_apis: MockApisTable;
+  mock_api_responses: MockApiResponsesTable;
 };

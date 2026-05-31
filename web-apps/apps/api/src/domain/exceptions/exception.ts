@@ -27,3 +27,10 @@ export class ApiGatewayException extends Error {
       input.status_code ?? HttpStatusCode.INTERNAL_SERVER_ERROR;
   }
 }
+
+export class MockApiException extends ApiGatewayException {
+  constructor(input: ApiGatewayExceptionInput) {
+    super(input);
+    this.name = "MockApiException";
+  }
+}

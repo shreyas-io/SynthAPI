@@ -83,7 +83,7 @@ export const addAgentChatRoutes = (
       const isCompleted =
         existingEvents.records.length > 0 &&
         existingEvents.records[existingEvents.records.length - 1]
-          ?.event_type === "assistant_message";
+          ?.event_type === "assistant-message";
 
       if (isCompleted) {
         res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
@@ -111,7 +111,7 @@ export const addAgentChatRoutes = (
               { by: "sequence", order: "desc" },
             );
           const lastEvent = latestEvents.records[0];
-          if (lastEvent?.event_type === "assistant_message") {
+          if (lastEvent?.event_type === "assistant-message") {
             clearInterval(pollInterval);
             unsubscribe();
             res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);

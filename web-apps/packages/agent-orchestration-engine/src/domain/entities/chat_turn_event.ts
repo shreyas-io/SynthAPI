@@ -1,50 +1,58 @@
-import type { ChatTurnUserInput } from "./chat_session_turn";
-
-type TextMessageItem = {
-  type: "text";
-  source: {
-    type: "text";
-    text: string;
-  };
-};
+import type { ChatTurnUserInput, TextMessageItem } from "./chat_session_turn";
 
 type ToolUseDisplayBlock = {
   tool_use_id: string;
   label: string;
-  content: string;
+  content: Record<string, any>;
 };
 
 export type ChatTurnEventType =
-  | "user_input"
-  | "assistant_delta"
-  | "assistant_message"
-  | "tool_call_request"
-  | "tool_call_response";
+  | "user-input"
+  | "assistant-message"
+  | "tool-input"
+  | "tool-response";
+
+type ChatTurnStreamingEventType =
+  | (ChatTurnEventType & "assistant-delta")
+  | "reasoning-delta"
+  | "tool-input-start";
 
 export type ChatTurnEventPayload =
   | {
-      type: "user_input";
+      type: "user-input";
       input: ChatTurnUserInput;
     }
   | {
-      type: "assistant_delta";
-      text: string;
-    }
-  | {
-      type: "assistant_message";
+      type: "assistant-message";
       content: Array<TextMessageItem>;
     }
   | {
-      type: "tool_call_request";
+      type: "tool-input";
       input: ToolUseDisplayBlock;
     }
   | {
-      type: "tool_call_response";
+      type: "tool-result";
       output: ToolUseDisplayBlock & {
         status: "success" | "failed";
       };
     };
 
+export type ChatTurnStreamingEventPayload =
+  | ChatTurnEventPayload
+  | {
+      type: "assistant-delta";
+      text: string;
+    }
+  | {
+      type: "reasoning-delta";
+      text: string;
+    }
+  | {
+      type: "tool-input-start";
+      text: string;
+    };
+
+// the event being stored inside DB
 export type ChatTurnEventEt = {
   id: string;
   chat_turn_id: string;
@@ -52,4 +60,11 @@ export type ChatTurnEventEt = {
   event_type: ChatTurnEventType;
   payload: ChatTurnEventPayload;
   created_at: Date;
+};
+
+// the event being streamed to the end-user
+export type ChatTurnStreamingEventEt = {
+  id: string;
+  event_type: ChatTurnStreamingEventType;
+  payload: ChatTurnStreamingEventPayload;
 };

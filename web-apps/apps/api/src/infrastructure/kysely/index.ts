@@ -14,6 +14,8 @@ export type ApiGatewayDatabase = {
   destroy: () => Promise<void>;
 };
 
+export type DatabaseClient = ApiGatewayDatabase;
+
 const buildConnectionString = (secrets: Secrets): string => {
   const user = encodeURIComponent(secrets.DB_USER);
   const password = encodeURIComponent(secrets.DB_PASS);

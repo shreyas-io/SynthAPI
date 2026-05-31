@@ -1,4 +1,4 @@
-import type { AppContext } from "../..";
+import type { AppContext } from "../../index.js";
 import { generateText } from "../../infrastructure/ai";
 import { AgentOrchestrationException } from "../../exceptions/exception";
 import { generationRequestDto } from "../dto/generation";

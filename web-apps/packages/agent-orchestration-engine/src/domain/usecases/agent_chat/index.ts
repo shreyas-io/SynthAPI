@@ -1,7 +1,6 @@
-import type { AppContext } from "../../..";
+import type { AppContext } from "../../../index.js";
 import type { LLMConfig } from "../../entities/generation";
 import type { ChatTurnUserInput } from "../../entities/chat_session_turn";
-import type { ChatTurnEventPayload, ChatTurnEventType } from "../../entities/chat_turn_event";
 import { ChatSessionsRepository } from "../../../infrastructure/kysely/repositories/chat_sessions";
 import { ChatSessionTurnsRepository } from "../../../infrastructure/kysely/repositories/chat_session_turns";
 import { ChatTurnEventsRepository } from "../../../infrastructure/kysely/repositories/chat_turn_events";
@@ -11,11 +10,7 @@ import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-
-type CreateChatTurnInput = {
-  user_input: ChatTurnUserInput;
-  mode: "execution" | "planning";
-};
+import { createChatTurn } from "./create";
 
 export const AgentChatUsecase = (ctx: AppContext) => {
   const chat_sessions_repo = ChatSessionsRepository(ctx.database);
@@ -37,55 +32,18 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     return config;
   };
 
-  const createAndPublishEvent = async (input: {
-    chat_turn_id: string;
-    sequence: number;
-    event_type: ChatTurnEventType;
-    payload: ChatTurnEventPayload;
-  }) => {
-    const eventId = await chat_events.create(input);
-    const events = await chat_events.list({ filters: { ids: [eventId] } });
-    const event = events[0];
-    if (event && eventBus) {
-      eventBus.publish(input.chat_turn_id, event);
-    }
-    return event;
-  };
-
   return {
-    createChatTurn: async (
+    createChatTurn: (
       chat_session_id: string,
-      input: CreateChatTurnInput,
-    ): Promise<string> => {
-      const count = await chat_sessions_repo.count({
-        filters: { ids: [chat_session_id] },
-      });
-      if (count === 0) {
-        throw new AgentOrchestrationException({
-          public_message: "Chat session not found.",
-          status_code: HttpStatusCode.NOT_FOUND,
-        });
-      }
-
-      const turnId = await chat_turns.create({
-        chat_session_id,
-        mode: input.mode,
-        user_input: input.user_input,
-        conversation_context: null,
-        status: "in_progress",
-      });
-
-      await createAndPublishEvent({
-        chat_turn_id: turnId,
-        sequence: 1,
-        event_type: "user_input",
-        payload: { type: "user_input", input: input.user_input },
-      });
-
-      return turnId;
-    },
-
-    executeChatTurn: async (chat_session_id: string, turn_id: string): Promise<void> => {
+      input: {
+        user_input: ChatTurnUserInput;
+        mode: "execution" | "planning";
+      },
+    ) => createChatTurn(ctx, chat_session_id, input),
+    executeChatTurn: async (
+      chat_session_id: string,
+      turn_id: string,
+    ): Promise<void> => {
       const count = await chat_sessions_repo.count({
         filters: { ids: [chat_session_id] },
       });
@@ -98,6 +56,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       const turns = await chat_turns.list({
         filters: { ids: [turn_id], chat_session_ids: [chat_session_id] },
+        columns: ["status", "chat_session_id", "mode", "user_input"],
       });
       const turn = turns.at(0);
 
@@ -164,22 +123,56 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       };
 
       let iteration = 0;
-      const maxIterations = 5;
+      const maxIterations = 20;
       let fullText = "";
 
       while (iteration < maxIterations) {
         iteration++;
         const result = await llm.streamText(currentRequest);
-
-        for await (const textDelta of result.textStream) {
-          fullText += textDelta;
-
-          await createAndPublishEvent({
-            chat_turn_id: turn_id,
-            sequence: sequence++,
-            event_type: "assistant_delta",
-            payload: { type: "assistant_delta", text: textDelta },
-          });
+        for await (const event of result.fullStream) {
+          switch (event.type) {
+            case "text-delta":
+              eventBus.publish(turn_id, {
+                type: "assistant-delta",
+                text: event.text,
+              });
+              continue;
+            case "reasoning-delta":
+              eventBus.publish(turn_id, {
+                type: event.type,
+                text: event.text,
+              });
+              continue;
+            case "tool-input-start":
+              eventBus.publish(turn_id, {
+                type: "tool-input-start",
+                text: event.toolName,
+              });
+              continue;
+            case "tool-call":
+              eventBus.publish(turn_id, {
+                type: "tool-input",
+                input: {
+                  tool_use_id: event.toolCallId,
+                  label: event.toolName,
+                  content: event.input as Record<string, any>,
+                },
+              });
+              continue;
+            case "tool-result":
+              eventBus.publish(turn_id, {
+                type: "tool-result",
+                output: {
+                  tool_use_id: event.toolCallId,
+                  label: event.toolName,
+                  content: event.output as Record<string, any>,
+                  status: "success",
+                },
+              });
+              continue;
+            default:
+              continue;
+          }
         }
 
         const toolCalls = await (result as any).toolCalls;
@@ -195,19 +188,19 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           const toolArgs = toolCall.args as Record<string, unknown>;
           const toolCallId = toolCall.toolCallId as string;
 
-          await createAndPublishEvent({
-            chat_turn_id: turn_id,
-            sequence: sequence++,
-            event_type: "tool_call_request",
-            payload: {
-              type: "tool_call_request",
-              input: {
-                tool_use_id: toolCallId,
-                label: toolName,
-                content: JSON.stringify(toolArgs),
-              },
-            },
-          });
+          // await createAndPublishEvent({
+          //   chat_turn_id: turn_id,
+          //   sequence: sequence++,
+          //   event_type: "tool_call_request",
+          //   payload: {
+          //     type: "tool_call_request",
+          //     input: {
+          //       tool_use_id: toolCallId,
+          //       label: toolName,
+          //       content: JSON.stringify(toolArgs),
+          //     },
+          //   },
+          // });
 
           if (!ctx.toolExecutor) {
             throw new AgentOrchestrationException({

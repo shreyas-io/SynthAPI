@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { AppContext } from "../..";
+import type { AppContext } from "../../index.js";
 import { ChatSessionsUsecase } from "../../domain/usecases/chat_sessions";
 import { AgentOrchestrationException } from "../../exceptions/exception";
 import {

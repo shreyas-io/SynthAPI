@@ -1,7 +1,7 @@
 import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 
-import type { AppContext } from "../..";
+import type { AppContext } from "../../index.js";
 import type { Database } from "./models";
 
 const { Pool } = pg;

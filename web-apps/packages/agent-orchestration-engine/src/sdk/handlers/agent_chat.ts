@@ -1,4 +1,4 @@
-import type { AppContext } from "../..";
+import type { AppContext } from "../../index.js";
 import { AgentChatUsecase } from "../../domain/usecases/agent_chat";
 import { AgentOrchestrationException } from "../../exceptions/exception";
 import { createChatTurnDto } from "../dto/agent_chat";

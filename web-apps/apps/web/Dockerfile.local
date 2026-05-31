@@ -8,7 +8,6 @@ COPY web-apps/package.json web-apps/pnpm-lock.yaml web-apps/pnpm-workspace.yaml 
 COPY web-apps/apps/api/package.json apps/api/package.json
 COPY web-apps/apps/web/package.json apps/web/package.json
 COPY web-apps/packages/agent-orchestration-engine/package.json packages/agent-orchestration-engine/package.json
-COPY web-apps/packages/mockapi-engine/package.json packages/mockapi-engine/package.json
 
 RUN pnpm install --frozen-lockfile
 

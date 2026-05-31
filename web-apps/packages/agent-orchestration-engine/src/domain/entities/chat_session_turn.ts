@@ -1,6 +1,6 @@
 import type { LLMConfig } from "./generation";
 
-type TextMessageItem = {
+export type TextMessageItem = {
   type: "text";
   source: {
     type: "text";

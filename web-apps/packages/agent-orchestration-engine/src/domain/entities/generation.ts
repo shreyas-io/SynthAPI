@@ -48,25 +48,3 @@ export type GenerationRequest = {
   config: LLMConfig;
   raw: unknown | null; // optionally, used for getting context from previous run.
 };
-
-export type GenerationResponse = {
-  content: Array<
-    | {
-        role: "assistant";
-        content: Array<TextMessageContent>;
-      }
-    | {
-        role: "thinking";
-        content: Array<TextMessageContent>;
-      }
-    | {
-        role: "tool_call_request"; // kept inline to keep the order for interleaved assistant message and tool blocks
-        content: Array<ToolCallRequest>;
-      }
-    | {
-        role: "tool_call_response"; // for server tools, the assistant gives both tool call requests and response
-        content: Array<ToolCallResponse>;
-      }
-  >;
-  raw: unknown | null;
-};

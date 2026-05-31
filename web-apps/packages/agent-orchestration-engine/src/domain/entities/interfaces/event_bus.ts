@@ -1,9 +1,9 @@
-import type { ChatTurnEventEt } from "../chat_turn_event";
+import { ChatTurnStreamingEventPayload } from "../chat_turn_event";
 
 export interface IEventBus {
-  publish(turn_id: string, event: ChatTurnEventEt): void;
+  publish(turn_id: string, event: ChatTurnStreamingEventPayload): void;
   subscribe(
     turn_id: string,
-    handler: (event: ChatTurnEventEt) => void,
+    handler: (event: ChatTurnStreamingEventPayload) => void,
   ): () => void;
 }

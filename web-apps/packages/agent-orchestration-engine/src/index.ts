@@ -20,7 +20,7 @@ import { TextGeneration } from "./sdk/handlers/text_generation";
 type ApplicationDependencies = {
   environment: Environment;
   toolExecutor?: IToolExecutor;
-  eventBus?: IEventBus;
+  eventBus: IEventBus;
 };
 
 export type AppContext = Omit<ApplicationDependencies, "environment"> & {

@@ -1,7 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { streamText, type ModelMessage, type StreamTextResult, type ToolSet } from "ai";
 
-import { AppContext } from "../../..";
+import { AppContext } from "../../../index.js";
 import { AgentOrchestrationException } from "../../../exceptions/exception";
 
 export type CloudflareWorkersAiStreamInput = {

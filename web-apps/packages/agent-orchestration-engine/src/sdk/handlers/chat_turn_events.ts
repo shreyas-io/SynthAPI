@@ -1,4 +1,4 @@
-import type { AppContext } from "../..";
+import type { AppContext } from "../../index.js";
 import { ChatTurnEventsUsecase } from "../../domain/usecases/chat_turn_events";
 import { AgentOrchestrationException } from "../../exceptions/exception";
 import {

@@ -1,6 +1,6 @@
 import { type ModelMessage, type StreamTextResult } from "ai";
 
-import { AppContext } from "../../..";
+import { AppContext } from "../../../index.js";
 import { GenerationRequest } from "../../../domain/entities/generation";
 import {
   AgentOrchestrationException,
