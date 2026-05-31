@@ -21,6 +21,7 @@ export type AgentConfigEt = {
   compaction_config: LLMConfig | null;
   compaction_threshold_tokens: number | null;
   enabled: boolean;
+  version: number;
   created_at: Date;
   updated_at: Date;
 };

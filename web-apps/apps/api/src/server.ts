@@ -8,6 +8,8 @@ import { createAgentOrchestrationApplication } from "./application/agent_orchest
 import { createMockApiApplication } from "./application/mockapi";
 import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
 import { runMigrations } from "./infrastructure/kysely/run_migrations";
+import { runAgentConfigMigrations } from "./run_agent_config_migrations";
+import { AgentConfigsRepository } from "./infrastructure/kysely/repositories/agent_orchestration/agent_configs";
 import { createPyodideWorkerPool } from "./infrastructure/pyodide";
 import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
@@ -34,6 +36,10 @@ export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
   const apiGatewayDatabase = createApiGatewayDatabase(secrets);
   await runMigrations(apiGatewayDatabase.db);
+
+  const agentConfigsRepo = AgentConfigsRepository(apiGatewayDatabase);
+  await runAgentConfigMigrations(agentConfigsRepo);
+
   const serverContext: ServerContext = {
     db: apiGatewayDatabase.db,
   };

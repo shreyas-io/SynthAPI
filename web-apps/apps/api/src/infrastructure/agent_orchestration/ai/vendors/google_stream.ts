@@ -11,30 +11,9 @@ import { streamTextViaOpenRouter } from "../hosts/openrouter_stream";
 import { toModelMessages } from "../to_model_messages";
 import { toToolSet } from "../to_tool_set";
 
-type RawContext = {
-  model_provider: "google";
-  model_host: "openrouter" | "workers_ai";
-  messages: ModelMessage[];
-};
-
-const getRawContext = (request: GenerationRequest): RawContext => {
-  if (request.raw === null) {
-    return {
-      model_provider: "google",
-      model_host: request.config.model_host as "openrouter" | "workers_ai",
-      messages: [],
-    };
-  }
-
-  const raw = request.raw as any;
-
-  if (
-    raw?.model_provider === "google" &&
-    raw?.model_host === request.config.model_host &&
-    Array.isArray(raw?.messages)
-  ) {
-    return raw as RawContext;
-  }
+const getRawMessages = (request: GenerationRequest): ModelMessage[] => {
+  if (request.raw === null) return [];
+  if (Array.isArray(request.raw)) return request.raw as ModelMessage[];
 
   throw new AgentOrchestrationException({
     public_message: "Invalid conversation context.",
@@ -64,7 +43,7 @@ export function streamTextViaGoogle(ctx: AppContext) {
           ? await streamTextViaCloudflareWorkersAi(ctx, {
               model: request.config.model_id,
               system: request.config.system_prompt,
-              messages: [...getRawContext(request).messages, ...inputMessages],
+              messages: [...getRawMessages(request), ...inputMessages],
               temperature: request.config.temperature,
               maxOutputTokens: request.config.max_tokens,
               ...(toolSet === undefined ? {} : { tools: toolSet }),
@@ -72,7 +51,7 @@ export function streamTextViaGoogle(ctx: AppContext) {
           : await streamTextViaOpenRouter(ctx, {
               model: request.config.model_id,
               system: request.config.system_prompt,
-              messages: [...getRawContext(request).messages, ...inputMessages],
+              messages: [...getRawMessages(request), ...inputMessages],
               temperature: request.config.temperature,
               maxOutputTokens: request.config.max_tokens,
               model_gateway: request.config.model_gateway,

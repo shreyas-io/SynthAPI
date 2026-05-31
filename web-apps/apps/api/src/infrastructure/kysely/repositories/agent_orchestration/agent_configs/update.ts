@@ -21,6 +21,7 @@ export const updateAgentConfig =
         ),
         compaction_threshold_tokens: input.compaction_threshold_tokens ?? 0,
         enabled: input.enabled,
+        version: input.version,
       })
       .where("id", "=", id)
       .execute();

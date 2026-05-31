@@ -7,13 +7,13 @@ type AgentConfigInput = Omit<AgentConfigEt, "id" | "created_at" | "updated_at">;
 
 export const createAgentConfig =
   (client: DatabaseClient) =>
-  async (input: AgentConfigInput): Promise<string> => {
-    const id = uuidv7();
+  async (input: AgentConfigInput, id?: string): Promise<string> => {
+    const recordId = id ?? uuidv7();
 
     await client.db
       .insertInto("agent_configs")
       .values({
-        id,
+        id: recordId,
         key: input.key,
         name: input.name,
         description: input.description,
@@ -26,8 +26,9 @@ export const createAgentConfig =
         ),
         compaction_threshold_tokens: input.compaction_threshold_tokens ?? 0,
         enabled: input.enabled,
+        version: input.version,
       })
       .executeTakeFirstOrThrow();
 
-    return id;
+    return recordId;
   };

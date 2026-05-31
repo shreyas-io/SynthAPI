@@ -10,30 +10,9 @@ import { streamTextViaOllama } from "../hosts/ollama_stream";
 import { toModelMessages } from "../to_model_messages";
 import { toToolSet } from "../to_tool_set";
 
-type RawContext = {
-  model_provider: "meta";
-  model_host: "ollama";
-  messages: ModelMessage[];
-};
-
-const getRawContext = (request: GenerationRequest): RawContext => {
-  if (request.raw === null) {
-    return {
-      model_provider: "meta",
-      model_host: "ollama",
-      messages: [],
-    };
-  }
-
-  const raw = request.raw as any;
-
-  if (
-    raw?.model_provider === "meta" &&
-    raw?.model_host === "ollama" &&
-    Array.isArray(raw?.messages)
-  ) {
-    return raw as RawContext;
-  }
+const getRawMessages = (request: GenerationRequest): ModelMessage[] => {
+  if (request.raw === null) return [];
+  if (Array.isArray(request.raw)) return request.raw as ModelMessage[];
 
   throw new AgentOrchestrationException({
     public_message: "Invalid conversation context.",
@@ -58,7 +37,7 @@ export function streamTextViaMeta(ctx: AppContext) {
       const result = await streamTextViaOllama(ctx, {
         model: request.config.model_id,
         system: request.config.system_prompt,
-        messages: [...getRawContext(request).messages, ...inputMessages],
+        messages: [...getRawMessages(request), ...inputMessages],
         temperature: request.config.temperature,
         maxOutputTokens: request.config.max_tokens,
         ...(toolSet === undefined ? {} : { tools: toolSet }),

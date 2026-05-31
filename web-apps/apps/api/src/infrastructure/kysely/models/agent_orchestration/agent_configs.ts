@@ -33,6 +33,7 @@ export type AgentConfigsTable = {
     number
   >;
   enabled: ColumnType<boolean, boolean | undefined, boolean>;
+  version: ColumnType<number, number | undefined, number>;
   created_at: Timestamp;
   updated_at: Timestamp;
 };

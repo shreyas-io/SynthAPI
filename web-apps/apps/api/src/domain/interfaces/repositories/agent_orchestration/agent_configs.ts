@@ -11,7 +11,7 @@ export interface IAgentConfigsRepository {
       enabled?: boolean | undefined;
     };
   }) => Promise<number>;
-  create: (input: AgentConfigInput) => Promise<string>;
+  create: (input: AgentConfigInput, id?: string) => Promise<string>;
   list: {
     (params: {
       filters: {

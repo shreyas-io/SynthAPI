@@ -90,6 +90,18 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         return;
       }
 
+      const previousTurns = await chat_turns.list({
+        filters: {
+          chat_session_ids: [chat_session_id],
+          statuses: ["completed"],
+        },
+        columns: ["conversation_context"],
+        sort: { by: "created_at", order: "desc" },
+        pagination: { limit: 1, offset: 0 },
+      });
+      const initialRaw =
+        previousTurns[0]?.conversation_context?.raw_context ?? null;
+
       const session = await chat_sessions_repo.list({
         filters: { ids: [turn.chat_session_id] },
       });
@@ -131,19 +143,18 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         .map((item) => item.source.text)
         .join("\n");
 
+      const userMessage = { role: "user" as const, content: userText };
+      const initialRawMessages = Array.isArray(initialRaw)
+        ? [...initialRaw, userMessage]
+        : [userMessage];
+
       let currentRequest = {
         config: {
           ...llmConfig,
-          input_messages: [
-            ...(llmConfigWithTools.input_messages || []),
-            {
-              role: "user" as const,
-              content: { type: "text" as const, text: userText },
-            },
-          ],
+          input_messages: [],
           custom_tools: llmConfigWithTools.custom_tools,
         },
-        raw: null,
+        raw: initialRawMessages,
       };
 
       let iteration = 0;
@@ -205,9 +216,16 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           }
         }
 
+        const response = await result.response;
+        const rawMessages = response.messages;
+
         const toolCalls = await (result as any).toolCalls;
 
         if (!toolCalls || toolCalls.length === 0) {
+          currentRequest = {
+            ...currentRequest,
+            raw: [...(currentRequest?.raw ?? []), ...(rawMessages ?? [])],
+          };
           break;
         }
 
@@ -262,18 +280,28 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           });
         }
 
+        const toolResultMessages = toolResponses.map((tr) => ({
+          role: "tool" as const,
+          content: [
+            {
+              type: "tool-result" as const,
+              toolCallId: tr.tool_use_id,
+              toolName: tr.name,
+              output: { type: "text" as const, value: tr.output },
+            },
+          ],
+        }));
+
         currentRequest = {
           config: {
             ...currentRequest.config,
-            input_messages: [
-              ...(currentRequest.config.input_messages || []),
-              {
-                role: "tool_call_response" as const,
-                content: toolResponses,
-              },
-            ],
+            input_messages: [],
           },
-          raw: null,
+          raw: [
+            ...(currentRequest?.raw ?? []),
+            ...rawMessages,
+            ...toolResultMessages,
+          ],
         };
       }
 
@@ -293,7 +321,15 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       });
 
       await chat_turns.update(turn_id, {
-        conversation_context: null,
+        conversation_context: currentRequest.raw
+          ? {
+              model_host: currentRequest.config.model_host,
+              model_provider: currentRequest.config.model_provider,
+              model_gateway: currentRequest.config.model_gateway,
+              model_id: currentRequest.config.model_id,
+              raw_context: currentRequest.raw,
+            }
+          : null,
         status: "completed",
       });
     },
