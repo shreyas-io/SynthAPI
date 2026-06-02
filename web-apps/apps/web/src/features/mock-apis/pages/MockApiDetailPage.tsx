@@ -1,4 +1,5 @@
 import { Link, useParams, useLocation, Outlet } from "react-router";
+import { SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -88,6 +89,7 @@ export function MockApiDetailPage() {
               onClick={() => setVariablesOpen(true)}
               className="button secondary-btn compact-action"
             >
+              <SlidersHorizontal size={14} />
               Variables
             </button>
           </header>

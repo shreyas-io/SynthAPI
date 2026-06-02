@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
+import { Save } from "lucide-react";
 
 import { JsonInput } from "../../../components/atoms/JsonInput";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
@@ -408,7 +409,7 @@ export function MockApiResponseEditor({
                aria-label={submitLabel}
                title={submitLabel}
              >
-               <span aria-hidden="true">💾</span>
+               <Save size={14} />
              </button>
           </div>
         </div>

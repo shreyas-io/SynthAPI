@@ -1,4 +1,5 @@
 import { Link, Outlet, useNavigate } from "react-router";
+import { LogOut } from "lucide-react";
 
 import { useSignout } from "../../features/auth/hooks/auth_hooks";
 
@@ -23,6 +24,7 @@ export function AppLayout() {
             })
           }
         >
+          <LogOut size={14} />
           Sign out
         </button>
       </header>

@@ -1,4 +1,5 @@
 import { Link, useParams } from "react-router";
+import { Settings2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { VariablesEditor } from "../../../components/organisms/VariablesEditor";
@@ -65,6 +66,7 @@ export function ProjectDetailPage() {
                 className="button secondary-btn compact-action"
                 onClick={() => setVariablesOpen(true)}
               >
+                <Settings2 size={14} />
                 Project Variables
               </button>
             </div>

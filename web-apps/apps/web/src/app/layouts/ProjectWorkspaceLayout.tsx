@@ -1,4 +1,5 @@
-import { Link, Outlet, useParams, useLocation } from "react-router";
+import { Outlet, useParams, useLocation } from "react-router";
+import { Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 import { ProjectAgentChatPanel } from "../../features/agent-chat/components/ProjectAgentChatPanel";
@@ -32,11 +33,11 @@ export function ProjectWorkspaceLayout() {
         >
           {chatOpen ? (
             <>
-              <span aria-hidden="true">×</span> Close
+              <X size={16} /> Close
             </>
           ) : (
             <>
-              <span aria-hidden="true">✨</span> Ask AI
+              <Sparkles size={16} /> Ask AI
             </>
           )}
         </button>
