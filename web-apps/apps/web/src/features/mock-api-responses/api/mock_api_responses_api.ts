@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../shared/api/client";
+import { apiRequest } from "../../../lib/api/client";
 import type { ListResponse } from "../../projects/types";
 import type { MockApiResponse, MockApiResponseInput } from "../types";
 

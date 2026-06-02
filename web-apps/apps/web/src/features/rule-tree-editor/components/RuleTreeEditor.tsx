@@ -19,7 +19,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 
-import { JsonInput } from "../../../shared/components/JsonInput";
+import { JsonInput } from "../../../components/atoms/JsonInput";
 import type { PredicateValue, RulePredicate, RuleTree } from "../../mock-api-responses/types";
 
 const operatorsWithoutExpected = [
@@ -450,9 +450,9 @@ export function RuleTreeEditor({
   }, [nodes, setNodes, setEdges]);
 
   return (
-    <section className="card rule-editor">
-      <header className="editor-toolbar" style={{ display: "flex", gap: "1rem" }}>
-        <div style={{ flex: 1 }}>
+    <section className="rule-editor">
+      <header className="editor-toolbar rule-editor-toolbar">
+        <div className="rule-editor-title">
           <p className="eyebrow">Rule tree</p>
           <h2>React Flow Builder</h2>
         </div>
@@ -469,7 +469,7 @@ export function RuleTreeEditor({
         </div>
       </header>
 
-      <div style={{ width: "100%", flex: 1, border: "1px solid #735F32", borderRadius: "8px", overflow: "hidden", background: "#000000" }}>
+      <div className="rule-flow-frame">
         <ReactFlow
           nodes={enhancedNodes}
           edges={edges}
@@ -479,7 +479,7 @@ export function RuleTreeEditor({
           nodeTypes={nodeTypes}
           fitView
           minZoom={0.2}
-          colorMode="dark"
+          colorMode="light"
         >
           <Background color="#333" gap={16} />
           <Controls />

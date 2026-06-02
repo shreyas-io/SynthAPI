@@ -19,30 +19,22 @@ export function JsonInput({ label, value, onChange, error }: JsonInputProps) {
 
   return (
     <div className="json-input-field">
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <div className="json-input-header">
         {label && <label>{label}</label>}
         <button
           type="button"
           className="pill"
           onClick={handleFormat}
-          style={{ cursor: "pointer", border: 0, marginLeft: "auto" }}
           title="Format JSON"
         >
           Beautify
         </button>
       </div>
-      <div
-        style={{
-          border: "1px solid #735F32",
-          borderRadius: "6px",
-          overflow: "hidden",
-          height: "200px",
-        }}
-      >
+      <div className="json-input-editor">
         <Editor
           height="100%"
           defaultLanguage="json"
-          theme="vs-dark"
+          theme="light"
           value={value}
           onChange={(val) => onChange(val || "")}
           options={{

@@ -1,15 +1,13 @@
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../shared/api/query_keys";
-import { VariablesEditor } from "../../../shared/components/VariablesEditor";
-import { getProject, updateProject } from "../api/projects_api";
+import { VariablesEditor } from "../../../components/organisms/VariablesEditor";
+import { useMockApis } from "../../mock-apis/hooks/mock_api_hooks";
+import { useProject, useUpdateProject } from "../hooks/project_hooks";
 import type { Variable } from "../types";
 
 export function ProjectDetailPage() {
   const { projectId } = useParams();
-  const queryClient = useQueryClient();
   const [globals, setGlobals] = useState<Variable[]>([]);
   const [constants, setConstants] = useState<Variable[]>([]);
   const [variablesOpen, setVariablesOpen] = useState(false);
@@ -21,29 +19,27 @@ export function ProjectDetailPage() {
     return <main className="page-content">Missing project ID.</main>;
   }
 
-  const project = useQuery({
-    queryKey: queryKeys.project(projectId),
-    queryFn: () => getProject(projectId),
-  });
+  const project = useProject(projectId);
+  const mockApis = useMockApis(projectId);
+  const updateMutation = useUpdateProject(projectId);
 
-  const updateMutation = useMutation({
-    mutationFn: () => {
+  const saveVariables = () => {
       if (!project.data) throw new Error("Project is not loaded");
 
-      return updateProject(projectId, {
+    updateMutation.mutate(
+      {
         name: project.data.name,
         description: project.data.description,
         globals,
         constants,
-      });
-    },
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.project(projectId),
-      });
-      setVariablesOpen(false);
-    },
-  });
+      },
+      {
+        onSuccess() {
+          setVariablesOpen(false);
+        },
+      },
+    );
+  };
 
   useEffect(() => {
     setGlobals(project.data?.globals ?? []);
@@ -51,34 +47,58 @@ export function ProjectDetailPage() {
   }, [project.data]);
 
   return (
-    <main className="page-content">
+    <main className="workspace-canvas">
       {project.isError && <p className="error">{project.error.message}</p>}
-      
+
       {project.data && (
-        <div style={{ display: "grid", gap: "1rem" }}>
-          <header className="page-header" style={{ marginBottom: 0 }}>
-            <div>
-              <p className="eyebrow">Project Overview</p>
+        <>
+          <header className="workspace-row workspace-title-row">
+            <div className="workspace-heading">
               <h1>{project.data.name}</h1>
-              <p>{project.data.description}</p>
+              {project.data.description && (
+                <p className="muted-text">{project.data.description}</p>
+              )}
+            </div>
+            <div className="toolbar-actions">
+              <button
+                type="button"
+                className="button secondary-btn compact-action"
+                onClick={() => setVariablesOpen(true)}
+              >
+                Project Variables
+              </button>
             </div>
           </header>
 
-          <section className="card variables-settings-panel">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Variables</p>
-                <h2>Project variables</h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => setVariablesOpen(true)}
-              >
-                Edit variables
-              </button>
-            </div>
+          <section className="dense-page-content">
+            {mockApis.isPending && <p>Loading APIs...</p>}
+            {mockApis.isError && <p className="error">{mockApis.error.message}</p>}
+            {mockApis.data && (
+              <section className="grid">
+                {mockApis.data.records.map((api) => (
+                  <Link
+                    className="card link-card"
+                    to={`/projects/${projectId}/mock-apis/${api.id}`}
+                    key={api.id}
+                  >
+                    <h2>{api.name}</h2>
+                    <p>
+                      <span className="pill">{api.method}</span>{" "}
+                      <code>{api.path}</code>
+                    </p>
+                    {api.description && <p>{api.description}</p>}
+                  </Link>
+                ))}
+                <Link
+                  className="card link-card empty-card"
+                  to={`/projects/${projectId}/mock-apis/new`}
+                >
+                  <h2 style={{ color: "var(--color-text-muted)" }}>+ New API</h2>
+                </Link>
+              </section>
+            )}
           </section>
-        </div>
+        </>
       )}
 
       {variablesOpen && (
@@ -129,7 +149,7 @@ export function ProjectDetailPage() {
             <button
               type="button"
               disabled={updateMutation.isPending}
-              onClick={() => updateMutation.mutate()}
+              onClick={saveVariables}
             >
               Save variables
             </button>

@@ -1,21 +1,19 @@
 import { Link, useParams, useLocation, Outlet } from "react-router";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../shared/api/query_keys";
 import {
   VariablesEditor,
   VariablesViewer,
-} from "../../../shared/components/VariablesEditor";
-import { listMockApiResponses } from "../../mock-api-responses/api/mock_api_responses_api";
+} from "../../../components/organisms/VariablesEditor";
+import { useMockApiResponses } from "../../mock-api-responses/hooks/mock_api_response_hooks";
 import type { Variable } from "../../projects/types";
-import { getProject, updateProject } from "../../projects/api/projects_api";
-import { getMockApi, updateMockApi } from "../api/mock_apis_api";
+import { useProject, useUpdateProject } from "../../projects/hooks/project_hooks";
+import { useMockApi, useMockApis, useUpdateMockApi } from "../hooks/mock_api_hooks";
 
 export function MockApiDetailPage() {
   const { projectId, mockApiId } = useParams();
   const location = useLocation();
-  const queryClient = useQueryClient();
+  const [apiDropdownOpen, setApiDropdownOpen] = useState(false);
   const [variables, setVariables] = useState<Variable[]>([]);
   const [globals, setGlobals] = useState<Variable[]>([]);
   const [variablesOpen, setVariablesOpen] = useState(false);
@@ -27,56 +25,12 @@ export function MockApiDetailPage() {
     return <main className="page-content">Missing ID.</main>;
   }
 
-  const mockApi = useQuery({
-    queryKey: queryKeys.mockApi(mockApiId),
-    queryFn: () => getMockApi(mockApiId),
-  });
-  const responses = useQuery({
-    queryKey: queryKeys.mockApiResponses(mockApiId),
-    queryFn: () => listMockApiResponses(mockApiId),
-  });
-  const project = useQuery({
-    queryKey: queryKeys.project(projectId),
-    queryFn: () => getProject(projectId),
-  });
-  const updateMockApiMutation = useMutation({
-    mutationFn: () => {
-      if (!mockApi.data) throw new Error("Mock API is not loaded");
-
-      return updateMockApi(mockApiId, {
-        project_id: mockApi.data.project_id,
-        method: mockApi.data.method,
-        path: mockApi.data.path,
-        name: mockApi.data.name,
-        description: mockApi.data.description,
-        variables,
-      });
-    },
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.mockApi(mockApiId),
-      });
-    },
-  });
-  const updateProjectMutation = useMutation({
-    mutationFn: () => {
-      if (!project.data) throw new Error("Project is not loaded");
-
-      return updateProject(project.data.id, {
-        name: project.data.name,
-        description: project.data.description,
-        globals,
-        constants: project.data.constants ?? [],
-      });
-    },
-    async onSuccess() {
-      if (!project.data) return;
-
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.project(project.data.id),
-      });
-    },
-  });
+  const mockApi = useMockApi(mockApiId);
+  const mockApis = useMockApis(projectId);
+  const responses = useMockApiResponses(mockApiId);
+  const project = useProject(projectId);
+  const updateMockApiMutation = useUpdateMockApi(mockApiId);
+  const updateProjectMutation = useUpdateProject(projectId);
 
   useEffect(() => {
     setVariables(mockApi.data?.variables ?? []);
@@ -87,61 +41,87 @@ export function MockApiDetailPage() {
   }, [project.data]);
 
   return (
-    <main className="page-content" style={{ padding: "0 1rem" }}>
-      <section className="card" style={{ marginBottom: "1rem", padding: "1rem 1.5rem" }}>
+    <main className="workspace-canvas">
         {mockApi.data && (
-          <header className="page-header" style={{ marginBottom: "1.5rem", alignItems: "center" }}>
-            <h2 style={{ margin: 0 }}>{mockApi.data.name}</h2>
-            <button type="button" onClick={() => setVariablesOpen(true)} className="button secondary-btn">
-               Edit variables
+          <header className="workspace-row workspace-title-row">
+            <div className="workspace-heading route-identity">
+              <div className="api-selector">
+                <button
+                  type="button"
+                  className="api-selector-toggle"
+                  onClick={() => setApiDropdownOpen((v) => !v)}
+                >
+                  <span className="pill">{mockApi.data.method}</span>
+                  <span className="api-selector-name">{mockApi.data.name}</span>
+                  <span aria-hidden="true">⌄</span>
+                </button>
+                {apiDropdownOpen && (
+                  <div className="api-selector-list" role="listbox">
+                    {mockApis.isPending && <p className="muted-text">Loading...</p>}
+                    {mockApis.data?.records.map((api) => (
+                      <Link
+                        key={api.id}
+                        to={`/projects/${projectId}/mock-apis/${api.id}`}
+                        className={`api-selector-item ${api.id === mockApiId ? "active" : ""}`}
+                        onClick={() => setApiDropdownOpen(false)}
+                      >
+                        <span className="pill">{api.method}</span>
+                        <code className="path-text">{api.path}</code>
+                      </Link>
+                    ))}
+                    <Link
+                      className="api-selector-item"
+                      to={`/projects/${projectId}/mock-apis/new`}
+                      onClick={() => setApiDropdownOpen(false)}
+                    >
+                      + New API
+                    </Link>
+                  </div>
+                )}
+              </div>
+              <p>
+                <code>{mockApi.data.path}</code>
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setVariablesOpen(true)}
+              className="button secondary-btn compact-action"
+            >
+              Variables
             </button>
           </header>
         )}
 
-        {responses.isPending && <p>Loading responses...</p>}
-        {responses.isError && <p className="error">{responses.error.message}</p>}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
-           <h3 style={{ margin: 0, marginRight: "0.5rem", color: "#735F32", fontSize: "0.9rem" }}>responses</h3>
+        <div className="workspace-row response-strip">
+           {responses.isPending && <span className="muted-text">Loading responses...</span>}
+           {responses.isError && <span className="error">{responses.error.message}</span>}
+           <span className="response-strip-label">Responses</span>
            {responses.data?.records.map((response) => {
              const isActive = location.pathname.includes(`/responses/${response.id}`);
              return (
                <Link
-                 className={`button ${isActive ? "active" : "secondary-btn"}`}
+                 className={`response-tab ${isActive ? "active" : ""}`}
                  to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/${response.id}`}
                  key={response.id}
-                 style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem", borderRadius: "4px" }}
                >
                  {response.name} {response.is_default && " (default)"}
                </Link>
              );
            })}
            <Link 
-             className="button secondary-btn icon-btn" 
+             className="response-tab add-response-tab"
              to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/new`}
              title="New Response"
-             style={{ padding: "0.1rem 0.4rem", borderRadius: "4px" }}
            >
              +
            </Link>
         </div>
-      </section>
 
       {location.pathname.endsWith(mockApiId) ? (
-        responses.data && (
-          <div className="grid" style={{ marginTop: "1rem" }}>
-            <div className="card" style={{ background: "transparent" }}>
-              <p className="eyebrow">Total responses</p>
-              <h2>{responses.data.total}</h2>
-            </div>
-            <div className="card" style={{ background: "transparent" }}>
-              <p className="eyebrow">Default response</p>
-              <h2>
-                {responses.data.records.find((response) => response.is_default)
-                  ?.name ?? "Not set"}
-              </h2>
-            </div>
-          </div>
-        )
+        <section className="workspace-empty">
+          <p>Select or create a response.</p>
+        </section>
       ) : (
         <Outlet />
       )}
@@ -214,8 +194,22 @@ export function MockApiDetailPage() {
                 updateProjectMutation.isPending
               }
               onClick={() => {
-                updateMockApiMutation.mutate();
-                updateProjectMutation.mutate();
+                if (!mockApi.data || !project.data) return;
+
+                updateMockApiMutation.mutate({
+                  project_id: mockApi.data.project_id,
+                  method: mockApi.data.method,
+                  path: mockApi.data.path,
+                  name: mockApi.data.name,
+                  description: mockApi.data.description,
+                  variables,
+                });
+                updateProjectMutation.mutate({
+                  name: project.data.name,
+                  description: project.data.description,
+                  globals,
+                  constants: project.data.constants ?? [],
+                });
               }}
             >
               Save variables

@@ -1,9 +1,7 @@
 import { Link } from "react-router";
-import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../shared/api/query_keys";
-import { listMockApiResponses } from "../../mock-api-responses/api/mock_api_responses_api";
-import { getMockApi } from "../api/mock_apis_api";
+import { useMockApiResponses } from "../../mock-api-responses/hooks/mock_api_response_hooks";
+import { useMockApi } from "../hooks/mock_api_hooks";
 
 export function MockApiResponsePane({
   mockApiId,
@@ -12,14 +10,8 @@ export function MockApiResponsePane({
   mockApiId: string;
   activeResponseId?: string;
 }) {
-  const mockApi = useQuery({
-    queryKey: queryKeys.mockApi(mockApiId),
-    queryFn: () => getMockApi(mockApiId),
-  });
-  const responses = useQuery({
-    queryKey: queryKeys.mockApiResponses(mockApiId),
-    queryFn: () => listMockApiResponses(mockApiId),
-  });
+  const mockApi = useMockApi(mockApiId);
+  const responses = useMockApiResponses(mockApiId);
 
   return (
     <aside className="mock-api-left-pane card">

@@ -1,26 +1,24 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../shared/api/query_keys";
-import { signin } from "../api/auth_api";
+import { useSignin } from "../hooks/auth_hooks";
 
 export function SigninPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const mutation = useMutation({
-    mutationFn: signin,
-    async onSuccess() {
-      queryClient.removeQueries({ queryKey: queryKeys.authUser });
-      navigate("/projects");
-    },
-  });
+  const mutation = useSignin();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    mutation.mutate({ username, password });
+    mutation.mutate(
+      { username, password },
+      {
+        onSuccess() {
+          navigate("/projects");
+        },
+      },
+    );
   };
 
   return (

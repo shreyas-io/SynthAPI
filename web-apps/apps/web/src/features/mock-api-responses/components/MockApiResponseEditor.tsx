@@ -1,17 +1,11 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 
-import { JsonInput } from "../../../shared/components/JsonInput";
-import { queryKeys } from "../../../shared/api/query_keys";
-import { getMockApi } from "../../mock-apis/api/mock_apis_api";
-import { getProject } from "../../projects/api/projects_api";
-import type { Variable } from "../../projects/types";
+import { JsonInput } from "../../../components/atoms/JsonInput";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
 import type {
   MockApiResponse,
   MockApiResponseInput,
   PostResponseAction,
-  PostResponseActionValue,
   ResponseBody,
   RuleTree,
   VariableScope,
@@ -153,8 +147,7 @@ function KeyValueRows({
         <h3>{label}</h3>
         <button
           type="button"
-          className="secondary-btn"
-          style={{ padding: "0.2rem 0.5rem" }}
+          className="button secondary-btn compact-action"
           onClick={() => onChange([...rows, { id: createId(), key: "", value: "" }])}
         >
           Add
@@ -184,7 +177,7 @@ function KeyValueRows({
           />
           <button
             type="button"
-            className="secondary-btn icon-btn"
+            className="button secondary-btn icon-btn"
             onClick={() => onChange(rows.filter((r) => r.id !== row.id))}
           >
             ×
@@ -279,61 +272,6 @@ function PostActionForm({
   );
 }
 
-function VariablesReference({ mockApiId }: { mockApiId: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  const mockApi = useQuery({
-    queryKey: queryKeys.mockApi(mockApiId),
-    queryFn: () => getMockApi(mockApiId),
-  });
-
-  const project = useQuery({
-    queryKey: queryKeys.project(mockApi.data?.project_id ?? ""),
-    queryFn: () => getProject(mockApi.data?.project_id ?? ""),
-    enabled: !!mockApi.data?.project_id,
-  });
-
-  const renderVars = (title: string, vars?: Variable[] | null) => {
-    if (!vars?.length) return null;
-    return (
-      <div className="variable-reference-section">
-        <h3>{title}</h3>
-        {vars.map((v) => (
-          <div key={v.name} className="variable-reference-card">
-            <small>{v.name}</small>
-            <code>{`{{${title === "Local variables" ? "variables" : title === "Constants" ? "constants" : "globals"}.${v.name}}}`}</code>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  return (
-    <>
-      <button type="button" onClick={() => setIsOpen(true)} className="secondary-btn" style={{ padding: "0.2rem 0.5rem" }}>
-        Variables Ref
-      </button>
-
-      {isOpen && (
-        <div className="variable-reference-modal-backdrop">
-          <section className="variable-reference-modal card">
-            <div className="section-heading">
-              <h2>Variables Reference</h2>
-              <button type="button" onClick={() => setIsOpen(false)}>
-                Close
-              </button>
-            </div>
-            <p>You can use these variables in your templates (body, headers, expected values, etc).</p>
-            {renderVars("Project globals", project.data?.globals)}
-            {renderVars("Constants", project.data?.constants)}
-            {renderVars("Local variables", mockApi.data?.variables)}
-          </section>
-        </div>
-      )}
-    </>
-  );
-}
-
 export function MockApiResponseEditor({
   mockApiId,
   initialResponse,
@@ -348,7 +286,7 @@ export function MockApiResponseEditor({
   };
 
   const [name, setName] = useState(initialResponse?.name ?? "");
-  const [leftTab, setLeftTab] = useState<"response" | "actions">("response");
+  const [activeTab, setActiveTab] = useState<"response" | "actions" | "rules">("response");
   const [isDefault, setIsDefault] = useState(initialResponse?.is_default ?? false);
   const [statusCode, setStatusCode] = useState(
     initialResponse?.response.status_code ?? 200,
@@ -436,41 +374,52 @@ export function MockApiResponseEditor({
   };
 
   return (
-    <form className="response-editor-shell" onSubmit={submit}>
-      <div className="editor-toolbar" style={{ padding: "0.5rem", background: "transparent", border: "none" }}>
-        <div style={{ display: "flex", gap: "1rem", alignItems: "center", width: "100%" }}>
-          <h2 style={{ margin: 0, fontSize: "1.1rem" }}>{initialResponse ? initialResponse.name : "Create mock response"}</h2>
-          <div style={{ marginLeft: "auto", display: "flex", gap: "0.5rem" }}>
-             <VariablesReference mockApiId={mockApiId} />
-             <button disabled={isPending || !mockApiId} style={{ padding: "0.2rem 0.5rem" }}>{submitLabel}</button>
+    <form className="response-editor-shell flat-editor" onSubmit={submit}>
+      <div className="workspace-row editor-toolbar dense-editor-toolbar">
+        <div className="editor-title-row">
+          <h2>{initialResponse ? initialResponse.name : "Create response"}</h2>
+          <div className="editor-tabs compact-tabs inline-tabs">
+            <button
+              className={activeTab === "response" ? "active" : ""}
+              type="button"
+              onClick={() => setActiveTab("response")}
+            >
+              Response
+            </button>
+            <button
+              className={activeTab === "actions" ? "active" : ""}
+              type="button"
+              onClick={() => setActiveTab("actions")}
+            >
+              Actions
+            </button>
+            <button
+              className={activeTab === "rules" ? "active" : ""}
+              type="button"
+              onClick={() => setActiveTab("rules")}
+            >
+              Rules
+            </button>
+          </div>
+          <div className="toolbar-actions">
+             <button
+               className="compact-action icon-only-action"
+               disabled={isPending || !mockApiId}
+               aria-label={submitLabel}
+               title={submitLabel}
+             >
+               <span aria-hidden="true">💾</span>
+             </button>
           </div>
         </div>
       </div>
 
-      <section className="response-editor-main" style={{ display: "grid", gridTemplateColumns: "350px 1fr", gap: "1.5rem" }}>
-        
-        <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-          <div className="editor-tabs" style={{ gap: "0.5rem", flexWrap: "wrap", borderBottom: "none", paddingBottom: 0 }}>
-            <button
-              className={leftTab === "response" ? "active" : "secondary-btn"}
-              type="button"
-              onClick={() => setLeftTab("response")}
-              style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem", borderRadius: "4px" }}
-            >
-              Response Config
-            </button>
-            <button
-              className={leftTab === "actions" ? "active" : "secondary-btn"}
-              type="button"
-              onClick={() => setLeftTab("actions")}
-              style={{ padding: "0.2rem 0.6rem", fontSize: "0.8rem", borderRadius: "4px" }}
-            >
-              Post Actions
-            </button>
-          </div>
+      <section className="response-editor-main">
+        <div className="response-editor-stack">
 
-          {leftTab === "response" && (
-            <div className="card form">
+          {activeTab === "response" && (
+            <div className="editor-tab-panel form flat-panel">
+              <div className="field-grid">
               <label>
                 Name
                 <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -483,13 +432,13 @@ export function MockApiResponseEditor({
                   onChange={(e) => setStatusCode(Number(e.target.value))}
                 />
               </label>
-              <label className="checkbox">
+              <label>
+                Set as Default Response
                 <input
                   type="checkbox"
                   checked={isDefault}
                   onChange={(e) => setIsDefault(e.target.checked)}
                 />
-                Default response
               </label>
               <label>
                 Body type
@@ -504,6 +453,7 @@ export function MockApiResponseEditor({
                   <option value="empty">empty</option>
                 </select>
               </label>
+              </div>
               {bodyType !== "empty" && (
                 bodyType === "json" ? (
                   <JsonInput
@@ -530,16 +480,15 @@ export function MockApiResponseEditor({
             </div>
           )}
 
-          {leftTab === "actions" && (
-            <div className="card post-actions-panel">
-              <div className="section-heading" style={{ marginBottom: "1rem" }}>
+          {activeTab === "actions" && (
+            <div className="editor-tab-panel post-actions-panel flat-panel">
+              <div className="section-heading">
                 <div>
-                  <h3 style={{ margin: 0 }}>Post response actions</h3>
+                  <h3>Post response actions</h3>
                 </div>
                 <button
                   type="button"
-                  className="secondary-btn"
-                  style={{ padding: "0.2rem 0.5rem" }}
+                  className="button secondary-btn compact-action"
                   onClick={() =>
                     setPostActions([
                       ...postActions,
@@ -550,7 +499,7 @@ export function MockApiResponseEditor({
                   + Add
                 </button>
               </div>
-              {!postActions.length && <p style={{ fontSize: "0.8rem", opacity: 0.7 }}>No post response actions configured.</p>}
+              {!postActions.length && <p className="muted-text">No post response actions configured.</p>}
               {postActions.map((action, index) => (
                 <PostActionForm
                   action={action}
@@ -571,25 +520,27 @@ export function MockApiResponseEditor({
               ))}
             </div>
           )}
-        </div>
 
-        <div className="card" style={{ display: "flex", flexDirection: "column", height: "calc(100vh - 12rem)" }}>
-          <div className="section-heading" style={{ marginBottom: "0.5rem" }}>
-            <h3 style={{ margin: 0 }}>Rule Tree</h3>
-          </div>
-          {isDefault && !ruleTree ? (
-            <div className="empty-state">
-              Default responses do not use rule trees.
-            </div>
-          ) : (
-            <div style={{ flex: 1, minHeight: 0 }}>
-              <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
+          {activeTab === "rules" && (
+            <div className="editor-tab-panel rule-editor-panel flat-panel">
+              <div className="section-heading">
+                <h3>Rule tree</h3>
+              </div>
+              {isDefault && !ruleTree ? (
+                <div className="empty-state">
+                  Default responses do not use rule trees.
+                </div>
+              ) : (
+                <div className="rule-editor-frame">
+                  <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
+                </div>
+              )}
             </div>
           )}
         </div>
 
         {(formError || errorMessage) && (
-          <p className="error" style={{ gridColumn: "1 / -1" }}>{formError ?? errorMessage}</p>
+          <p className="error">{formError ?? errorMessage}</p>
         )}
       </section>
     </form>

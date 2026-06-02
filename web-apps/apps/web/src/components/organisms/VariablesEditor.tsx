@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import type { Variable } from "../../features/projects/types";
-import { JsonInput } from "./JsonInput";
+import { JsonInput } from "../atoms/JsonInput";
 
 type VariableRow = Variable & {
   id: string;

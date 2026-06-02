@@ -1,14 +1,9 @@
 import { Link } from "react-router";
-import { useQuery } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../shared/api/query_keys";
-import { listProjects } from "../api/projects_api";
+import { useProjects } from "../hooks/project_hooks";
 
 export function ProjectsPage() {
-  const projects = useQuery({
-    queryKey: queryKeys.projects,
-    queryFn: listProjects,
-  });
+  const projects = useProjects();
 
   return (
     <main className="page">

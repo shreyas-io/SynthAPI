@@ -1,23 +1,24 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router";
-import { useMutation } from "@tanstack/react-query";
 
-import { signup } from "../api/auth_api";
+import { useSignup } from "../hooks/auth_hooks";
 
 export function SignupPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const mutation = useMutation({
-    mutationFn: signup,
-    onSuccess() {
-      navigate("/signin");
-    },
-  });
+  const mutation = useSignup();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    mutation.mutate({ username, password });
+    mutation.mutate(
+      { username, password },
+      {
+        onSuccess() {
+          navigate("/signin");
+        },
+      },
+    );
   };
 
   return (

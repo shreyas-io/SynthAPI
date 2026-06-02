@@ -6,17 +6,16 @@ import {
   useRef,
   useState,
 } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router";
 
-import { queryKeys } from "../../../shared/api/query_keys";
+import { getChatTurnStreamUrl } from "../api/agent_chat_api";
 import {
-  createChatTurn,
-  createProjectChat,
-  getChatTurnStreamUrl,
-  listChatTurnEvents,
-  listProjectChats,
-} from "../api/agent_chat_api";
+  useCreateChatTurn,
+  useCreateProjectChat,
+  useProjectChatEvents,
+  useProjectChats,
+  useRefetchProjectChatEvents,
+} from "../hooks/agent_chat_hooks";
 import { MarkdownMessage } from "./MarkdownMessage";
 import type {
   ChatSession,
@@ -225,7 +224,6 @@ const messagesFromEvents = (events: ChatTurnEvent[]): ChatMessage[] => {
 };
 
 export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps) {
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get("chat_id");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -248,18 +246,13 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     setSearchParams(next, { replace: false });
   };
 
-  const chats = useQuery({
-    queryKey: queryKeys.projectChats(projectId),
-    queryFn: () => listProjectChats(projectId),
-  });
-
-  const events = useQuery({
-    queryKey: selectedChatId
-      ? queryKeys.projectChatEvents(projectId, selectedChatId)
-      : ["projects", projectId, "chats", "none", "events"],
-    queryFn: () => listChatTurnEvents(projectId, selectedChatId!),
-    enabled: Boolean(selectedChatId && !isDraftChat),
-  });
+  const chats = useProjectChats(projectId);
+  const events = useProjectChatEvents(
+    projectId,
+    selectedChatId,
+    Boolean(selectedChatId && !isDraftChat),
+  );
+  const refetchChatEvents = useRefetchProjectChatEvents(projectId);
 
   const selectedChat = chats.data?.records.find(
     (chat) => chat.id === selectedChatId,
@@ -268,30 +261,15 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     ? "Draft chat"
     : (selectedChat?.name ?? "Select chat");
 
-  const createChatMutation = useMutation({
-    mutationFn: (firstMessage: string) =>
-      createProjectChat(projectId, {
+  const createChatMutation = useCreateProjectChat(projectId);
+
+  const createDraftChat = (firstMessage: string) =>
+    createChatMutation.mutateAsync({
         name: chatNameFromMessage(firstMessage),
         description: null,
-      }),
-    async onSuccess(chat) {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.projectChats(projectId),
       });
-      setSelectedChatId(chat.id);
-      setIsDraftChat(false);
-      setIsChatListOpen(false);
-      setUrlChatId(chat.id);
-    },
-  });
 
-  const createTurnMutation = useMutation({
-    mutationFn: (input: { chatId: string; message: string }) =>
-      createChatTurn(projectId, input.chatId, {
-        message: input.message,
-        mode: "execution",
-      }),
-  });
+  const createTurnMutation = useCreateChatTurn(projectId);
 
   const canonicalMessages = useMemo(
     () => messagesFromEvents(events.data?.records ?? []),
@@ -342,9 +320,7 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   };
 
   const refetchTranscript = async (chatId: string) => {
-    await queryClient.invalidateQueries({
-      queryKey: queryKeys.projectChatEvents(projectId, chatId),
-    });
+    await refetchChatEvents(chatId);
   };
 
   const settleStream = async (chatId: string) => {
@@ -521,7 +497,11 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
       const chat =
         selectedChatId && !isDraftChat
           ? ({ id: selectedChatId } as Pick<ChatSession, "id">)
-          : await createChatMutation.mutateAsync(trimmed);
+          : await createDraftChat(trimmed);
+      setSelectedChatId(chat.id);
+      setIsDraftChat(false);
+      setIsChatListOpen(false);
+      setUrlChatId(chat.id);
       const turn = await createTurnMutation.mutateAsync({
         chatId: chat.id,
         message: trimmed,

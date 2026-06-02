@@ -1,41 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router";
 
-import { queryKeys } from "../../../shared/api/query_keys";
-import {
-  getMockApiResponse,
-  updateMockApiResponse,
-} from "../api/mock_api_responses_api";
 import { MockApiResponseEditor } from "../components/MockApiResponseEditor";
+import {
+  useMockApiResponse,
+  useUpdateMockApiResponse,
+} from "../hooks/mock_api_response_hooks";
 
 export function MockApiResponseDetailPage() {
   const { mockApiId, responseId } = useParams();
-  const queryClient = useQueryClient();
-
-  const response = useQuery({
-    queryKey: queryKeys.mockApiResponse(mockApiId!, responseId!),
-    enabled: Boolean(mockApiId && responseId),
-    queryFn: () => getMockApiResponse(mockApiId!, responseId!),
-  });
-
-  const mutation = useMutation({
-    mutationFn: (args: any) => updateMockApiResponse(mockApiId!, args.id, args.response),
-    async onSuccess() {
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.mockApiResponse(mockApiId!, responseId!),
-      });
-      await queryClient.invalidateQueries({
-        queryKey: queryKeys.mockApiResponses(mockApiId!),
-      });
-    },
-  });
+  const response = useMockApiResponse(mockApiId, responseId);
+  const mutation = useUpdateMockApiResponse(mockApiId, responseId);
 
   if (!mockApiId || !responseId) {
     return <main className="page-content">Missing ID.</main>;
   }
 
   return (
-    <div style={{ marginTop: "1rem" }}>
+    <main className="nested-workspace-canvas">
       {response.isPending && <p>Loading response...</p>}
       {response.isError && <p className="error">{response.error.message}</p>}
       {response.data && (
@@ -45,14 +26,9 @@ export function MockApiResponseDetailPage() {
           submitLabel="Save response"
           isPending={mutation.isPending}
           errorMessage={mutation.error?.message}
-          onSubmit={(input) =>
-            mutation.mutate({
-              id: responseId,
-              response: { ...input, mock_api_id: mockApiId },
-            })
-          }
+          onSubmit={(input) => mutation.mutate(input)}
         />
       )}
-    </div>
+    </main>
   );
 }
