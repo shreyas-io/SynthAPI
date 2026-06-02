@@ -1,5 +1,5 @@
 import { Link, useParams, useLocation, Outlet } from "react-router";
-import { SlidersHorizontal } from "lucide-react";
+import { Check, Copy, SlidersHorizontal } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import {
@@ -11,10 +11,22 @@ import type { Variable } from "../../projects/types";
 import { useProject, useUpdateProject } from "../../projects/hooks/project_hooks";
 import { useMockApi, useMockApis, useUpdateMockApi } from "../hooks/mock_api_hooks";
 
+function generateCurl(method: string, path: string, projectSlug?: string) {
+  const host = projectSlug ? `${projectSlug}.mock-stack.localhost` : "localhost";
+  const url = `http://${host}:8787${path}`;
+  const upper = method.toUpperCase();
+
+  if (["POST", "PUT", "PATCH"].includes(upper)) {
+    return `curl -X ${upper} -H "Content-Type: application/json" -d '{}' ${url}`;
+  }
+  return `curl -X ${upper} ${url}`;
+}
+
 export function MockApiDetailPage() {
   const { projectId, mockApiId } = useParams();
   const location = useLocation();
   const [apiDropdownOpen, setApiDropdownOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [variables, setVariables] = useState<Variable[]>([]);
   const [globals, setGlobals] = useState<Variable[]>([]);
   const [variablesOpen, setVariablesOpen] = useState(false);
@@ -84,14 +96,34 @@ export function MockApiDetailPage() {
                 <code>{mockApi.data.path}</code>
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => setVariablesOpen(true)}
-              className="button secondary-btn compact-action"
-            >
-              <SlidersHorizontal size={14} />
-              Variables
-            </button>
+            <div className="toolbar-actions">
+              <button
+                type="button"
+                className="button secondary-btn compact-action"
+                onClick={() => {
+                  if (!mockApi.data) return;
+                  const curl = generateCurl(
+                    mockApi.data.method,
+                    mockApi.data.path,
+                    project.data?.slug,
+                  );
+                  void navigator.clipboard.writeText(curl);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                }}
+              >
+                {copied ? <Check size={14} /> : <Copy size={14} />}
+                {copied ? "Copied" : "Copy curl"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setVariablesOpen(true)}
+                className="button secondary-btn compact-action"
+              >
+                <SlidersHorizontal size={14} />
+                Variables
+              </button>
+            </div>
           </header>
         )}
 
