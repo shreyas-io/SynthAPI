@@ -7,6 +7,14 @@ import type { ChatTurnBlobsTable } from "./agent_orchestration/chat_turn_blobs";
 import type { ChatTurnEventsTable } from "./agent_orchestration/chat_turn_events";
 import type { MockApiResponsesTable } from "./mock_api_responses";
 import type { MockApisTable } from "./mock_apis";
+import type {
+  OrganizationCreditGrantsTable,
+  OrganizationCreditUsagesTable,
+  OrganizationMembershipsTable,
+  OrganizationPlanSubscriptionsTable,
+  OrganizationsTable,
+  PlanTypesTable,
+} from "./organizations";
 import type { ProjectsTable } from "./projects";
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
@@ -16,6 +24,7 @@ export type UsersTable = {
   email: string | null;
   display_name: string | null;
   avatar_url: string | null;
+  default_organization_id: string | null;
   created_at: Timestamp;
   updated_at: Timestamp;
 };
@@ -44,6 +53,12 @@ export type Database = {
   users: UsersTable;
   auth_identities: AuthIdentitiesTable;
   authorized_sessions: AuthorizedSessionsTable;
+  organizations: OrganizationsTable;
+  organization_memberships: OrganizationMembershipsTable;
+  plan_types: PlanTypesTable;
+  organization_plan_subscriptions: OrganizationPlanSubscriptionsTable;
+  organization_credit_grants: OrganizationCreditGrantsTable;
+  organization_credit_usages: OrganizationCreditUsagesTable;
   projects: ProjectsTable;
   mock_apis: MockApisTable;
   mock_api_responses: MockApiResponsesTable;

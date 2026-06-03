@@ -11,6 +11,7 @@ const toUser = (row: UserRow): User => ({
   email: row.email,
   display_name: row.display_name,
   avatar_url: row.avatar_url,
+  default_organization_id: row.default_organization_id,
   created_at: row.created_at,
   updated_at: row.updated_at,
 });
