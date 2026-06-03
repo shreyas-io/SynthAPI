@@ -1,9 +1,10 @@
 import type { AppContext } from "../../../../application/agent_orchestration/context";
+import { sql } from "kysely";
+import { uuidv7 } from "uuidv7";
 import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import { ChatTurnBlobsRepository } from "../../../../infrastructure/kysely/repositories/agent_orchestration/chat_turn_blobs";
 import type {
   ChatTurnBlobEt,
   ChatTurnBlobMimeType,
@@ -27,13 +28,44 @@ type ChatTurnBlobSort = {
 };
 
 export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
-  const chat_turn_blobs_repository = ChatTurnBlobsRepository(ctx.database);
+  const hasFilters = (filters: ChatTurnBlobFilters) =>
+    Boolean(filters.ids?.length || filters.mime_types?.length);
+
+  const applyFilters = <QB extends { where: (...args: any[]) => any }>(
+    query: QB,
+    filters: ChatTurnBlobFilters,
+  ) => {
+    let filtered = query;
+    if (filters.ids?.length) {
+      filtered = filtered.where("id", "in", filters.ids);
+    }
+    if (filters.mime_types?.length) {
+      filtered = filtered.where("mime_type", "in", filters.mime_types);
+    }
+    return filtered;
+  };
+
+  const countChatTurnBlobs = async (
+    filters: ChatTurnBlobFilters,
+  ): Promise<number> => {
+    if (!hasFilters(filters)) return 0;
+
+    const row = await applyFilters(
+      ctx.database.db
+        .selectFrom("chat_turn_blobs")
+        .select(sql<number>`count(*)::int`.as("count")),
+      filters,
+    ).executeTakeFirstOrThrow();
+
+    return row.count;
+  };
 
   const getChatTurnBlob = async (id: string): Promise<ChatTurnBlobEt> => {
-    const chat_turn_blobs = await chat_turn_blobs_repository.list({
-      filters: { ids: [id] },
-    });
-    const chat_turn_blob = chat_turn_blobs.at(0);
+    const chat_turn_blob = await ctx.database.db
+      .selectFrom("chat_turn_blobs")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst() as ChatTurnBlobEt | undefined;
 
     if (!chat_turn_blob) {
       throw new AgentOrchestrationException({
@@ -49,7 +81,16 @@ export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
     createChatTurnBlob: async (
       input: ChatTurnBlobInput,
     ): Promise<ChatTurnBlobEt> => {
-      const id = await chat_turn_blobs_repository.create(input);
+      const id = uuidv7();
+      await ctx.database.db
+        .insertInto("chat_turn_blobs")
+        .values({
+          id,
+          mime_type: input.mime_type,
+          size_bytes: input.size_bytes,
+          content: input.content,
+        })
+        .executeTakeFirstOrThrow();
 
       return getChatTurnBlob(id);
     },
@@ -59,22 +100,34 @@ export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
       pagination: ChatTurnBlobPagination,
       sort: ChatTurnBlobSort,
     ) => {
+      if (!hasFilters(filters) && !pagination) {
+        return { total: 0, records: [] };
+      }
+
+      let recordsQuery = applyFilters(
+        ctx.database.db.selectFrom("chat_turn_blobs").selectAll(),
+        filters,
+      );
+      recordsQuery = recordsQuery
+        .orderBy(sort.by, sort.order)
+        .limit(pagination.limit)
+        .offset(pagination.offset);
+
       const [total, records] = await Promise.all([
-        chat_turn_blobs_repository.count({ filters }),
-        chat_turn_blobs_repository.list({
-          filters,
-          pagination,
-          sort,
-        }),
+        countChatTurnBlobs(filters),
+        recordsQuery.execute() as Promise<ChatTurnBlobEt[]>,
       ]);
 
       return { total, records };
     },
     countChatTurnBlobs(filters: ChatTurnBlobFilters): Promise<number> {
-      return chat_turn_blobs_repository.count({ filters });
+      return countChatTurnBlobs(filters);
     },
-    deleteChatTurnBlob(id: string): Promise<void> {
-      return chat_turn_blobs_repository.delete(id);
+    async deleteChatTurnBlob(id: string): Promise<void> {
+      await ctx.database.db
+        .deleteFrom("chat_turn_blobs")
+        .where("id", "=", id)
+        .execute();
     },
   };
 };

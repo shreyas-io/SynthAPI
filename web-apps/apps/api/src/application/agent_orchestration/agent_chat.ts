@@ -4,13 +4,11 @@ import {
 } from "../../domain/exceptions/exception";
 import { AgentChatUsecase } from "../../domain/usecases/agent_orchestration/agent_chat";
 import type { ToolWorkspaceContext } from "../../domain/usecases/agent_orchestration/tools/types";
-import { ChatSessionTurnsRepository } from "../../infrastructure/kysely/repositories/agent_orchestration/chat_session_turns";
 import type { AppContext } from "./context";
 import { createChatTurnDto } from "./validation/agent_chat";
 
 export function AgentChatApplication(ctx: AppContext) {
   const agent_chat = AgentChatUsecase(ctx);
-  const chat_turns_repo = ChatSessionTurnsRepository(ctx.database);
   const runningTurns = new Set<string>();
 
   return {
@@ -49,11 +47,11 @@ export function AgentChatApplication(ctx: AppContext) {
         });
     },
     getTurnStatus: async (turn_id: string) => {
-      const turns = await chat_turns_repo.list({
-        filters: { ids: [turn_id] },
-        columns: ["id", "chat_session_id", "status"],
-      });
-      const turn = turns.at(0);
+      const turn = await ctx.database.db
+        .selectFrom("chat_session_turns")
+        .select(["id", "chat_session_id", "status"])
+        .where("id", "=", turn_id)
+        .executeTakeFirst();
       if (!turn) {
         throw new AgentOrchestrationException({
           public_message: "Turn not found.",

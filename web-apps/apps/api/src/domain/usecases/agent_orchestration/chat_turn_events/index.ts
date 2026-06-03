@@ -1,9 +1,10 @@
 import type { AppContext } from "../../../../application/agent_orchestration/context";
+import { sql } from "kysely";
+import { uuidv7 } from "uuidv7";
 import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import { ChatTurnEventsRepository } from "../../../../infrastructure/kysely/repositories/agent_orchestration/chat_turn_events";
 import type {
   ChatTurnEventEt,
   ChatTurnEventType,
@@ -16,6 +17,7 @@ type ChatTurnEventInput = Pick<
 type ChatTurnEventFilters = {
   ids?: string[] | undefined;
   chat_turn_ids?: string[] | undefined;
+  chat_session_ids?: string[] | undefined;
   event_types?: ChatTurnEventType[] | undefined;
 };
 type ChatTurnEventPagination = {
@@ -28,13 +30,56 @@ type ChatTurnEventSort = {
 };
 
 export const ChatTurnEventsUsecase = (ctx: AppContext) => {
-  const chat_turn_events_repository = ChatTurnEventsRepository(ctx.database);
+  const hasFilters = (filters: ChatTurnEventFilters) =>
+    Boolean(
+      filters.ids?.length ||
+        filters.chat_turn_ids?.length ||
+        filters.chat_session_ids?.length ||
+        filters.event_types?.length,
+    );
+
+  const countChatTurnEvents = async (
+    filters: ChatTurnEventFilters,
+  ): Promise<number> => {
+    if (!hasFilters(filters)) return 0;
+
+    let query = ctx.database.db
+      .selectFrom("chat_turn_events")
+      .select(sql<number>`count(*)::int`.as("count"));
+
+    if (filters.ids?.length) {
+      query = query.where("id", "in", filters.ids);
+    }
+    if (filters.chat_turn_ids?.length) {
+      query = query.where("chat_turn_id", "in", filters.chat_turn_ids);
+    }
+    if (filters.chat_session_ids?.length) {
+      query = query
+        .innerJoin(
+          "chat_session_turns",
+          "chat_turn_events.chat_turn_id",
+          "chat_session_turns.id",
+        )
+        .where(
+          "chat_session_turns.chat_session_id",
+          "in",
+          filters.chat_session_ids,
+        );
+    }
+    if (filters.event_types?.length) {
+      query = query.where("event_type", "in", filters.event_types);
+    }
+
+    const row = await query.executeTakeFirstOrThrow();
+    return row.count;
+  };
 
   const getChatTurnEvent = async (id: string): Promise<ChatTurnEventEt> => {
-    const chat_turn_events = await chat_turn_events_repository.list({
-      filters: { ids: [id] },
-    });
-    const chat_turn_event = chat_turn_events.at(0);
+    const chat_turn_event = (await ctx.database.db
+      .selectFrom("chat_turn_events")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst()) as unknown as ChatTurnEventEt | undefined;
 
     if (!chat_turn_event) {
       throw new AgentOrchestrationException({
@@ -50,7 +95,17 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
     createChatTurnEvent: async (
       input: ChatTurnEventInput,
     ): Promise<ChatTurnEventEt> => {
-      const id = await chat_turn_events_repository.create(input);
+      const id = uuidv7();
+      await ctx.database.db
+        .insertInto("chat_turn_events")
+        .values({
+          id,
+          chat_turn_id: input.chat_turn_id,
+          sequence: input.sequence,
+          event_type: input.event_type,
+          payload: JSON.stringify(input.payload),
+        })
+        .executeTakeFirstOrThrow();
 
       return getChatTurnEvent(id);
     },
@@ -60,22 +115,71 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
       pagination: ChatTurnEventPagination,
       sort: ChatTurnEventSort,
     ) => {
+      if (!hasFilters(filters) && !pagination) {
+        return { total: 0, records: [] };
+      }
+
+      let recordsQuery = ctx.database.db.selectFrom("chat_turn_events");
+
+      if (filters.ids?.length) {
+        recordsQuery = recordsQuery.where("id", "in", filters.ids);
+      }
+      if (filters.chat_turn_ids?.length) {
+        recordsQuery = recordsQuery.where(
+          "chat_turn_id",
+          "in",
+          filters.chat_turn_ids,
+        );
+      }
+      if (filters.chat_session_ids?.length) {
+        recordsQuery = recordsQuery
+          .innerJoin(
+            "chat_session_turns",
+            "chat_turn_events.chat_turn_id",
+            "chat_session_turns.id",
+          )
+          .where(
+            "chat_session_turns.chat_session_id",
+            "in",
+            filters.chat_session_ids,
+          );
+      }
+      if (filters.event_types?.length) {
+        recordsQuery = recordsQuery.where(
+          "event_type",
+          "in",
+          filters.event_types,
+        );
+      }
+
+      if (filters.chat_session_ids?.length) {
+        recordsQuery = recordsQuery
+          .orderBy(sql`chat_session_turns.created_at`, "asc")
+          .selectAll("chat_turn_events");
+      } else {
+        recordsQuery = recordsQuery.selectAll();
+      }
+
+      recordsQuery = recordsQuery
+        .orderBy(sort.by, sort.order)
+        .limit(pagination.limit)
+        .offset(pagination.offset);
+
       const [total, records] = await Promise.all([
-        chat_turn_events_repository.count({ filters }),
-        chat_turn_events_repository.list({
-          filters,
-          pagination,
-          sort,
-        }),
+        countChatTurnEvents(filters),
+        recordsQuery.execute() as Promise<ChatTurnEventEt[]>,
       ]);
 
       return { total, records };
     },
     countChatTurnEvents(filters: ChatTurnEventFilters): Promise<number> {
-      return chat_turn_events_repository.count({ filters });
+      return countChatTurnEvents(filters);
     },
-    deleteChatTurnEvent(id: string): Promise<void> {
-      return chat_turn_events_repository.delete(id);
+    async deleteChatTurnEvent(id: string): Promise<void> {
+      await ctx.database.db
+        .deleteFrom("chat_turn_events")
+        .where("id", "=", id)
+        .execute();
     },
   };
 };
