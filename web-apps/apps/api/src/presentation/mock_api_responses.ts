@@ -10,40 +10,7 @@ import {
   listMockApiResponsesPaginationDto,
   listMockApiResponsesSortDto,
 } from "./dtos/mock_api/mock_api_response";
-
-const getString = (value: unknown): string | undefined => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-
-  return undefined;
-};
-
-const getStringArray = (value: unknown): string[] | undefined => {
-  if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-
-  if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === "string");
-  }
-
-  return undefined;
-};
-
-const getNumber = (value: unknown, fallback: number): number => {
-  const stringValue = getString(value);
-  const numberValue = stringValue ? Number(stringValue) : fallback;
-
-  return Number.isFinite(numberValue) ? numberValue : fallback;
-};
+import { getNumber, getString, getStringArray } from "./utils";
 
 export const addMockApiResponseRoutes = (
   app: Express,

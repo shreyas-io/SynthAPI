@@ -13,29 +13,11 @@ import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
 import { createProjectChatSessionDto } from "./dtos/agent_orchestration/chat_sessions";
 import { createProjectChatTurnDto } from "./dtos/agent_orchestration/agent_chat";
+import { getNumber, getString } from "./utils";
 
 type ProjectsUsecaseApi = ReturnType<typeof ProjectsUsecase>;
 type AgentChatUsecaseApi = ReturnType<typeof AgentChatUsecase>;
 type ChatSessionsUsecaseApi = ReturnType<typeof ChatSessionsUsecase>;
-
-const getString = (value: unknown): string | undefined => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-
-  return undefined;
-};
-
-const getNumber = (value: unknown, fallback: number): number => {
-  const stringValue = getString(value);
-  const numberValue = stringValue ? Number(stringValue) : fallback;
-
-  return Number.isFinite(numberValue) ? numberValue : fallback;
-};
 
 const getChatSessionSortBy = (value: unknown): "name" | "created_at" => {
   return value === "name" || value === "created_at" ? value : "created_at";

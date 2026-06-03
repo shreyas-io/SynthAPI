@@ -11,22 +11,11 @@ import { GoogleAuthProvider } from "../domain/auth_providers/google";
 import { asyncRoute } from "../middleware/async_route";
 import { bearerAuthMiddleware } from "../middleware/auth";
 import type { AppContext } from "../server";
+import { getString } from "./utils";
 
 const OAUTH_STATE_COOKIE_NAME = "mock_stack_oauth_state";
 const OAUTH_RETURN_COOKIE_NAME = "mock_stack_oauth_return_to";
 const OAUTH_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
-
-const getString = (value: unknown): string | undefined => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-
-  return undefined;
-};
 
 const parseCookie = (req: Request, name: string): string | null => {
   const cookieHeader = req.header("cookie");

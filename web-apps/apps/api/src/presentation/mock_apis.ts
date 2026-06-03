@@ -12,37 +12,7 @@ import {
   listMockApisPaginationDto,
   listMockApisSortDto,
 } from "./dtos/mock_api";
-
-const getString = (value: unknown): string | undefined => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-
-  return undefined;
-};
-
-const getStringArray = (value: unknown): string[] | undefined => {
-  if (typeof value === "string") {
-    return [value];
-  }
-
-  if (Array.isArray(value)) {
-    return value.filter((item): item is string => typeof item === "string");
-  }
-
-  return undefined;
-};
-
-const getNumber = (value: unknown, fallback: number): number => {
-  const stringValue = getString(value);
-  const numberValue = stringValue ? Number(stringValue) : fallback;
-
-  return Number.isFinite(numberValue) ? numberValue : fallback;
-};
+import { getNumber, getString, getStringArray } from "./utils";
 
 export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
   const mock_apis = MockApisUsecase(ctx);
