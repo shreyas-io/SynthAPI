@@ -104,6 +104,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
       agent_orchestration,
     },
     serverContext,
+    secrets,
   );
   app.use(errorMiddleware);
 

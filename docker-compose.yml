@@ -6,7 +6,7 @@ services:
     container_name: mock-stack-api
     command: >
       sh -lc "
-        CI=true pnpm install --frozen-lockfile &&
+        CI=true pnpm install --frozen-lockfile --force --store-dir /tmp/pnpm-store --filter @mock-stack/api... &&
         pnpm --filter @mock-stack/api run migrate:latest &&
         pnpm --filter @mock-stack/api run seed:local &&
         pnpm --filter @mock-stack/api run dev
@@ -36,7 +36,7 @@ services:
     container_name: mock-stack-web
     command: >
       sh -lc "
-        CI=true pnpm install --frozen-lockfile &&
+        CI=true pnpm install --frozen-lockfile --force --store-dir /tmp/pnpm-store --filter @mock-stack/web... --prod &&
         pnpm --filter @mock-stack/web run dev
       "
     depends_on:

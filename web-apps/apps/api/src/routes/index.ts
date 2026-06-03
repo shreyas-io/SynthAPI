@@ -11,6 +11,9 @@ import {
 import { addMockApiRoutes, type MockApisSdk } from "./mock_apis";
 import { addProjectChatRoutes } from "./project_chats";
 import { addProjectRoutes, type ProjectsSdk } from "./projects";
+import type { getSecrets } from "../config/secrets";
+
+type RouteSecrets = Awaited<ReturnType<typeof getSecrets>>;
 
 export const addRoutes = (
   app: Express,
@@ -22,9 +25,10 @@ export const addRoutes = (
     projects: ProjectsSdk;
   },
   serverContext: ServerContext,
+  secrets: RouteSecrets,
 ) => {
   addHealthRoutes(app, application);
-  addAuthRoutes(app, serverContext);
+  addAuthRoutes(app, serverContext, secrets);
   app.use("/api/v1", authMiddleware(serverContext));
   addProjectChatRoutes(app, application.agent_orchestration);
   addMockApiRoutes(app, application.mock_apis);

@@ -9,12 +9,44 @@ afterEach(() => {
 });
 
 describe("App", () => {
-  it("renders the signin page", () => {
+  it("renders the signin page", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          status: "success",
+          data: { google: { enabled: true } },
+        }),
+      ),
+    );
     window.history.pushState({}, "", "/signin");
 
     render(<App />);
 
     expect(screen.getByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("link", { name: "Continue with Google" }),
+    ).toHaveAttribute(
+      "href",
+      "http://localhost:8787/mock-stack/api/v1/auth/google/start?return_to=%2Fprojects",
+    );
+  });
+
+  it("shows a google signin error", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          status: "success",
+          data: { google: { enabled: true } },
+        }),
+      ),
+    );
+
+    window.history.pushState({}, "", "/signin?error=google");
+    render(<App />);
+
+    expect(
+      await screen.findByText("Google sign in failed. Please try again."),
+    ).toBeInTheDocument();
   });
 
   it("renders protected projects after session check", async () => {
@@ -23,7 +55,12 @@ describe("App", () => {
         new Response(
           JSON.stringify({
             status: "success",
-            data: { id: "user-1", username: "demo" },
+            data: {
+              id: "user-1",
+              email: "demo@example.com",
+              display_name: "Demo User",
+              avatar_url: null,
+            },
           }),
         ),
       )
@@ -61,7 +98,12 @@ describe("App", () => {
         new Response(JSON.stringify({ status: "success", data }));
 
       if (url.endsWith("/api/v1/auth/me")) {
-        return success({ id: "user-1", username: "demo" });
+        return success({
+          id: "user-1",
+          email: "demo@example.com",
+          display_name: "Demo User",
+          avatar_url: null,
+        });
       }
 
       if (url.endsWith("/api/v1/projects/project-1")) {

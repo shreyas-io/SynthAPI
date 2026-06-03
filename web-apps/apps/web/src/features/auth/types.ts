@@ -1,9 +1,12 @@
 export type AuthUser = {
   id: string;
-  username: string;
+  email: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
 };
 
-export type AuthCredentials = {
-  username: string;
-  password: string;
+export type AuthProviders = {
+  google: {
+    enabled: boolean;
+  };
 };
