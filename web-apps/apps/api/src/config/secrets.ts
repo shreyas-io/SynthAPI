@@ -15,10 +15,10 @@ const secretsSchema = z.object({
   CLOUDFLARE_AI_GATEWAY_TOKEN: z.string(),
   OPENROUTER_API_KEY: z.string(),
   OLLAMA_BASE_URL: z.string().optional(),
-  GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
-  GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
-  GOOGLE_OAUTH_REDIRECT_URI: z.string().optional(),
-  WEB_APP_BASE_URL: z.string().optional(),
+  GOOGLE_OAUTH_CLIENT_ID: z.string(),
+  GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
+  GOOGLE_OAUTH_REDIRECT_URI: z.string(),
+  WEB_APP_BASE_URL: z.string(),
   CORS_WHITELISTED_DOMAINS: z.string().transform((v) => {
     try {
       return v.split(",");
