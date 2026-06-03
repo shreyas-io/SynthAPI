@@ -9,13 +9,13 @@ import {
 import { clearAuthCookie, setAuthCookie } from "../domain/auth_cookie";
 import { GoogleAuthProvider } from "../domain/auth_providers/google";
 import { asyncRoute } from "../middleware/async_route";
-import { authMiddleware } from "../middleware/auth";
+import { bearerAuthMiddleware } from "../middleware/auth";
 import type { ServerContext } from "../server";
 import type { getSecrets } from "../config/secrets";
 
-const oauthStateCookieName = "mock_stack_oauth_state";
-const oauthReturnCookieName = "mock_stack_oauth_return_to";
-const oauthCookieMaxAgeMs = 10 * 60 * 1000;
+const OAUTH_STATE_COOKIE_NAME = "mock_stack_oauth_state";
+const OAUTH_RETURN_COOKIE_NAME = "mock_stack_oauth_return_to";
+const OAUTH_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
 
 type AuthSecrets = Awaited<ReturnType<typeof getSecrets>>;
 
@@ -50,7 +50,7 @@ const setTemporaryCookie = (res: Response, name: string, value: string) => {
     sameSite: "lax",
     secure: false,
     path: "/",
-    maxAge: oauthCookieMaxAgeMs,
+    maxAge: OAUTH_COOKIE_MAX_AGE_MS,
   });
 };
 
@@ -81,10 +81,7 @@ const normalizeReturnTo = (value: unknown): string => {
 };
 
 const getWebBaseUrl = (secrets: AuthSecrets): string => {
-  return (secrets.WEB_APP_BASE_URL ?? "http://127.0.0.1:8787").replace(
-    /\/$/,
-    "",
-  );
+  return secrets.WEB_APP_BASE_URL.replace(/\/$/, "");
 };
 
 const redirectToSigninError = (res: Response, secrets: AuthSecrets) => {
@@ -113,7 +110,7 @@ export const addAuthRoutes = (
   secrets: AuthSecrets,
 ) => {
   const auth = AuthService(serverContext);
-  const requireAuth = authMiddleware(serverContext);
+  const requireAuth = bearerAuthMiddleware(serverContext);
 
   app.get(
     "/api/v1/auth/providers",
@@ -141,8 +138,8 @@ export const addAuthRoutes = (
       const state = randomBytes(32).toString("hex");
       const returnTo = normalizeReturnTo(req.query.return_to);
 
-      setTemporaryCookie(res, oauthStateCookieName, state);
-      setTemporaryCookie(res, oauthReturnCookieName, returnTo);
+      setTemporaryCookie(res, OAUTH_STATE_COOKIE_NAME, state);
+      setTemporaryCookie(res, OAUTH_RETURN_COOKIE_NAME, returnTo);
 
       res.redirect(google.getAuthorizationUrl(state));
     }),
@@ -154,13 +151,13 @@ export const addAuthRoutes = (
       const google = getGoogleProvider(secrets);
       const code = getString(req.query.code);
       const state = getString(req.query.state);
-      const cookieState = parseCookie(req, oauthStateCookieName);
+      const cookieState = parseCookie(req, OAUTH_STATE_COOKIE_NAME);
       const returnTo = normalizeReturnTo(
-        parseCookie(req, oauthReturnCookieName),
+        parseCookie(req, OAUTH_RETURN_COOKIE_NAME),
       );
 
-      clearTemporaryCookie(res, oauthStateCookieName);
-      clearTemporaryCookie(res, oauthReturnCookieName);
+      clearTemporaryCookie(res, OAUTH_STATE_COOKIE_NAME);
+      clearTemporaryCookie(res, OAUTH_RETURN_COOKIE_NAME);
 
       if (!google || !code || !state || !cookieState) {
         redirectToSigninError(res, secrets);

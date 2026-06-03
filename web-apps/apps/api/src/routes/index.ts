@@ -3,7 +3,7 @@ import type { Express } from "express";
 import type { OrchestrationEngine, ServerContext } from "../server";
 import { addAuthRoutes } from "./auth";
 import { addHealthRoutes } from "./health";
-import { authMiddleware } from "../middleware/auth";
+import { bearerAuthMiddleware } from "../middleware/auth";
 import {
   addMockApiResponseRoutes,
   type MockApiResponsesSdk,
@@ -29,7 +29,7 @@ export const addRoutes = (
 ) => {
   addHealthRoutes(app, application);
   addAuthRoutes(app, serverContext, secrets);
-  app.use("/api/v1", authMiddleware(serverContext));
+  app.use("/api/v1", bearerAuthMiddleware(serverContext));
   addProjectChatRoutes(
     app,
     application.agent_orchestration,

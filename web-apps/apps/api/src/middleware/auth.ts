@@ -25,7 +25,7 @@ const parseBearerToken = (req: Request): string | null => {
   return token.length > 0 ? token : null;
 };
 
-export const authMiddleware = (serverContext: ServerContext) => {
+export const bearerAuthMiddleware = (serverContext: ServerContext) => {
   const auth = AuthService(serverContext);
 
   return async (req: Request, res: Response, next: NextFunction) => {
