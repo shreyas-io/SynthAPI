@@ -3,9 +3,6 @@ import {
   HttpStatusCode,
   MockApiException,
 } from "../../../exceptions/exception";
-import { MockApiResponsesRepository } from "../../../../infrastructure/kysely/repositories/mock_api_responses";
-import { MockApisRepository } from "../../../../infrastructure/kysely/repositories/mock_apis";
-import { ProjectsRepository } from "../../../../infrastructure/kysely/repositories/projects";
 import { getMockApiExecutionContext, upsertMockApiVariables } from "./context";
 import { executePostResponseActions } from "./post_response_actions";
 import { executeRuleTree } from "./rule_engine/execute_rule_tree";
@@ -14,6 +11,7 @@ import type {
   RequestBodyEt,
 } from "../../../entities/execution_context";
 import type { MockApiEt } from "../../../entities/mock_api";
+import type { MockApiResponseEt } from "../../../entities/mock_api_response/mock_api_response";
 
 type PublicMockApiRequest = {
   project_slug: string;
@@ -184,18 +182,11 @@ export async function executePublicMockApi(
   ctx: AppContext,
   request_data: PublicMockApiRequest,
 ) {
-  const mock_api_repo = MockApisRepository(ctx.database);
-  const mock_api_response_repo = MockApiResponsesRepository(ctx.database);
-  const projects_repo = ProjectsRepository(ctx.database);
-
-  const project = (
-    await projects_repo.list({
-      filters: {
-        slug: request_data.project_slug,
-      },
-      columns: ["id", "globals", "constants"],
-    })
-  ).at(0);
+  const project = await ctx.database.db
+    .selectFrom("projects")
+    .select(["id", "globals", "constants"])
+    .where("slug", "=", request_data.project_slug)
+    .executeTakeFirst();
 
   if (!project) {
     throw new MockApiException({
@@ -204,13 +195,12 @@ export async function executePublicMockApi(
     });
   }
 
-  const candidates = await mock_api_repo.list({
-    filters: {
-      project_ids: [project.id],
-      method: request_data.method,
-    },
-    columns: ["id", "path", "created_at", "variables"],
-  });
+  const candidates = await ctx.database.db
+    .selectFrom("mock_apis")
+    .select(["id", "path", "created_at", "variables"])
+    .where("project_id", "=", project.id)
+    .where("method", "=", request_data.method)
+    .execute();
   const match = getBestMatch(candidates, request_data.url);
 
   if (!match) {
@@ -243,15 +233,12 @@ export async function executePublicMockApi(
     },
   );
 
-  const mock_api_responses = await mock_api_response_repo.list({
-    filters: {
-      mock_api_ids: [mock_api.id],
-    },
-    sort: {
-      by: "created_at",
-      order: "desc",
-    },
-  });
+  const mock_api_responses = (await ctx.database.db
+    .selectFrom("mock_api_responses")
+    .selectAll()
+    .where("mock_api_id", "=", mock_api.id)
+    .orderBy("created_at", "desc")
+    .execute()) as unknown as MockApiResponseEt[];
 
   let mock_api_response: (typeof mock_api_responses)[number] | undefined;
   let default_mock_api_response:
@@ -306,52 +293,3 @@ export async function executePublicMockApi(
     body: mock_api_response.response.body,
   };
 }
-
-// async function executeMockApi(ctx: AppContext, id: string, request_data: any) {
-//   /**
-//    * First, get the mock api response with this id and then fetch the mock api
-//    * Second, check redis if all variables for this mock api exist...
-//    * ...and update TTL for all that exist, else insert again with default values.
-//    * Third, we map all the inputs of this request - URL, request body, headers, cookies
-//    * Fourth, we execute API
-//    */
-
-//   const mock_api_repo = MockApisRepository(ctx.database);
-//   const projects_repo = ProjectsRepository(ctx.database);
-
-//   const mock_api = (
-//     await mock_api_repo.list({
-//       filters: { ids: [id] },
-//       columns: ["project_id", "variables"],
-//     })
-//   ).at(0);
-
-//   if (!mock_api) {
-//     throw new MockApiException({
-//       public_message: `Mock API not found with ID '${id}'`,
-//       status_code: HttpStatusCode.NOT_FOUND,
-//     });
-//   }
-
-//   const project = (
-//     await projects_repo.list({
-//       filters: {
-//         ids: [mock_api.project_id],
-//       },
-//       columns: ["constants", "globals"],
-//     })
-//   ).at(0);
-
-//   if (!project) {
-//     throw new MockApiException({
-//       public_message: `Associated project with ID '${mock_api.project_id}' not found for Mock API with ID '${id}'`,
-//       status_code: HttpStatusCode.NOT_FOUND,
-//     });
-//   }
-
-//   await upsertMockApiVariables(
-//     ctx,
-//     { ...mock_api, id },
-//     { ...project, id: mock_api.project_id },
-//   );
-// }

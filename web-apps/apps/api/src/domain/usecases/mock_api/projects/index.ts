@@ -1,10 +1,9 @@
 import type { AppContext } from "../../../../application/agent_orchestration/context";
+import { sql } from "kysely";
 import {
   HttpStatusCode,
   MockApiException,
 } from "../../../exceptions/exception";
-import { ProjectsRepository } from "../../../../infrastructure/kysely/repositories/projects";
-import { OrganizationMembershipsRepository } from "../../../../infrastructure/kysely/repositories/organizations";
 import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import type { ProjectEt } from "../../../entities/project";
 
@@ -27,11 +26,6 @@ type ProjectSort = {
 };
 
 export const ProjectsUsecase = (ctx: AppContext) => {
-  const projects_repository = ProjectsRepository(ctx.database);
-  const memberships_repository = OrganizationMembershipsRepository(
-    ctx.database,
-  );
-
   const getAccessibleOrganizationId = async (
     user: AuthenticatedUser,
   ): Promise<string> => {
@@ -44,16 +38,15 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       });
     }
 
-    const memberships = await memberships_repository.list({
-      filters: {
-        organization_ids: [organizationId],
-        user_ids: [user.id],
-        statuses: ["active"],
-      },
-      columns: ["id"],
-    });
+    const membership = await ctx.database.db
+      .selectFrom("organization_memberships")
+      .select(["id"])
+      .where("organization_id", "=", organizationId)
+      .where("user_id", "=", user.id)
+      .where("status", "=", "active")
+      .executeTakeFirst();
 
-    if (!memberships.length) {
+    if (!membership) {
       throw new MockApiException({
         public_message: "You do not have access to this organization.",
         status_code: HttpStatusCode.FORBIDDEN,
@@ -71,20 +64,22 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         "slug" | "name" | "description" | "globals" | "constants"
       >,
     ) => {
-      const projects_repository = ProjectsRepository(ctx.database);
       const organizationId = await getAccessibleOrganizationId(user);
-      const id = await projects_repository.create({
-        ...input,
-        organization_id: organizationId,
-      });
+      const project = await ctx.database.db
+        .insertInto("projects")
+        .values({
+          organization_id: organizationId,
+          slug: input.slug,
+          name: input.name,
+          description: input.description,
+          ...(input.globals ? { globals: JSON.stringify(input.globals) } : {}),
+          ...(input.constants
+            ? { constants: JSON.stringify(input.constants) }
+            : {}),
+        })
+        .returningAll()
+        .executeTakeFirst();
 
-      const projects = await projects_repository.list({
-        filters: {
-          ids: [id],
-          organization_ids: [organizationId],
-        },
-      });
-      const project = projects.at(0);
       if (!project) {
         throw new MockApiException({
           public_message: "Error encountered while creating project.",
@@ -98,13 +93,12 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       id: string,
     ): Promise<ProjectEt> => {
       const organizationId = await getAccessibleOrganizationId(user);
-      const projects = await projects_repository.list({
-        filters: {
-          ids: [id],
-          organization_ids: [organizationId],
-        },
-      });
-      const project = projects.at(0);
+      const project = await ctx.database.db
+        .selectFrom("projects")
+        .selectAll()
+        .where("id", "=", id)
+        .where("organization_id", "=", organizationId)
+        .executeTakeFirst();
       if (!project) {
         throw new MockApiException({
           public_message: "Project not found.",
@@ -125,14 +119,62 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         ...filters,
         organization_ids: [organizationId],
       };
+      let countQuery = ctx.database.db
+        .selectFrom("projects")
+        .select(sql<number>`count(*)::int`.as("count"));
+      let recordsQuery = ctx.database.db
+        .selectFrom("projects")
+        .select(["id", "organization_id", "slug", "name", "description"]);
+
+      if (scopedFilters.ids?.length) {
+        countQuery = countQuery.where("id", "in", scopedFilters.ids);
+        recordsQuery = recordsQuery.where("id", "in", scopedFilters.ids);
+      }
+
+      if (scopedFilters.organization_ids?.length) {
+        countQuery = countQuery.where(
+          "organization_id",
+          "in",
+          scopedFilters.organization_ids,
+        );
+        recordsQuery = recordsQuery.where(
+          "organization_id",
+          "in",
+          scopedFilters.organization_ids,
+        );
+      }
+
+      if (scopedFilters.slug) {
+        countQuery = countQuery.where("slug", "=", scopedFilters.slug);
+        recordsQuery = recordsQuery.where("slug", "=", scopedFilters.slug);
+      }
+
+      if (scopedFilters.name) {
+        countQuery = countQuery.where("name", "ilike", `%${scopedFilters.name}%`);
+        recordsQuery = recordsQuery.where("name", "ilike", `%${scopedFilters.name}%`);
+      }
+
+      if (scopedFilters.description) {
+        countQuery = countQuery.where(
+          "description",
+          "ilike",
+          `%${scopedFilters.description}%`,
+        );
+        recordsQuery = recordsQuery.where(
+          "description",
+          "ilike",
+          `%${scopedFilters.description}%`,
+        );
+      }
+
+      recordsQuery = recordsQuery
+        .orderBy(sort.by, sort.order)
+        .limit(pagination.limit)
+        .offset(pagination.offset);
+
       const [total, records] = await Promise.all([
-        projects_repository.count({ filters: scopedFilters, pagination }),
-        projects_repository.list({
-          filters: scopedFilters,
-          pagination,
-          sort,
-          columns: ["id", "organization_id", "slug", "name", "description"],
-        }),
+        countQuery.executeTakeFirstOrThrow().then((row) => row.count),
+        recordsQuery.execute(),
       ]);
 
       return {
@@ -149,44 +191,56 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       >,
     ): Promise<void> => {
       const organizationId = await getAccessibleOrganizationId(user);
-      const projects = await projects_repository.list({
-        filters: {
-          ids: [id],
-          organization_ids: [organizationId],
-        },
-        columns: ["id"],
-      });
+      const project = await ctx.database.db
+        .selectFrom("projects")
+        .select(["id"])
+        .where("id", "=", id)
+        .where("organization_id", "=", organizationId)
+        .executeTakeFirst();
 
-      if (!projects.length) {
+      if (!project) {
         throw new MockApiException({
           public_message: "Project not found.",
           status_code: HttpStatusCode.NOT_FOUND,
         });
       }
 
-      return projects_repository.update(id, input);
+      await ctx.database.db
+        .updateTable("projects")
+        .set({
+          name: input.name,
+          description: input.description,
+          ...(input.globals ? { globals: JSON.stringify(input.globals) } : {}),
+          ...(input.constants
+            ? { constants: JSON.stringify(input.constants) }
+            : {}),
+        })
+        .where("id", "=", id)
+        .execute();
     },
     deleteProject: async (
       user: AuthenticatedUser,
       id: string,
     ): Promise<void> => {
       const organizationId = await getAccessibleOrganizationId(user);
-      const projects = await projects_repository.list({
-        filters: {
-          ids: [id],
-          organization_ids: [organizationId],
-        },
-        columns: ["id"],
-      });
+      const project = await ctx.database.db
+        .selectFrom("projects")
+        .select(["id"])
+        .where("id", "=", id)
+        .where("organization_id", "=", organizationId)
+        .executeTakeFirst();
 
-      if (!projects.length) {
+      if (!project) {
         throw new MockApiException({
           public_message: "Project not found.",
           status_code: HttpStatusCode.NOT_FOUND,
         });
       }
 
-      return projects_repository.delete(id);
+      await ctx.database.db
+        .deleteFrom("projects")
+        .where("id", "=", id)
+        .execute();
     },
   };
 };

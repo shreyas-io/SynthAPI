@@ -1,9 +1,9 @@
 import type { AppContext } from "../../../../application/agent_orchestration/context";
+import { sql } from "kysely";
 import {
   HttpStatusCode,
   MockApiException,
 } from "../../../exceptions/exception";
-import { MockApisRepository } from "../../../../infrastructure/kysely/repositories/mock_apis";
 import type { MockApiEt } from "../../../entities/mock_api";
 
 type MockApiInput = Pick<
@@ -31,18 +31,22 @@ type MockApiSort = {
 };
 
 export const MockApisUsecase = (ctx: AppContext) => {
-  const mock_apis_repository = MockApisRepository(ctx.database);
-
   return {
     createMockApi: async (input: MockApiInput): Promise<MockApiEt> => {
-      const id = await mock_apis_repository.create(input);
-
-      const mock_apis = await mock_apis_repository.list({
-        filters: {
-          ids: [id],
-        },
-      });
-      const mock_api = mock_apis.at(0);
+      const mock_api = await ctx.database.db
+        .insertInto("mock_apis")
+        .values({
+          project_id: input.project_id,
+          method: input.method,
+          path: input.path,
+          name: input.name,
+          description: input.description,
+          ...(input.variables
+            ? { variables: JSON.stringify(input.variables) }
+            : {}),
+        })
+        .returningAll()
+        .executeTakeFirst();
 
       if (!mock_api) {
         throw new MockApiException({
@@ -53,12 +57,11 @@ export const MockApisUsecase = (ctx: AppContext) => {
       return mock_api;
     },
     getMockApi: async (id: string): Promise<MockApiEt> => {
-      const mock_apis = await mock_apis_repository.list({
-        filters: {
-          ids: [id],
-        },
-      });
-      const mock_api = mock_apis.at(0);
+      const mock_api = await ctx.database.db
+        .selectFrom("mock_apis")
+        .selectAll()
+        .where("id", "=", id)
+        .executeTakeFirst();
 
       if (!mock_api) {
         throw new MockApiException({
@@ -74,35 +77,108 @@ export const MockApisUsecase = (ctx: AppContext) => {
       pagination: MockApiPagination,
       sort: MockApiSort,
     ) => {
+      if (
+        !filters.ids?.length &&
+        !filters.project_ids?.length &&
+        !filters.method &&
+        !filters.path &&
+        !filters.name &&
+        !filters.description
+      ) {
+        return {
+          total: 0,
+          records: [],
+        };
+      }
+
+      let countQuery = ctx.database.db
+        .selectFrom("mock_apis")
+        .select(sql<number>`count(*)::int`.as("count"));
+      let recordsQuery = ctx.database.db
+        .selectFrom("mock_apis")
+        .select([
+          "id",
+          "project_id",
+          "method",
+          "path",
+          "name",
+          "description",
+          "created_at",
+        ]);
+
+      if (filters.ids?.length) {
+        countQuery = countQuery.where("id", "in", filters.ids);
+        recordsQuery = recordsQuery.where("id", "in", filters.ids);
+      }
+
+      if (filters.project_ids?.length) {
+        countQuery = countQuery.where("project_id", "in", filters.project_ids);
+        recordsQuery = recordsQuery.where("project_id", "in", filters.project_ids);
+      }
+
+      if (filters.method) {
+        countQuery = countQuery.where("method", "=", filters.method);
+        recordsQuery = recordsQuery.where("method", "=", filters.method);
+      }
+
+      if (filters.path) {
+        countQuery = countQuery.where("path", "ilike", `%${filters.path}%`);
+        recordsQuery = recordsQuery.where("path", "ilike", `%${filters.path}%`);
+      }
+
+      if (filters.name) {
+        countQuery = countQuery.where("name", "ilike", `%${filters.name}%`);
+        recordsQuery = recordsQuery.where("name", "ilike", `%${filters.name}%`);
+      }
+
+      if (filters.description) {
+        countQuery = countQuery.where(
+          "description",
+          "ilike",
+          `%${filters.description}%`,
+        );
+        recordsQuery = recordsQuery.where(
+          "description",
+          "ilike",
+          `%${filters.description}%`,
+        );
+      }
+
+      recordsQuery = recordsQuery
+        .orderBy(sort.by, sort.order)
+        .limit(pagination.limit)
+        .offset(pagination.offset);
+
       const [total, records] = await Promise.all([
-        mock_apis_repository.count({
-          filters,
-        }),
-        mock_apis_repository.list({
-          filters,
-          pagination,
-          sort,
-          columns: [
-            "id",
-            "project_id",
-            "method",
-            "path",
-            "name",
-            "description",
-            "created_at",
-          ],
-        }),
+        countQuery.executeTakeFirstOrThrow().then((row) => row.count),
+        recordsQuery.execute(),
       ]);
       return {
         total,
         records,
       };
     },
-    updateMockApi(id: string, input: MockApiInput): Promise<void> {
-      return mock_apis_repository.update(id, input);
+    async updateMockApi(id: string, input: MockApiInput): Promise<void> {
+      await ctx.database.db
+        .updateTable("mock_apis")
+        .set({
+          project_id: input.project_id,
+          method: input.method,
+          path: input.path,
+          name: input.name,
+          description: input.description,
+          ...(input.variables
+            ? { variables: JSON.stringify(input.variables) }
+            : {}),
+        })
+        .where("id", "=", id)
+        .execute();
     },
-    deleteMockApi(id: string): Promise<void> {
-      return mock_apis_repository.delete(id);
+    async deleteMockApi(id: string): Promise<void> {
+      await ctx.database.db
+        .deleteFrom("mock_apis")
+        .where("id", "=", id)
+        .execute();
     },
   };
 };

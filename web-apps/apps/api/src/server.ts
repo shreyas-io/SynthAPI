@@ -16,7 +16,7 @@ import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
 import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
-import type { Kysely, Transaction } from "kysely";
+import type { Kysely } from "kysely";
 import type { Database } from "./infrastructure/kysely/models/index";
 
 type ApiApp = {
@@ -25,7 +25,7 @@ type ApiApp = {
 };
 
 export type ServerContext = {
-  db: Kysely<Database> | Transaction<Database>;
+  db: Kysely<Database>;
 };
 
 export type OrchestrationEngine = Awaited<
