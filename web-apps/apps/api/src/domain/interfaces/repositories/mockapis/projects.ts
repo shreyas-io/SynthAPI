@@ -2,7 +2,7 @@ import type { ProjectEt } from "../../../entities/project";
 
 type ProjectInput = Pick<
   ProjectEt,
-  "slug" | "name" | "description" | "globals" | "constants"
+  "organization_id" | "slug" | "name" | "description" | "globals" | "constants"
 >;
 type ProjectUpdateInput = Pick<
   ProjectEt,
@@ -14,6 +14,7 @@ export interface IProjectsRepository {
   count: (params: {
     filters: {
       ids?: string[];
+      organization_ids?: string[];
       slug?: string;
       name?: string;
       description?: string;
@@ -28,6 +29,7 @@ export interface IProjectsRepository {
     (params: {
       filters: {
         ids?: string[];
+        organization_ids?: string[];
         slug?: string;
         name?: string;
         description?: string;
@@ -44,6 +46,7 @@ export interface IProjectsRepository {
     <C extends readonly ColumnKeys[]>(params: {
       filters: {
         ids?: string[];
+        organization_ids?: string[];
         slug?: string;
         name?: string;
         description?: string;

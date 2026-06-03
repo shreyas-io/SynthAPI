@@ -5,6 +5,7 @@ import type { DatabaseClient } from "../../index";
 
 type ProjectFilters = {
   ids?: string[];
+  organization_ids?: string[];
   slug?: string;
   name?: string;
   description?: string;
@@ -24,6 +25,7 @@ export const count =
   }): Promise<number> => {
     if (
       !filters.ids?.length &&
+      !filters.organization_ids?.length &&
       !filters.slug &&
       !filters.name &&
       !filters.description &&
@@ -37,6 +39,10 @@ export const count =
 
     if (filters.ids?.length) {
       query = query.where("id", "in", filters.ids);
+    }
+
+    if (filters.organization_ids?.length) {
+      query = query.where("organization_id", "in", filters.organization_ids);
     }
 
     if (filters.slug) {

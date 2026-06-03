@@ -50,6 +50,7 @@ export const AuthorizedSessionsRepository = (
         "users.email as email",
         "users.display_name as display_name",
         "users.avatar_url as avatar_url",
+        "users.default_organization_id as default_organization_id",
         "authorized_sessions.token_hash as token_hash",
       ])
       .where("authorized_sessions.token_prefix", "=", input.token_prefix)
@@ -64,6 +65,7 @@ export const AuthorizedSessionsRepository = (
         email: row.email,
         display_name: row.display_name,
         avatar_url: row.avatar_url,
+        default_organization_id: row.default_organization_id,
       },
     }));
   },

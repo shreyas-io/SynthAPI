@@ -5,6 +5,9 @@ type UserFilters = {
   email?: string | undefined;
 };
 
+type UserUpdateInput = Partial<
+  Pick<User, "email" | "display_name" | "avatar_url" | "default_organization_id">
+>;
 type ColumnKeys = Extract<keyof User, string>;
 
 export interface IUsersRepository {
@@ -13,6 +16,7 @@ export interface IUsersRepository {
     display_name: string | null;
     avatar_url: string | null;
   }) => Promise<User>;
+  update: (id: string, input: UserUpdateInput) => Promise<void>;
   list: {
     (params: { filters: UserFilters }): Promise<User[]>;
     <C extends readonly ColumnKeys[]>(params: {

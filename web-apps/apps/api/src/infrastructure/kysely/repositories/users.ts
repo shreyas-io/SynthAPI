@@ -80,5 +80,8 @@ export const UsersRepository = (ctx: ServerContext): IUsersRepository => ({
 
     return toUser(row);
   },
+  async update(id, input): Promise<void> {
+    await ctx.db.updateTable("users").set(input).where("id", "=", id).execute();
+  },
   list: list(ctx),
 });

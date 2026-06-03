@@ -5,6 +5,14 @@ import { IAuthService, type ProviderIdentity } from "./interfaces/auth_service";
 import { AuthIdentitiesRepository } from "../infrastructure/kysely/repositories/auth_identities";
 import { AuthorizedSessionsRepository } from "../infrastructure/kysely/repositories/authorized_sessions";
 import { UsersRepository } from "../infrastructure/kysely/repositories/users";
+import {
+  OrganizationCreditGrantsRepository,
+  OrganizationMembershipsRepository,
+  OrganizationPlanSubscriptionsRepository,
+  OrganizationsRepository,
+  PlanTypesRepository,
+} from "../infrastructure/kysely/repositories/organizations";
+import type { User } from "./entities/user";
 
 const token_length_bytes = 64;
 const token_hint_length = 4;
@@ -44,6 +52,88 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
     };
   };
 
+  const ensureDefaultOrganization = async (user: User): Promise<User> => {
+    if (user.default_organization_id) {
+      return user;
+    }
+
+    return ctx.db.transaction().execute(async (trx) => {
+      const txCtx = { db: trx };
+      const users = UsersRepository(txCtx);
+      const organizations = OrganizationsRepository(txCtx);
+      const memberships = OrganizationMembershipsRepository(txCtx);
+      const planTypes = PlanTypesRepository(txCtx);
+      const subscriptions = OrganizationPlanSubscriptionsRepository(txCtx);
+      const creditGrants = OrganizationCreditGrantsRepository(txCtx);
+
+      const [freshUser] = await users.list({
+        filters: { ids: [user.id] },
+      });
+
+      if (!freshUser) {
+        return user;
+      }
+
+      if (freshUser.default_organization_id) {
+        return freshUser;
+      }
+
+      const organization = await organizations.create({
+        name:
+          freshUser.display_name ??
+          freshUser.email ??
+          "Default organization",
+        created_by_user_id: freshUser.id,
+      });
+
+      await users.update(freshUser.id, {
+        default_organization_id: organization.id,
+      });
+
+      await memberships.create({
+        organization_id: organization.id,
+        user_id: freshUser.id,
+        role: "owner",
+        status: "active",
+      });
+
+      const [basicPlan] = await planTypes.list({
+        filters: { keys: ["basic"] },
+      });
+
+      if (!basicPlan) {
+        throw new Error("Basic plan type is missing.");
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(now);
+      expiresAt.setUTCDate(
+        expiresAt.getUTCDate() + basicPlan.credit_grant_duration_days,
+      );
+
+      const subscription = await subscriptions.create({
+        organization_id: organization.id,
+        plan_type_id: basicPlan.id,
+        status: "active",
+        starts_at: now,
+        expires_at: expiresAt,
+      });
+
+      await creditGrants.create({
+        organization_id: organization.id,
+        grant_type: "ai_credits",
+        amount: basicPlan.default_ai_credits,
+        source_subscription_id: subscription.id,
+        expires_at: subscription.expires_at,
+      });
+
+      return {
+        ...freshUser,
+        default_organization_id: organization.id,
+      };
+    });
+  };
+
   const getOrCreateProviderUser = async (input: ProviderIdentity) => {
     const identities = await repositories.authIdentities.list({
       filters: {
@@ -60,7 +150,7 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
       });
       const user = users.at(0);
 
-      if (user) return user;
+      if (user) return ensureDefaultOrganization(user);
     }
 
     const existingUsers = input.email
@@ -80,7 +170,7 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
       user_id: user.id,
     });
 
-    return user;
+    return ensureDefaultOrganization(user);
   };
 
   return {

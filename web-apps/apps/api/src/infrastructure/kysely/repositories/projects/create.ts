@@ -4,7 +4,7 @@ import { uuidv7 } from "uuidv7";
 
 type ProjectInput = Pick<
   ProjectEt,
-  "slug" | "name" | "description" | "globals" | "constants"
+  "organization_id" | "slug" | "name" | "description" | "globals" | "constants"
 >;
 
 export const createProject =
@@ -15,6 +15,7 @@ export const createProject =
       .insertInto("projects")
       .values({
         id,
+        organization_id: input.organization_id,
         slug: input.slug,
         name: input.name,
         description: input.description,
