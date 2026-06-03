@@ -17,7 +17,6 @@ import { createProjectChatTurnDto } from "./dtos/agent_orchestration/agent_chat"
 type ProjectsUsecaseApi = ReturnType<typeof ProjectsUsecase>;
 type AgentChatUsecaseApi = ReturnType<typeof AgentChatUsecase>;
 type ChatSessionsUsecaseApi = ReturnType<typeof ChatSessionsUsecase>;
-type ChatTurnEventsUsecaseApi = ReturnType<typeof ChatTurnEventsUsecase>;
 
 const getString = (value: unknown): string | undefined => {
   if (typeof value === "string") {
@@ -100,16 +99,12 @@ const validateTurnOwnership = async (
   return turnStatus;
 };
 
-export const addProjectChatRoutes = (
-  app: Express,
-  ctx: AppContext,
-) => {
+export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
   const projects = ProjectsUsecase(ctx);
   const agent_chat = AgentChatUsecase(ctx);
   const chat_sessions = ChatSessionsUsecase(ctx);
   const chat_turn_events = ChatTurnEventsUsecase(ctx);
 
-  // GET /api/v1/projects/:project_id/chats
   app.get(
     "/api/v1/projects/:project_id/chats",
     asyncRoute(async (req, res) => {
@@ -155,9 +150,11 @@ export const addProjectChatRoutes = (
       await validateProjectAccess(projects, user, project_id);
 
       const session =
-        await chat_sessions.createChatSessionWithDefaultAgentConfig(
-          { project_id, name, description: description ?? null },
-        );
+        await chat_sessions.createChatSessionWithDefaultAgentConfig({
+          project_id,
+          name,
+          description: description ?? null,
+        });
 
       res.status(201).json(session);
     }),
@@ -189,10 +186,10 @@ export const addProjectChatRoutes = (
         },
       ];
 
-      const turnId = await agent_chat.createChatTurn(
-        chat_id,
-        { user_input, mode },
-      );
+      const turnId = await agent_chat.createChatTurn(chat_id, {
+        user_input,
+        mode,
+      });
 
       res.status(201).json({ id: turnId });
     }),
@@ -210,11 +207,7 @@ export const addProjectChatRoutes = (
       await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(chat_sessions, project_id, chat_id);
 
-      const status = await validateTurnOwnership(
-        agent_chat,
-        chat_id,
-        turn_id,
-      );
+      const status = await validateTurnOwnership(agent_chat, chat_id, turn_id);
 
       res.json(status);
     }),
@@ -231,15 +224,14 @@ export const addProjectChatRoutes = (
       await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(chat_sessions, project_id, chat_id);
 
-      const result =
-        await chat_turn_events.getChatTurnEvents(
-          { chat_session_ids: [chat_id] },
-          {
-            limit: getNumber(req.query.limit, 50),
-            offset: getNumber(req.query.offset, 0),
-          },
-          { by: "sequence", order: "asc" },
-        );
+      const result = await chat_turn_events.getChatTurnEvents(
+        { chat_session_ids: [chat_id] },
+        {
+          limit: getNumber(req.query.limit, 50),
+          offset: getNumber(req.query.offset, 0),
+        },
+        { by: "sequence", order: "asc" },
+      );
 
       res.json(result);
     }),
@@ -265,12 +257,11 @@ export const addProjectChatRoutes = (
       res.flushHeaders?.();
 
       // 1. Replay existing events from the database
-      const existingEvents =
-        await chat_turn_events.getChatTurnEvents(
-          { chat_turn_ids: [turn_id] },
-          { limit: 100, offset: 0 },
-          { by: "sequence", order: "asc" },
-        );
+      const existingEvents = await chat_turn_events.getChatTurnEvents(
+        { chat_turn_ids: [turn_id] },
+        { limit: 100, offset: 0 },
+        { by: "sequence", order: "asc" },
+      );
 
       for (const event of existingEvents.records) {
         res.write(`data: ${JSON.stringify(event)}\n\n`);
@@ -290,23 +281,16 @@ export const addProjectChatRoutes = (
       let unsubscribe = () => {};
 
       try {
-        unsubscribe = agent_chat.subscribeToTurn(
-          turn_id,
-          (event) => {
-            res.write(`data: ${JSON.stringify(event)}\n\n`);
+        unsubscribe = agent_chat.subscribeToTurn(turn_id, (event) => {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
 
-            if (event.type === "turn-settled") {
-              unsubscribe();
-              res.end();
-            }
-          },
-        );
+          if (event.type === "turn-settled") {
+            unsubscribe();
+            res.end();
+          }
+        });
 
-        agent_chat.executeChatTurn(
-          chat_id,
-          turn_id,
-          { project_id, user },
-        );
+        agent_chat.executeChatTurn(chat_id, turn_id, { project_id, user });
 
         req.on("close", () => {
           unsubscribe();

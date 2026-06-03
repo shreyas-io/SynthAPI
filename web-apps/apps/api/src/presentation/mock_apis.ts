@@ -7,7 +7,6 @@ import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
 import {
   createMockApiDto,
-  executeMockApiDto,
   executePublicMockApiDto,
   listMockApisFilterDto,
   listMockApisPaginationDto,
@@ -28,10 +27,7 @@ const getString = (value: unknown): string | undefined => {
 
 const getStringArray = (value: unknown): string[] | undefined => {
   if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    return [value];
   }
 
   if (Array.isArray(value)) {
@@ -50,23 +46,6 @@ const getNumber = (value: unknown, fallback: number): number => {
 
 export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
   const mock_apis = MockApisUsecase(ctx);
-
-  app.post(
-    "/api/v1/mock-apis/:id/execute",
-    asyncRoute(async (req, res) => {
-      const parsed = executeMockApiDto.safeParse(req.body);
-      if (!parsed.success) {
-        throw new ApiGatewayException({
-          public_message: JSON.stringify(parsed.error.issues),
-        });
-      }
-
-      res.json({
-        mock_api_id: req.params.id as string,
-        request: parsed.data,
-      });
-    }),
-  );
 
   app.post(
     "/api/v1/mock-apis",
@@ -108,29 +87,12 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
       const name = getString(req.query.name);
       const description = getString(req.query.description);
 
-      if (ids?.length) {
-        filters.ids = ids;
-      }
-
-      if (project_ids?.length) {
-        filters.project_ids = project_ids;
-      }
-
-      if (method) {
-        filters.method = method;
-      }
-
-      if (path) {
-        filters.path = path;
-      }
-
-      if (name) {
-        filters.name = name;
-      }
-
-      if (description) {
-        filters.description = description;
-      }
+      if (ids?.length) filters.ids = ids;
+      if (project_ids?.length) filters.project_ids = project_ids;
+      if (method) filters.method = method;
+      if (path) filters.path = path;
+      if (name) filters.name = name;
+      if (description) filters.description = description;
 
       const parsedFilters = listMockApisFilterDto.safeParse(filters);
       if (!parsedFilters.success) {
@@ -203,20 +165,6 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
     asyncRoute(async (req, res) => {
       await mock_apis.deleteMockApi(req.params.id as string);
       res.status(204).send();
-    }),
-  );
-
-  app.post(
-    "/api/v1/mock-apis/public/execute",
-    asyncRoute(async (req, res) => {
-      const parsed = executePublicMockApiDto.safeParse(req.body);
-      if (!parsed.success) {
-        throw new ApiGatewayException({
-          public_message: JSON.stringify(parsed.error.issues),
-        });
-      }
-
-      res.json(await executePublicMockApi(ctx, parsed.data));
     }),
   );
 };
