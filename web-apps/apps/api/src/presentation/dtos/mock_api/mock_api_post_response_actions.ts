@@ -65,7 +65,7 @@ const scriptPostResponseAction = z.object({
   order: z.number().int(),
 });
 
-export const mockApiPostResponseAction = z.discriminatedUnion("type", [
+export const mockApiPostResponseActionDto = z.discriminatedUnion("type", [
   setVariableAction,
   unsetVariableAction,
   incrementVariableAction,

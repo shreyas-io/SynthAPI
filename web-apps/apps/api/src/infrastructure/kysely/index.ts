@@ -26,14 +26,12 @@ const buildConnectionString = (secrets: Secrets): string => {
   return `postgres://${user}:${password}@${host}:${port}/${name}`;
 };
 
-export const createApiGatewayDatabase = (
-  secrets: Secrets,
-): ApiGatewayDatabase => {
+export const createDatabaseClient = (secrets: Secrets): ApiGatewayDatabase => {
   const db = new Kysely<Database>({
     dialect: new PostgresDialect({
       pool: new Pool({
         connectionString: buildConnectionString(secrets),
-        max: 5,
+        max: 10,
       }),
     }),
   });

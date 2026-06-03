@@ -1,28 +1,19 @@
+import { randomBytes } from "node:crypto";
 import type { Express } from "express";
 
-import type { AuthenticatedUser } from "../domain/entities/authenticated_user";
 import {
   ApiGatewayException,
   HttpStatusCode,
 } from "../domain/exceptions/exception";
 import { asyncRoute } from "../middleware/async_route";
-
-export type ProjectsSdk = {
-  createProject: (user: AuthenticatedUser, data: unknown) => Promise<unknown>;
-  getProject: (user: AuthenticatedUser, id: string) => Promise<unknown>;
-  listProjects: (
-    user: AuthenticatedUser,
-    filters: unknown,
-    pagination: unknown,
-    sort: unknown,
-  ) => Promise<unknown>;
-  updateProject: (
-    user: AuthenticatedUser,
-    id: string,
-    data: unknown,
-  ) => Promise<void>;
-  deleteProject: (user: AuthenticatedUser, id: string) => Promise<void>;
-};
+import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
+import type { AppContext } from "../server";
+import {
+  createProjectDto,
+  listProjectsFilterDto,
+  listProjectsPaginationDto,
+  listProjectsSortDto,
+} from "./dtos/projects";
 
 const getAuthenticatedUser = (user: Express.Request["user"]) => {
   if (!user) {
@@ -69,13 +60,42 @@ const getNumber = (value: unknown, fallback: number): number => {
   return Number.isFinite(numberValue) ? numberValue : fallback;
 };
 
-export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
+const getSlugBase = (name: string): string => {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 244);
+
+  return slug || "project";
+};
+
+const getProjectSlug = (name: string): string => {
+  return `${getSlugBase(name)}-${randomBytes(5).toString("hex")}`;
+};
+
+export const addProjectRoutes = (app: Express, ctx: AppContext) => {
+  const projects = ProjectsUsecase(ctx);
+
   app.post(
     "/api/v1/projects",
     asyncRoute(async (req, res) => {
+      const parsed = createProjectDto.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsed.error.issues),
+        });
+      }
+      const input = parsed.data;
       const project = await projects.createProject(
         getAuthenticatedUser(req.user),
-        req.body,
+        {
+          slug: getProjectSlug(input.name),
+          name: input.name,
+          description: input.description,
+          globals: input.globals ?? null,
+          constants: input.constants ?? null,
+        },
       );
       res.status(201).json(project);
     }),
@@ -111,18 +131,39 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
         filters.description = description;
       }
 
+      const parsedFilters = listProjectsFilterDto.safeParse(filters);
+      if (!parsedFilters.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsedFilters.error.issues),
+        });
+      }
+
+      const parsedPagination = listProjectsPaginationDto.safeParse({
+        limit: getNumber(req.query.limit, 20),
+        offset: getNumber(req.query.offset, 0),
+      });
+      if (!parsedPagination.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsedPagination.error.issues),
+        });
+      }
+
+      const parsedSort = listProjectsSortDto.safeParse({
+        by: getString(req.query.sort_by) ?? "created_at",
+        order: getString(req.query.sort_order) ?? "desc",
+      });
+      if (!parsedSort.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsedSort.error.issues),
+        });
+      }
+
       res.json(
-        await projects.listProjects(
+        await projects.getProjects(
           getAuthenticatedUser(req.user),
-          filters,
-          {
-            limit: getNumber(req.query.limit, 20),
-            offset: getNumber(req.query.offset, 0),
-          },
-          {
-            by: getString(req.query.sort_by) ?? "created_at",
-            order: getString(req.query.sort_order) ?? "desc",
-          },
+          parsedFilters.data,
+          parsedPagination.data,
+          parsedSort.data,
         ),
       );
     }),
@@ -143,10 +184,22 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
   app.put(
     "/api/v1/projects/:id",
     asyncRoute(async (req, res) => {
+      const parsed = createProjectDto.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsed.error.issues),
+        });
+      }
+      const input = parsed.data;
       await projects.updateProject(
         getAuthenticatedUser(req.user),
         req.params.id as string,
-        req.body,
+        {
+          name: input.name,
+          description: input.description,
+          globals: input.globals ?? null,
+          constants: input.constants ?? null,
+        },
       );
       res.json({});
     }),

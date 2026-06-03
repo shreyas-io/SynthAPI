@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import {
   HttpStatusCode,
   MockApiException,
@@ -182,7 +182,7 @@ export async function executePublicMockApi(
   ctx: AppContext,
   request_data: PublicMockApiRequest,
 ) {
-  const project = await ctx.database.db
+  const project = await ctx.db
     .selectFrom("projects")
     .select(["id", "globals", "constants"])
     .where("slug", "=", request_data.project_slug)
@@ -195,7 +195,7 @@ export async function executePublicMockApi(
     });
   }
 
-  const candidates = await ctx.database.db
+  const candidates = await ctx.db
     .selectFrom("mock_apis")
     .select(["id", "path", "created_at", "variables"])
     .where("project_id", "=", project.id)
@@ -233,7 +233,7 @@ export async function executePublicMockApi(
     },
   );
 
-  const mock_api_responses = (await ctx.database.db
+  const mock_api_responses = (await ctx.db
     .selectFrom("mock_api_responses")
     .selectAll()
     .where("mock_api_id", "=", mock_api.id)

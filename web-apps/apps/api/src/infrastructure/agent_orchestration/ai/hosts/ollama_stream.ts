@@ -1,7 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { streamText, type ModelMessage, type StreamTextResult, type ToolSet } from "ai";
 
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { AgentOrchestrationException } from "../../../../domain/exceptions/exception";
 
 export type OllamaStreamInput = {
@@ -18,7 +18,7 @@ export async function streamTextViaOllama(
   input: OllamaStreamInput,
 ): Promise<StreamTextResult<any, any>> {
   try {
-    const baseUrl = ctx.environment.OLLAMA_BASE_URL ?? "http://localhost:11434";
+    const baseUrl = ctx.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
     const normalized = /^https?:\/\//.test(baseUrl)
       ? baseUrl
       : `http://${baseUrl}`;

@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
 import {
   HttpStatusCode,
@@ -17,9 +17,9 @@ type MockApiResponseInput = Pick<
 >;
 
 type MockApiResponseFilters = {
-  ids?: string[];
-  mock_api_ids?: string[];
-  name?: string;
+  ids?: string[] | undefined;
+  mock_api_ids?: string[] | undefined;
+  name?: string | undefined;
 };
 
 type MockApiResponsePagination = {
@@ -37,7 +37,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
     createMockApiResponse: async (
       input: MockApiResponseInput,
     ): Promise<MockApiResponseEt> => {
-      const mock_api_response = await ctx.database.db
+      const mock_api_response = await ctx.db
         .transaction()
         .execute(async (trx) => {
           if (input.is_default) {
@@ -79,7 +79,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       return mock_api_response as unknown as MockApiResponseEt;
     },
     getMockApiResponse: async (id: string): Promise<MockApiResponseEt> => {
-      const mock_api_response = await ctx.database.db
+      const mock_api_response = await ctx.db
         .selectFrom("mock_api_responses")
         .selectAll()
         .where("id", "=", id)
@@ -110,10 +110,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         };
       }
 
-      let countQuery = ctx.database.db
+      let countQuery = ctx.db
         .selectFrom("mock_api_responses")
         .select(sql<number>`count(*)::int`.as("count"));
-      let recordsQuery = ctx.database.db
+      let recordsQuery = ctx.db
         .selectFrom("mock_api_responses")
         .select(["id", "mock_api_id", "name", "is_default", "created_at"]);
 
@@ -158,7 +158,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       id: string,
       input: MockApiResponseInput,
     ): Promise<void> {
-      await ctx.database.db.transaction().execute(async (trx) => {
+      await ctx.db.transaction().execute(async (trx) => {
         if (input.is_default) {
           await trx
             .updateTable("mock_api_responses")
@@ -191,7 +191,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       });
     },
     async deleteMockApiResponse(id: string): Promise<void> {
-      await ctx.database.db
+      await ctx.db
         .deleteFrom("mock_api_responses")
         .where("id", "=", id)
         .execute();

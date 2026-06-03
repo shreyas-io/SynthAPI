@@ -1,8 +1,8 @@
 import { getSecrets } from "../../config/secrets";
-import { createApiGatewayDatabase } from "./index";
+import { createDatabaseClient } from "./index";
 
 const secrets = await getSecrets();
-const database = createApiGatewayDatabase(secrets);
+const database = createDatabaseClient(secrets);
 
 try {
   await database.checkHealth();

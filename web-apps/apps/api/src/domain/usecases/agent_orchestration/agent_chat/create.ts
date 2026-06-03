@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import {
@@ -15,7 +15,7 @@ export async function createChatTurn(
     mode: "execution" | "planning";
   },
 ): Promise<string> {
-  const session = await ctx.database.db
+  const session = await ctx.db
     .selectFrom("chat_sessions")
     .select(sql<number>`count(*)::int`.as("count"))
     .where("id", "=", chat_session_id)
@@ -28,7 +28,7 @@ export async function createChatTurn(
   }
 
   const turnId = uuidv7();
-  await ctx.database.db
+  await ctx.db
     .insertInto("chat_session_turns")
     .values({
       id: turnId,
@@ -40,7 +40,7 @@ export async function createChatTurn(
     })
     .executeTakeFirstOrThrow();
 
-  await ctx.database.db
+  await ctx.db
     .insertInto("chat_turn_events")
     .values({
       id: uuidv7(),

@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import {
@@ -85,7 +85,7 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
     if (!hasFilters(filters)) return 0;
 
     const row = await applyFilters(
-      ctx.database.db
+      ctx.db
         .selectFrom("chat_sessions")
         .select(sql<number>`count(*)::int`.as("count")),
       filters,
@@ -95,11 +95,11 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
   };
 
   const getChatSession = async (id: string): Promise<ChatSessionEt> => {
-    const chat_session = await ctx.database.db
+    const chat_session = (await ctx.db
       .selectFrom("chat_sessions")
       .selectAll()
       .where("id", "=", id)
-      .executeTakeFirst() as ChatSessionEt | undefined;
+      .executeTakeFirst()) as ChatSessionEt | undefined;
 
     if (!chat_session) {
       throw new AgentOrchestrationException({
@@ -111,24 +111,69 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
     return chat_session;
   };
 
-  return {
-    createChatSession: async (
-      input: ChatSessionInput,
-    ): Promise<ChatSessionEt> => {
-      const id = uuidv7();
-      await ctx.database.db
-        .insertInto("chat_sessions")
-        .values({
-          id,
-          agent_config_id: input.agent_config_id,
-          project_id: input.project_id,
-          name: input.name,
-          description: input.description,
-          status: input.status,
-        })
-        .executeTakeFirstOrThrow();
+  const createChatSession = async (
+    input: ChatSessionInput,
+  ): Promise<ChatSessionEt> => {
+    const id = uuidv7();
+    await ctx.db
+      .insertInto("chat_sessions")
+      .values({
+        id,
+        agent_config_id: input.agent_config_id,
+        project_id: input.project_id,
+        name: input.name,
+        description: input.description,
+        status: input.status,
+      })
+      .executeTakeFirstOrThrow();
 
-      return getChatSession(id);
+    return getChatSession(id);
+  };
+
+  return {
+    createChatSession,
+    createChatSessionWithDefaultAgentConfig: async (input: {
+      project_id: string;
+      name: string;
+      description?: string | null;
+    }) => {
+      const configs = await ctx.db
+        .selectFrom("agent_configs")
+        .selectAll()
+        .where("key", "=", "local-default")
+        .where("enabled", "=", true)
+        .execute();
+
+      let agentConfigId = configs[0]?.id;
+
+      if (!agentConfigId) {
+        const fallback = await ctx.db
+          .selectFrom("agent_configs")
+          .selectAll()
+          .where("enabled", "=", true)
+          .orderBy("created_at", "asc")
+          .limit(1)
+          .offset(0)
+          .execute();
+
+        agentConfigId = fallback[0]?.id;
+      }
+
+      if (!agentConfigId) {
+        throw new AgentOrchestrationException({
+          public_message:
+            "No enabled agent configuration found. Please create one first.",
+          status_code: HttpStatusCode.PRECONDITION_FAILED,
+        });
+      }
+
+      return createChatSession({
+        agent_config_id: agentConfigId,
+        project_id: input.project_id,
+        name: input.name,
+        description: input.description ?? null,
+        status: "active",
+      });
     },
     getChatSession,
     getChatSessions: async (
@@ -141,7 +186,7 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
       }
 
       let recordsQuery = applyFilters(
-        ctx.database.db.selectFrom("chat_sessions").selectAll(),
+        ctx.db.selectFrom("chat_sessions").selectAll(),
         filters,
       );
       recordsQuery = recordsQuery
@@ -163,7 +208,7 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
       id: string,
       input: ChatSessionUpdateInput,
     ): Promise<void> {
-      await ctx.database.db
+      await ctx.db
         .updateTable("chat_sessions")
         .set({
           name: input.name,
@@ -174,7 +219,7 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
         .execute();
     },
     async deleteChatSession(id: string): Promise<void> {
-      await ctx.database.db
+      await ctx.db
         .deleteFrom("chat_sessions")
         .where("id", "=", id)
         .execute();

@@ -1,7 +1,7 @@
 import z from "zod";
-import { variable_types } from "./variables";
+import { variableTypesDto } from "./variables";
 
-const httpMethod = z.enum([
+export const httpMethodDto = z.enum([
   "GET",
   "POST",
   "PUT",
@@ -30,18 +30,18 @@ const requestBodyDto = z.discriminatedUnion("type", [
 ]);
 
 export const createMockApiDto = z.object({
-  method: httpMethod,
+  method: httpMethodDto,
   path: z.string().max(4096),
   name: z.string().max(64),
   description: z.string().max(255).nullable().default(null),
   project_id: z.uuidv7(),
-  variables: variable_types.array().optional(),
+  variables: variableTypesDto.array().optional(),
 });
 
 export const listMockApisFilterDto = z.object({
   ids: z.uuidv7().array().optional(),
   project_ids: z.uuidv7().array().optional(),
-  method: httpMethod.optional(),
+  method: httpMethodDto.optional(),
   path: z.string().optional(),
   name: z.string().optional(),
   description: z.string().optional(),
@@ -66,5 +66,5 @@ export const executeMockApiDto = z.object({
 
 export const executePublicMockApiDto = executeMockApiDto.extend({
   project_slug: z.string(),
-  method: httpMethod,
+  method: httpMethodDto,
 });

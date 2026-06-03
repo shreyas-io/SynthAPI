@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import _ from "lodash";
 
-import type { AppContext } from "../../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../../server";
 import { MockApiException } from "../../../../exceptions/exception";
 import { ExecutionContextEt } from "../../../../entities/execution_context";
 import { MockApiPredicateEt } from "../../../../entities/mock_api_response/rule_tree";

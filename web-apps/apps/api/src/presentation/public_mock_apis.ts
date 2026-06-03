@@ -1,6 +1,8 @@
 import type { Express, NextFunction, Request, Response } from "express";
 
-import type { MockApisSdk } from "./mock_apis";
+import type { RequestBodyEt } from "../domain/entities/execution_context";
+import { executePublicMockApi } from "../domain/usecases/mock_api/execution";
+import type { AppContext } from "../server";
 
 type MockApiExecutionResponse = {
   status_code: number;
@@ -29,7 +31,7 @@ const parseCookies = (header: string | undefined): Record<string, string> => {
   );
 };
 
-const getRequestBody = (req: Request) => {
+const getRequestBody = (req: Request): RequestBodyEt => {
   const content_type = req.headers["content-type"]?.toLowerCase() ?? "";
 
   if (req.body === undefined || req.body === null) {
@@ -84,10 +86,7 @@ const sendMockApiResponse = (
   res.json(result.body.value);
 };
 
-export const addPublicMockApiRoutes = (
-  app: Express,
-  mock_apis: MockApisSdk,
-) => {
+export const addProjectSlugRouter = (app: Express, ctx: AppContext) => {
   app.all(/.*/, (req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith("/api/v1")) {
       next();
@@ -101,15 +100,14 @@ export const addPublicMockApiRoutes = (
       return;
     }
 
-    void mock_apis
-      .executePublicMockApi({
-        project_slug,
-        method: req.method,
-        url: req.originalUrl,
-        headers: getForwardedHeaders(req),
-        body: getRequestBody(req),
-        cookies: parseCookies(req.headers.cookie),
-      })
+    void executePublicMockApi(ctx, {
+      project_slug,
+      method: req.method,
+      url: req.originalUrl,
+      headers: getForwardedHeaders(req),
+      body: getRequestBody(req),
+      cookies: parseCookies(req.headers.cookie),
+    })
       .then((result) =>
         sendMockApiResponse(res, result as MockApiExecutionResponse),
       )

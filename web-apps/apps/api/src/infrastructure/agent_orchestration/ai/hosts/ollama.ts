@@ -1,7 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText, type ModelMessage, type ToolSet } from "ai";
 
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { AgentOrchestrationException } from "../../../../domain/exceptions/exception";
 
 export type OllamaInput = {
@@ -18,7 +18,7 @@ export async function generateTextViaOllama(
   input: OllamaInput,
 ): Promise<Awaited<ReturnType<typeof generateText>>> {
   try {
-    const baseUrl = ctx.environment.OLLAMA_BASE_URL ?? "http://localhost:11434";
+    const baseUrl = ctx.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
     const normalized = /^https?:\/\//.test(baseUrl)
       ? baseUrl
       : `http://${baseUrl}`;

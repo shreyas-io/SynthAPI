@@ -1,11 +1,11 @@
 import z from "zod";
-import { variable_types } from "./variables";
+import { variableTypesDto } from "./mock_api/variables";
 
 export const createProjectDto = z.object({
   name: z.string().max(64),
   description: z.string().max(255),
-  globals: variable_types.array().optional(),
-  constants: variable_types.array().optional(),
+  globals: variableTypesDto.array().optional(),
+  constants: variableTypesDto.array().optional(),
 });
 
 export const listProjectsFilterDto = z.object({

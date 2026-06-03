@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import type { ToolDefinition } from "../../../entities/agent_orchestration/tool";
 

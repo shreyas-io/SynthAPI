@@ -1,16 +1,16 @@
 import { randomBytes } from "node:crypto";
 import argon2 from "argon2";
-import { ServerContext } from "../server";
 import { IAuthService, type ProviderIdentity } from "./interfaces/auth_service";
 import type { User } from "./entities/user";
+import type { AppContext } from "../server";
 
-const token_length_bytes = 64;
-const token_hint_length = 4;
-const session_ttl_ms = 7 * 24 * 60 * 60 * 1000;
+const TOKEN_LENGTH_BYTES = 64;
+const TOKEN_HINT_LENGTH = 4;
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const createToken = () => randomBytes(token_length_bytes).toString("hex");
+const createToken = () => randomBytes(TOKEN_LENGTH_BYTES).toString("hex");
 
-export const AuthService = (ctx: ServerContext): IAuthService => {
+export const AuthService = (ctx: AppContext): IAuthService => {
   const argon_options = {
     type: argon2.argon2id,
   };
@@ -20,15 +20,18 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
   ): Promise<{ token: string; expiresAt: string }> => {
     const token = createToken();
     const tokenHash = await argon2.hash(token, argon_options);
-    const expiresAt = new Date(Date.now() + session_ttl_ms);
+    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
-    await ctx.db.insertInto("authorized_sessions").values({
-      user_id,
-      token_prefix: token.slice(0, token_hint_length),
-      token_suffix: token.slice(-token_hint_length),
-      token_hash: tokenHash,
-      expires_at: expiresAt,
-    }).executeTakeFirstOrThrow();
+    await ctx.db
+      .insertInto("authorized_sessions")
+      .values({
+        user_id,
+        token_prefix: token.slice(0, TOKEN_HINT_LENGTH),
+        token_suffix: token.slice(-TOKEN_HINT_LENGTH),
+        token_hash: tokenHash,
+        expires_at: expiresAt,
+      })
+      .executeTakeFirstOrThrow();
 
     return {
       token,
@@ -60,9 +63,7 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
         .insertInto("organizations")
         .values({
           name:
-            freshUser.display_name ??
-            freshUser.email ??
-            "Default organization",
+            freshUser.display_name ?? freshUser.email ?? "Default organization",
           created_by_user_id: freshUser.id,
         })
         .returningAll()
@@ -76,12 +77,15 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
         .where("id", "=", freshUser.id)
         .execute();
 
-      await trx.insertInto("organization_memberships").values({
-        organization_id: organization.id,
-        user_id: freshUser.id,
-        role: "owner",
-        status: "active",
-      }).executeTakeFirstOrThrow();
+      await trx
+        .insertInto("organization_memberships")
+        .values({
+          organization_id: organization.id,
+          user_id: freshUser.id,
+          role: "owner",
+          status: "active",
+        })
+        .executeTakeFirstOrThrow();
 
       const basicPlan = await trx
         .selectFrom("plan_types")
@@ -111,13 +115,16 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      await trx.insertInto("organization_credit_grants").values({
-        organization_id: organization.id,
-        grant_type: "ai_credits",
-        amount: basicPlan.default_ai_credits,
-        source_subscription_id: subscription.id,
-        expires_at: subscription.expires_at,
-      }).executeTakeFirstOrThrow();
+      await trx
+        .insertInto("organization_credit_grants")
+        .values({
+          organization_id: organization.id,
+          grant_type: "ai_credits",
+          amount: basicPlan.default_ai_credits,
+          source_subscription_id: subscription.id,
+          expires_at: subscription.expires_at,
+        })
+        .executeTakeFirstOrThrow();
 
       return {
         ...freshUser,
@@ -164,11 +171,14 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
         .returningAll()
         .executeTakeFirstOrThrow());
 
-    await ctx.db.insertInto("auth_identities").values({
-      provider: input.provider,
-      provider_subject: input.provider_subject,
-      user_id: user.id,
-    }).executeTakeFirstOrThrow();
+    await ctx.db
+      .insertInto("auth_identities")
+      .values({
+        provider: input.provider,
+        provider_subject: input.provider_subject,
+        user_id: user.id,
+      })
+      .executeTakeFirstOrThrow();
 
     return ensureDefaultOrganization(user);
   };
@@ -194,8 +204,16 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
           "users.default_organization_id as default_organization_id",
           "authorized_sessions.token_hash as token_hash",
         ])
-        .where("authorized_sessions.token_prefix", "=", token.slice(0, token_hint_length))
-        .where("authorized_sessions.token_suffix", "=", token.slice(-token_hint_length))
+        .where(
+          "authorized_sessions.token_prefix",
+          "=",
+          token.slice(0, TOKEN_HINT_LENGTH),
+        )
+        .where(
+          "authorized_sessions.token_suffix",
+          "=",
+          token.slice(-TOKEN_HINT_LENGTH),
+        )
         .where("authorized_sessions.expires_at", ">", new Date())
         .execute();
 

@@ -4,83 +4,69 @@ import cors from "cors";
 import express, { type Express } from "express";
 
 import { getSecrets } from "./config/secrets";
-import { createAgentOrchestrationApplication } from "./application/agent_orchestration";
-import { createMockApiApplication } from "./application/mockapi";
-import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
 import { runMigrations } from "./infrastructure/kysely/run_migrations";
 import { runAgentConfigMigrations } from "./run_agent_config_migrations";
 import { InMemoryEventBus } from "./infrastructure/agent_orchestration/event_bus";
-import { createPyodideWorkerPool } from "./infrastructure/pyodide";
+import {
+  createPyodideWorkerPool,
+  type PyodideWorkerPool,
+} from "./infrastructure/pyodide";
 import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
-import { addRoutes } from "./routes/index";
-import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
+import { addRoutes } from "./presentation";
+import { addProjectSlugRouter } from "./presentation/public_mock_apis";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
-import type { Kysely } from "kysely";
-import type { Database } from "./infrastructure/kysely/models/index";
+import { createDatabaseClient } from "./infrastructure/kysely";
+import type { IKeyValueStore } from "./domain/interfaces/kv_store";
+import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bus";
+import { asyncRoute } from "./middleware/async_route";
 
 type ApiApp = {
   app: Express;
   destroy: () => Promise<void>;
 };
 
-export type ServerContext = {
-  db: Kysely<Database>;
+export type AppContext = {
+  db: ReturnType<typeof createDatabaseClient>["db"];
+  kvStore: IKeyValueStore;
+  pyodide: PyodideWorkerPool;
+  env: Awaited<ReturnType<typeof getSecrets>>;
+  eventBus: IEventBus;
 };
-
-export type OrchestrationEngine = Awaited<
-  ReturnType<typeof createAgentOrchestrationApplication>
->;
 
 export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
-  const apiGatewayDatabase = createApiGatewayDatabase(secrets);
-  await runMigrations(apiGatewayDatabase.db);
-
-  const serverContext: ServerContext = {
-    db: apiGatewayDatabase.db,
-  };
+  const dbClient = createDatabaseClient(secrets);
+  await runMigrations(dbClient.db);
 
   const keyValueStore = RedisKeyValueStore({
     redis_host: secrets.REDIS_HOST,
     redis_pass: secrets.REDIS_PASSWORD,
     redis_port: secrets.REDIS_PORT,
   });
+
   const pyodide = createPyodideWorkerPool({
     size: 1,
     max_queue_size: 100,
     worker_memory_limit_mb: 28,
     worker_boot_timeout_ms: 10_000,
   });
-  const agentEventBus = InMemoryEventBus();
-  const mockApiApplicationDependencies = {
-    database: apiGatewayDatabase,
-    keyValueStore,
-    pyodide,
-  };
 
-  const agentOrchestrationDependencies = {
-    database: apiGatewayDatabase,
-    keyValueStore,
-    pyodide,
-    environment: {
-      CLOUDFLARE_ACCOUNT_ID: secrets.CLOUDFLARE_ACCOUNT_ID,
-      CLOUDFLARE_AI_GATEWAY_ID: secrets.CLOUDFLARE_AI_GATEWAY_ID,
-      CLOUDFLARE_AI_GATEWAY_TOKEN: secrets.CLOUDFLARE_AI_GATEWAY_TOKEN,
-      OPENROUTER_API_KEY: secrets.OPENROUTER_API_KEY,
-      OLLAMA_BASE_URL: secrets.OLLAMA_BASE_URL,
-    },
+  const agentEventBus = InMemoryEventBus();
+
+  const appContext: AppContext = {
+    db: dbClient.db,
+    kvStore: keyValueStore,
+    pyodide: pyodide,
+    env: secrets,
     eventBus: agentEventBus,
   };
 
-  await runAgentConfigMigrations(agentOrchestrationDependencies);
-
-  const application = await createMockApiApplication(
-    mockApiApplicationDependencies,
-  );
-  const agent_orchestration = createAgentOrchestrationApplication(
-    agentOrchestrationDependencies,
-  );
+  /**
+   * TODO: create different DB users for both
+   * app (only DML permissions) and migration (with DDL permissions)
+   * */
+  await runAgentConfigMigrations(appContext);
 
   const app = express();
 
@@ -95,26 +81,27 @@ export const createApiApp = async (): Promise<ApiApp> => {
   app.use(express.json({ limit: "1mb" }));
   app.use(express.text({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: false, limit: "1mb" }));
-  addPublicMockApiRoutes(app, application.mock_apis);
+
+  app.get(
+    "/health",
+    asyncRoute(async (_req, res) => {
+      res.json({
+        app: "ok",
+        db: await dbClient.checkHealth(),
+      });
+    }),
+  );
+
+  addProjectSlugRouter(app, appContext);
   app.use(responseMiddleware);
 
-  addRoutes(
-    app,
-    {
-      ...application,
-      agent_orchestration,
-    },
-    serverContext,
-    secrets,
-  );
+  addRoutes(app, appContext);
   app.use(errorMiddleware);
 
   return {
     app,
     async destroy() {
-      await apiGatewayDatabase.destroy();
-      await application.destroy();
-      await agent_orchestration.destroy();
+      await dbClient.destroy();
       await keyValueStore.destroy();
       await pyodide.destroy();
     },
