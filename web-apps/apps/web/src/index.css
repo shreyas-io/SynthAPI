@@ -324,7 +324,6 @@ textarea {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-right: auto;
   margin-left: 1.5rem;
 }
 
@@ -1799,6 +1798,7 @@ h3 {
   position: relative;
   display: flex;
   align-items: center;
+  margin-left: auto;
 }
 
 .profile-dropdown-toggle {
@@ -1815,6 +1815,25 @@ h3 {
   color: var(--color-text);
   cursor: pointer;
   transition: border-color 0.15s ease;
+}
+
+.top-bar-center {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: auto;
+}
+
+.org-credits-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .profile-dropdown-toggle:hover {

@@ -1,8 +1,14 @@
 import { apiRequest } from "../../../lib/api/client";
-import type { Profile, ProfileOrganization } from "../types";
+import type { AiCredits, Profile, ProfileOrganization } from "../types";
 
 export const getProfile = (): Promise<Profile> => {
   return apiRequest("/api/v1/profile");
+};
+
+export const getOrganizationCredits = (
+  organizationId: string,
+): Promise<AiCredits> => {
+  return apiRequest(`/api/v1/organizations/${organizationId}/credits`);
 };
 
 export const createOrganization = (name: string): Promise<ProfileOrganization> => {

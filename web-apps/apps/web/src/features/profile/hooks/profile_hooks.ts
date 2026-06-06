@@ -1,12 +1,25 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "../../../lib/query/query_keys";
-import { createOrganization, deleteOrganization, getProfile, restoreOrganization } from "../api/profile_api";
+import {
+  createOrganization,
+  deleteOrganization,
+  getOrganizationCredits,
+  getProfile,
+  restoreOrganization,
+} from "../api/profile_api";
 
 export const useProfile = () => {
   return useQuery({
     queryKey: queryKeys.profile,
     queryFn: getProfile,
+  });
+};
+
+export const useOrganizationCredits = (organizationId: string) => {
+  return useQuery({
+    queryKey: queryKeys.organizationCredits(organizationId),
+    queryFn: () => getOrganizationCredits(organizationId),
   });
 };
 

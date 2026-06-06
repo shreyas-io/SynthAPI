@@ -1,3 +1,9 @@
+export type AiCredits = {
+  granted: number;
+  used: number;
+  remaining: number;
+};
+
 export type ProfileOrganization = {
   id: string;
   name: string;
@@ -21,11 +27,7 @@ export type ProfileOrganization = {
     max_org_members: number | null;
     default_ai_credits: number | null;
   } | null;
-  ai_credits: {
-    granted: number;
-    used: number;
-    remaining: number;
-  };
+  ai_credits: AiCredits;
 };
 
 export type ProfileUser = {

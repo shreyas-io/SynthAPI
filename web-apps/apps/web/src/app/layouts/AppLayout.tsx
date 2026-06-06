@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router";
-import { ChevronDown, LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, Sparkles, User } from "lucide-react";
 
 import { useCurrentUser, useSignout } from "../../features/auth/hooks/auth_hooks";
-import { useProfile } from "../../features/profile/hooks/profile_hooks";
+import {
+  useOrganizationCredits,
+  useProfile,
+} from "../../features/profile/hooks/profile_hooks";
 import { useSelectedOrganization } from "../context/OrganizationContext";
 
 export function AppLayout() {
@@ -13,6 +16,7 @@ export function AppLayout() {
   const profile = useProfile();
   const { selectedOrganizationId, setSelectedOrganizationId } =
     useSelectedOrganization();
+  const credits = useOrganizationCredits(selectedOrganizationId ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
@@ -53,41 +57,49 @@ export function AppLayout() {
         <nav className="app-nav-links">
           <Link to="/projects">Projects</Link>
         </nav>
-        <div ref={orgMenuRef} className="api-selector">
-          <button
-            className="api-selector-toggle"
-            onClick={() => setOrgMenuOpen((open) => !open)}
-            aria-haspopup="menu"
-            aria-expanded={orgMenuOpen}
-          >
-            <span className="api-selector-name">
-              {selectedOrg?.name ?? "Select org"}
-            </span>
-            <ChevronDown size={14} />
-          </button>
-          {orgMenuOpen && (
-            <div className="api-selector-list" role="menu">
-              {activeOrgs.map((org) => (
-                <button
-                  key={org.id}
-                  className={`api-selector-item ${
-                    org.id === selectedOrganizationId ? "active" : ""
-                  }`}
-                  onClick={() => {
-                    setSelectedOrganizationId(org.id);
-                    setOrgMenuOpen(false);
-                  }}
-                  role="menuitem"
-                >
-                  <span>{org.name}</span>
-                  {org.id === selectedOrganizationId && (
-                    <span className="pill">active</span>
-                  )}
-                </button>
-              ))}
-              {activeOrgs.length === 0 && (
-                <span className="api-selector-item">No organisations</span>
-              )}
+        <div className="top-bar-center">
+          <div ref={orgMenuRef} className="api-selector">
+            <button
+              className="api-selector-toggle"
+              onClick={() => setOrgMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={orgMenuOpen}
+            >
+              <span className="api-selector-name">
+                {selectedOrg?.name ?? "Select org"}
+              </span>
+              <ChevronDown size={14} />
+            </button>
+            {orgMenuOpen && (
+              <div className="api-selector-list" role="menu">
+                {activeOrgs.map((org) => (
+                  <button
+                    key={org.id}
+                    className={`api-selector-item ${
+                      org.id === selectedOrganizationId ? "active" : ""
+                    }`}
+                    onClick={() => {
+                      setSelectedOrganizationId(org.id);
+                      setOrgMenuOpen(false);
+                    }}
+                    role="menuitem"
+                  >
+                    <span>{org.name}</span>
+                    {org.id === selectedOrganizationId && (
+                      <span className="pill">active</span>
+                    )}
+                  </button>
+                ))}
+                {activeOrgs.length === 0 && (
+                  <span className="api-selector-item">No organisations</span>
+                )}
+              </div>
+            )}
+          </div>
+          {selectedOrganizationId && credits.data && (
+            <div className="org-credits-badge" title="AI credits remaining">
+              <Sparkles size={14} />
+              <span>{credits.data.remaining}</span>
             </div>
           )}
         </div>
