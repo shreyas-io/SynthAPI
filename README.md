@@ -2,8 +2,8 @@
 
 Docker-first local stack with:
 
-- `gateway/`: Kong Gateway DB-less configuration.
-- `web-apps/apps/api`: Express API, reachable through Kong in local Docker.
+- `gateway/`: Nginx gateway configuration.
+- `web-apps/apps/api`: Express API, reachable through Nginx in local Docker.
 - `web-apps/apps/web`: React/Vite frontend.
 - `web-apps/packages/application`: backend application package consumed by the API.
 
@@ -13,11 +13,11 @@ Docker-first local stack with:
 docker compose up --build
 ```
 
-The backend API port is internal-only. Use Kong for backend traffic.
+The backend API port is internal-only. Use Nginx for backend traffic.
 
 Local defaults:
 
-- Kong gateway: `http://localhost:8787`
+- Nginx gateway: `http://localhost:8787`
 - Web: `http://localhost:5173`
 - Postgres: `localhost:5432`
 - Redis: `localhost:6379`
@@ -25,14 +25,14 @@ Local defaults:
 
 ## Gateway Routes
 
-Control-plane APIs go through Kong:
+Control-plane APIs go through Nginx:
 
 ```bash
 curl http://localhost:8787/mock-stack/health
 curl http://localhost:8787/mock-stack/api/v1/projects
 ```
 
-Public mock APIs use project subdomains. Kong extracts the slug from the host
+Public mock APIs use project subdomains. Nginx extracts the slug from the host
 and forwards it to the backend as `x-project-slug`.
 
 ```bash
@@ -50,7 +50,7 @@ Copy the root env example if you want to override Docker defaults:
 cp .env.example .env
 ```
 
-The frontend should use Kong as its backend base URL:
+The frontend should use Nginx as its backend base URL:
 
 ```bash
 VITE_API_BASE_URL=http://localhost:8787/mock-stack
