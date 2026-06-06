@@ -3,6 +3,7 @@ import argon2 from "argon2";
 import { IAuthService, type ProviderIdentity } from "./interfaces/auth_service";
 import type { User } from "./entities/user";
 import type { AppContext } from "../server";
+import { seed_default_project } from "./usecases/mock_api/projects/seed_default_project";
 
 const TOKEN_LENGTH_BYTES = 64;
 const TOKEN_HINT_LENGTH = 4;
@@ -39,32 +40,61 @@ export const AuthService = (ctx: AppContext): IAuthService => {
     };
   };
 
-  const ensureDefaultOrganization = async (user: User): Promise<User> => {
-    if (user.default_organization_id) {
-      return user;
-    }
+  const getOrCreateProviderUser = async (input: ProviderIdentity) => {
+    const identity = await ctx.db
+      .selectFrom("auth_identities")
+      .select(["user_id"])
+      .where("provider", "=", input.provider)
+      .where("provider_subject", "=", input.provider_subject)
+      .executeTakeFirst();
 
-    return ctx.db.transaction().execute(async (trx) => {
-      const freshUser = await trx
+    if (identity) {
+      const user = await ctx.db
         .selectFrom("users")
         .selectAll()
-        .where("id", "=", user.id)
+        .where("id", "=", identity.user_id)
         .executeTakeFirst();
 
-      if (!freshUser) {
-        return user;
-      }
+      if (user) return user;
+    }
 
-      if (freshUser.default_organization_id) {
-        return freshUser;
-      }
+    const existingUser = input.email
+      ? await ctx.db
+          .selectFrom("users")
+          .selectAll()
+          .where("email", "=", input.email)
+          .executeTakeFirst()
+      : undefined;
+
+    if (existingUser) {
+      await ctx.db
+        .insertInto("auth_identities")
+        .values({
+          provider: input.provider,
+          provider_subject: input.provider_subject,
+          user_id: existingUser.id,
+        })
+        .executeTakeFirstOrThrow();
+
+      return existingUser;
+    }
+
+    return ctx.db.transaction().execute(async (trx): Promise<User> => {
+      const user = await trx
+        .insertInto("users")
+        .values({
+          email: input.email,
+          display_name: input.display_name,
+          avatar_url: input.avatar_url,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
 
       const organization = await trx
         .insertInto("organizations")
         .values({
-          name:
-            freshUser.display_name ?? freshUser.email ?? "Default organization",
-          created_by_user_id: freshUser.id,
+          name: user.display_name ?? user.email ?? "Default organization",
+          created_by_user_id: user.id,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -74,14 +104,14 @@ export const AuthService = (ctx: AppContext): IAuthService => {
         .set({
           default_organization_id: organization.id,
         })
-        .where("id", "=", freshUser.id)
+        .where("id", "=", user.id)
         .execute();
 
       await trx
         .insertInto("organization_memberships")
         .values({
           organization_id: organization.id,
-          user_id: freshUser.id,
+          user_id: user.id,
           role: "owner",
           status: "active",
         })
@@ -126,61 +156,24 @@ export const AuthService = (ctx: AppContext): IAuthService => {
         })
         .executeTakeFirstOrThrow();
 
+      await seed_default_project(trx, {
+        organization_id: organization.id,
+      });
+
+      await trx
+        .insertInto("auth_identities")
+        .values({
+          provider: input.provider,
+          provider_subject: input.provider_subject,
+          user_id: user.id,
+        })
+        .executeTakeFirstOrThrow();
+
       return {
-        ...freshUser,
+        ...user,
         default_organization_id: organization.id,
       };
     });
-  };
-
-  const getOrCreateProviderUser = async (input: ProviderIdentity) => {
-    const identity = await ctx.db
-      .selectFrom("auth_identities")
-      .select(["user_id"])
-      .where("provider", "=", input.provider)
-      .where("provider_subject", "=", input.provider_subject)
-      .executeTakeFirst();
-
-    if (identity) {
-      const user = await ctx.db
-        .selectFrom("users")
-        .selectAll()
-        .where("id", "=", identity.user_id)
-        .executeTakeFirst();
-
-      if (user) return ensureDefaultOrganization(user);
-    }
-
-    const existingUser = input.email
-      ? await ctx.db
-          .selectFrom("users")
-          .selectAll()
-          .where("email", "=", input.email)
-          .executeTakeFirst()
-      : undefined;
-
-    const user =
-      existingUser ??
-      (await ctx.db
-        .insertInto("users")
-        .values({
-          email: input.email,
-          display_name: input.display_name,
-          avatar_url: input.avatar_url,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow());
-
-    await ctx.db
-      .insertInto("auth_identities")
-      .values({
-        provider: input.provider,
-        provider_subject: input.provider_subject,
-        user_id: user.id,
-      })
-      .executeTakeFirstOrThrow();
-
-    return ensureDefaultOrganization(user);
   };
 
   return {

@@ -8,7 +8,6 @@ services:
       sh -lc "
         CI=true pnpm install --frozen-lockfile --force --store-dir /tmp/pnpm-store --filter @mock-stack/api... &&
         pnpm --filter @mock-stack/api run migrate:latest &&
-        pnpm --filter @mock-stack/api run seed:local &&
         pnpm --filter @mock-stack/api run dev
       "
     depends_on:
