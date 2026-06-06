@@ -4,7 +4,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
     create type organization_member_role as enum ('owner', 'admin', 'member');
     create type organization_membership_status as enum ('active', 'stale');
-    create type plan_subscription_status as enum ('active', 'cancelled');
+    create type plan_subscription_status as enum ('active', 'cancelled', 'expired');
     create type organization_credit_grant_type as enum ('ai_credits');
 
     create table organizations (
@@ -115,7 +115,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 
     insert into plan_types (key, name, max_org_members, default_ai_credits, credit_grant_duration_days)
     values
-      ('basic', 'Basic', 1, 100, 30),
+      ('basic', 'Basic', 1, 0, 3650),
       ('plus', 'Plus', 10, 1000, 30);
 
     insert into organizations (id, name, created_by_user_id)
@@ -133,10 +133,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     from users
     where users.default_organization_id is not null;
 
-    with basic_plan as (
+    with plus_plan as (
       select id, default_ai_credits, credit_grant_duration_days
       from plan_types
-      where key = 'basic'
+      where key = 'plus'
     ),
     inserted_subscriptions as (
       insert into organization_plan_subscriptions (
@@ -148,12 +148,12 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       )
       select
         organizations.id,
-        basic_plan.id,
+        plus_plan.id,
         'active',
         now(),
-        now() + make_interval(days => basic_plan.credit_grant_duration_days)
+        now() + make_interval(days => plus_plan.credit_grant_duration_days)
       from organizations
-      cross join basic_plan
+      cross join plus_plan
       returning id, organization_id, plan_type_id, expires_at
     )
     insert into organization_credit_grants (
@@ -166,11 +166,11 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     select
       inserted_subscriptions.organization_id,
       'ai_credits',
-      basic_plan.default_ai_credits,
+      plus_plan.default_ai_credits,
       inserted_subscriptions.id,
       inserted_subscriptions.expires_at
     from inserted_subscriptions
-    join basic_plan on basic_plan.id = inserted_subscriptions.plan_type_id;
+    join plus_plan on plus_plan.id = inserted_subscriptions.plan_type_id;
 
     update projects
     set organization_id = (

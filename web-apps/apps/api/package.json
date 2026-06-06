@@ -12,13 +12,14 @@
     "migrate:down": "tsx src/infrastructure/kysely/migrator.ts down"
   },
   "dependencies": {
-    "@infisical/sdk": "^5.0.2",
     "@ai-sdk/openai-compatible": "^2.0.0",
-    "ajv": "^8.20.0",
+    "@infisical/sdk": "^5.0.2",
     "@openrouter/ai-sdk-provider": "^2.9.0",
     "ai": "^6.0.0",
     "ai-gateway-provider": "^3.0.0",
+    "ajv": "^8.20.0",
     "argon2": "^0.44.0",
+    "bullmq": "^5.78.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",

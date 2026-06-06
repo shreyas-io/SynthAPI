@@ -1,6 +1,7 @@
 import type { Express, Response } from "express";
 
 import type { AuthenticatedUser } from "../domain/entities/authenticated_user";
+import type { ProjectEt } from "../domain/entities/project";
 import {
   ApiGatewayException,
   HttpStatusCode,
@@ -9,6 +10,7 @@ import { AgentChatUsecase } from "../domain/usecases/agent_orchestration/agent_c
 import { ChatSessionsUsecase } from "../domain/usecases/agent_orchestration/chat_sessions";
 import { ChatTurnEventsUsecase } from "../domain/usecases/agent_orchestration/chat_turn_events";
 import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
+import { assertOrganizationHasAiCredits } from "../domain/usecases/organizations/plans";
 import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
 import { createProjectChatSessionDto } from "./dtos/agent_orchestration/chat_sessions";
@@ -44,8 +46,8 @@ const validateProjectAccess = async (
   projects: ProjectsUsecaseApi,
   user: AuthenticatedUser,
   project_id: string,
-): Promise<void> => {
-  await projects.getProject(user, project_id);
+): Promise<ProjectEt> => {
+  return projects.getProject(user, project_id);
 };
 
 const validateChatOwnership = async (
@@ -150,8 +152,9 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
       const chat_id = req.params.chat_id as string;
       const user = getAuthenticatedUser(req.user);
 
-      await validateProjectAccess(projects, user, project_id);
+      const project = await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(chat_sessions, project_id, chat_id);
+      await assertOrganizationHasAiCredits(ctx.db, project.organization_id);
 
       const parsed = createProjectChatTurnDto.safeParse(req.body);
       if (!parsed.success) {

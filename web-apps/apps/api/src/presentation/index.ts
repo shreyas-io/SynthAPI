@@ -5,13 +5,17 @@ import { addAuthRoutes } from "./auth";
 import { bearerAuthMiddleware } from "../middleware/auth";
 import { addMockApiResponseRoutes } from "./mock_api_responses";
 import { addMockApiRoutes } from "./mock_apis";
+import { addOrganizationRoutes } from "./organizations";
 import { addProjectChatRoutes } from "./project_chats";
 import { addProjectRoutes } from "./projects";
+import { addProfileRoutes } from "./profile";
 
 export const addRoutes = (app: Express, ctx: AppContext) => {
   addAuthRoutes(app, ctx);
   app.use("/api/v1", bearerAuthMiddleware(ctx));
 
+  addOrganizationRoutes(app, ctx);
+  addProfileRoutes(app, ctx);
   addProjectRoutes(app, ctx);
   addMockApiRoutes(app, ctx);
   addMockApiResponseRoutes(app, ctx);

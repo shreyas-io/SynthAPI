@@ -40,10 +40,16 @@ export const ProjectsUsecase = (ctx: AppContext) => {
 
     const membership = await ctx.db
       .selectFrom("organization_memberships")
-      .select(["id"])
-      .where("organization_id", "=", organizationId)
-      .where("user_id", "=", user.id)
-      .where("status", "=", "active")
+      .innerJoin(
+        "organizations",
+        "organizations.id",
+        "organization_memberships.organization_id",
+      )
+      .select(["organization_memberships.id"])
+      .where("organization_memberships.organization_id", "=", organizationId)
+      .where("organizations.deleted_at", "is", null)
+      .where("organization_memberships.user_id", "=", user.id)
+      .where("organization_memberships.status", "=", "active")
       .executeTakeFirst();
 
     if (!membership) {

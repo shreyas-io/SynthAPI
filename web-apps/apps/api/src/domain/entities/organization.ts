@@ -2,7 +2,7 @@ export type OrganizationMemberRole = "owner" | "admin" | "member";
 
 export type OrganizationMembershipStatus = "active" | "stale";
 
-export type PlanSubscriptionStatus = "active" | "cancelled";
+export type PlanSubscriptionStatus = "active" | "cancelled" | "expired";
 
 export type OrganizationCreditGrantType = "ai_credits";
 
@@ -10,6 +10,7 @@ export type Organization = {
   id: string;
   name: string;
   created_by_user_id: string;
+  deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };

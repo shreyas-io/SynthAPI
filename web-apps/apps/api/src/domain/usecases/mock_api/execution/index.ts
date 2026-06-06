@@ -184,8 +184,10 @@ export async function executePublicMockApi(
 ) {
   const project = await ctx.db
     .selectFrom("projects")
-    .select(["id", "globals", "constants"])
-    .where("slug", "=", request_data.project_slug)
+    .innerJoin("organizations", "organizations.id", "projects.organization_id")
+    .select(["projects.id", "projects.globals", "projects.constants"])
+    .where("projects.slug", "=", request_data.project_slug)
+    .where("organizations.deleted_at", "is", null)
     .executeTakeFirst();
 
   if (!project) {

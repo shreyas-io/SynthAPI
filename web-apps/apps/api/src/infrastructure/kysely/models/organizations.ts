@@ -14,6 +14,7 @@ export type OrganizationsTable = {
   id: GeneratedUuid;
   name: string;
   created_by_user_id: string;
+  deleted_at: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
   created_at: Timestamp;
   updated_at: Timestamp;
 };

@@ -4,6 +4,7 @@ import { IAuthService, type ProviderIdentity } from "./interfaces/auth_service";
 import type { User } from "./entities/user";
 import type { AppContext } from "../server";
 import { seed_default_project } from "./usecases/mock_api/projects/seed_default_project";
+import { createOrganizationPlanSubscription } from "./usecases/organizations/plans";
 
 const TOKEN_LENGTH_BYTES = 64;
 const TOKEN_HINT_LENGTH = 4;
@@ -79,8 +80,8 @@ export const AuthService = (ctx: AppContext): IAuthService => {
       return existingUser;
     }
 
-    return ctx.db.transaction().execute(async (trx): Promise<User> => {
-      const user = await trx
+    const user = await ctx.db.transaction().execute(async (trx): Promise<User> => {
+      const createdUser = await trx
         .insertInto("users")
         .values({
           email: input.email,
@@ -93,8 +94,8 @@ export const AuthService = (ctx: AppContext): IAuthService => {
       const organization = await trx
         .insertInto("organizations")
         .values({
-          name: user.display_name ?? user.email ?? "Default organization",
-          created_by_user_id: user.id,
+          name: "Default organization",
+          created_by_user_id: createdUser.id,
         })
         .returningAll()
         .executeTakeFirstOrThrow();
@@ -104,60 +105,22 @@ export const AuthService = (ctx: AppContext): IAuthService => {
         .set({
           default_organization_id: organization.id,
         })
-        .where("id", "=", user.id)
+        .where("id", "=", createdUser.id)
         .execute();
 
       await trx
         .insertInto("organization_memberships")
         .values({
           organization_id: organization.id,
-          user_id: user.id,
+          user_id: createdUser.id,
           role: "owner",
           status: "active",
         })
         .executeTakeFirstOrThrow();
 
-      const basicPlan = await trx
-        .selectFrom("plan_types")
-        .selectAll()
-        .where("key", "=", "basic")
-        .executeTakeFirst();
-
-      if (!basicPlan) {
-        throw new Error("Basic plan type is missing.");
-      }
-
-      const now = new Date();
-      const expiresAt = new Date(now);
-      expiresAt.setUTCDate(
-        expiresAt.getUTCDate() + basicPlan.credit_grant_duration_days,
-      );
-
-      const subscription = await trx
-        .insertInto("organization_plan_subscriptions")
-        .values({
-          organization_id: organization.id,
-          plan_type_id: basicPlan.id,
-          status: "active",
-          starts_at: now,
-          expires_at: expiresAt,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
-
-      await trx
-        .insertInto("organization_credit_grants")
-        .values({
-          organization_id: organization.id,
-          grant_type: "ai_credits",
-          amount: basicPlan.default_ai_credits,
-          source_subscription_id: subscription.id,
-          expires_at: subscription.expires_at,
-        })
-        .executeTakeFirstOrThrow();
-
-      await seed_default_project(trx, {
+      await createOrganizationPlanSubscription(trx, {
         organization_id: organization.id,
+        plan_key: "plus",
       });
 
       await trx
@@ -165,15 +128,19 @@ export const AuthService = (ctx: AppContext): IAuthService => {
         .values({
           provider: input.provider,
           provider_subject: input.provider_subject,
-          user_id: user.id,
+          user_id: createdUser.id,
         })
         .executeTakeFirstOrThrow();
 
       return {
-        ...user,
+        ...createdUser,
         default_organization_id: organization.id,
       };
     });
+
+    await seed_default_project(ctx, user);
+
+    return user;
   };
 
   return {
