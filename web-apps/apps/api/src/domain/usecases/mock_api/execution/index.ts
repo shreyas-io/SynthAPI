@@ -6,6 +6,7 @@ import {
 import { getMockApiExecutionContext, upsertMockApiVariables } from "./context";
 import { executePostResponseActions } from "./post_response_actions";
 import { executeRuleTree } from "./rule_engine/execute_rule_tree";
+import { recursivelyMapTemplateParams } from "../utils/template_params";
 import type {
   QueryParams,
   RequestBodyEt,
@@ -290,8 +291,17 @@ export async function executePublicMockApi(
   return {
     mock_api_id: mock_api.id,
     status_code: mock_api_response.response.status_code,
-    headers: mock_api_response.response.headers,
-    cookies: mock_api_response.response.cookies,
-    body: mock_api_response.response.body,
+    headers: recursivelyMapTemplateParams(
+      mock_api_response.response.headers,
+      execution_context,
+    ),
+    cookies: recursivelyMapTemplateParams(
+      mock_api_response.response.cookies,
+      execution_context,
+    ),
+    body: recursivelyMapTemplateParams(
+      mock_api_response.response.body,
+      execution_context,
+    ),
   };
 }
