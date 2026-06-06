@@ -9,7 +9,7 @@ import type { ProjectEt } from "../../../entities/project";
 
 type ProjectFilters = {
   ids?: string[] | undefined;
-  organization_ids?: string[] | undefined;
+  organization_id?: string | undefined;
   slug?: string | undefined;
   name?: string | undefined;
   description?: string | undefined;
@@ -26,18 +26,24 @@ type ProjectSort = {
 };
 
 export const ProjectsUsecase = (ctx: AppContext) => {
-  const getAccessibleOrganizationId = async (
+  const getDefaultOrganizationId = async (
+    userId: string,
+  ): Promise<string | null> => {
+    const org = await ctx.db
+      .selectFrom("organizations")
+      .select("id")
+      .where("created_by_user_id", "=", userId)
+      .where("is_default_for_owner", "=", true)
+      .where("deleted_at", "is", null)
+      .executeTakeFirst();
+
+    return org?.id ?? null;
+  };
+
+  const assertOrganizationAccess = async (
     user: AuthenticatedUser,
+    organizationId: string,
   ): Promise<string> => {
-    const organizationId = user.default_organization_id;
-
-    if (!organizationId) {
-      throw new MockApiException({
-        public_message: "Default organization not found.",
-        status_code: HttpStatusCode.FORBIDDEN,
-      });
-    }
-
     const membership = await ctx.db
       .selectFrom("organization_memberships")
       .innerJoin(
@@ -67,14 +73,24 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       user: AuthenticatedUser,
       input: Pick<
         ProjectEt,
-        "slug" | "name" | "description" | "globals" | "constants"
+        | "slug"
+        | "name"
+        | "description"
+        | "globals"
+        | "constants"
+        | "organization_id"
       >,
     ) => {
-      const organizationId = await getAccessibleOrganizationId(user);
+      const organization_id = input.organization_id;
+      const validated_org_id = await assertOrganizationAccess(
+        user,
+        organization_id,
+      );
+
       const project = await ctx.db
         .insertInto("projects")
         .values({
-          organization_id: organizationId,
+          organization_id: validated_org_id,
           slug: input.slug,
           name: input.name,
           description: input.description,
@@ -98,19 +114,20 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       user: AuthenticatedUser,
       id: string,
     ): Promise<ProjectEt> => {
-      const organizationId = await getAccessibleOrganizationId(user);
       const project = await ctx.db
         .selectFrom("projects")
         .selectAll()
         .where("id", "=", id)
-        .where("organization_id", "=", organizationId)
         .executeTakeFirst();
+
       if (!project) {
         throw new MockApiException({
           public_message: "Project not found.",
           status_code: HttpStatusCode.NOT_FOUND,
         });
       }
+
+      await assertOrganizationAccess(user, project.organization_id);
 
       return project;
     },
@@ -119,12 +136,32 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       filters: ProjectFilters,
       pagination: ProjectPagination,
       sort: ProjectSort,
-    ) => {
-      const organizationId = await getAccessibleOrganizationId(user);
+    ): Promise<{
+      total: number;
+      records: Array<
+        Pick<
+          ProjectEt,
+          "id" | "organization_id" | "slug" | "name" | "description"
+        >
+      >;
+    }> => {
+      let organization_id = filters.organization_id;
+      if (!organization_id) {
+        organization_id = (await getDefaultOrganizationId(user.id)) ?? undefined;
+      }
+      if (!organization_id) {
+        return {
+          total: 0,
+          records: [],
+        };
+      }
+      await assertOrganizationAccess(user, organization_id);
+
       const scopedFilters = {
         ...filters,
-        organization_ids: [organizationId],
+        organization_ids: [organization_id],
       };
+
       let countQuery = ctx.db
         .selectFrom("projects")
         .select(sql<number>`count(*)::int`.as("count"));
@@ -156,8 +193,16 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       }
 
       if (scopedFilters.name) {
-        countQuery = countQuery.where("name", "ilike", `%${scopedFilters.name}%`);
-        recordsQuery = recordsQuery.where("name", "ilike", `%${scopedFilters.name}%`);
+        countQuery = countQuery.where(
+          "name",
+          "ilike",
+          `%${scopedFilters.name}%`,
+        );
+        recordsQuery = recordsQuery.where(
+          "name",
+          "ilike",
+          `%${scopedFilters.name}%`,
+        );
       }
 
       if (scopedFilters.description) {
@@ -191,17 +236,12 @@ export const ProjectsUsecase = (ctx: AppContext) => {
     updateProject: async (
       user: AuthenticatedUser,
       id: string,
-      input: Pick<
-        ProjectEt,
-        "name" | "description" | "globals" | "constants"
-      >,
+      input: Pick<ProjectEt, "name" | "description" | "globals" | "constants">,
     ): Promise<void> => {
-      const organizationId = await getAccessibleOrganizationId(user);
       const project = await ctx.db
         .selectFrom("projects")
-        .select(["id"])
+        .select(["id", "organization_id"])
         .where("id", "=", id)
-        .where("organization_id", "=", organizationId)
         .executeTakeFirst();
 
       if (!project) {
@@ -210,6 +250,8 @@ export const ProjectsUsecase = (ctx: AppContext) => {
           status_code: HttpStatusCode.NOT_FOUND,
         });
       }
+
+      await assertOrganizationAccess(user, project.organization_id);
 
       await ctx.db
         .updateTable("projects")
@@ -228,12 +270,10 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       user: AuthenticatedUser,
       id: string,
     ): Promise<void> => {
-      const organizationId = await getAccessibleOrganizationId(user);
       const project = await ctx.db
         .selectFrom("projects")
-        .select(["id"])
+        .select(["id", "organization_id"])
         .where("id", "=", id)
-        .where("organization_id", "=", organizationId)
         .executeTakeFirst();
 
       if (!project) {
@@ -243,10 +283,9 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         });
       }
 
-      await ctx.db
-        .deleteFrom("projects")
-        .where("id", "=", id)
-        .execute();
+      await assertOrganizationAccess(user, project.organization_id);
+
+      await ctx.db.deleteFrom("projects").where("id", "=", id).execute();
     },
   };
 };

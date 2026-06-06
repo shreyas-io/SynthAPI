@@ -26,16 +26,13 @@ const createExampleApiSlug = (organizationId: string) =>
 export async function seed_default_project(
   ctx: AppContext,
   user: AuthenticatedUser,
+  organization_id: string,
 ): Promise<void> {
-  if (!user.default_organization_id) {
-    return;
-  }
-
-  const slug = createExampleApiSlug(user.default_organization_id);
+  const slug = createExampleApiSlug(organization_id);
   const projectsUsecase = ProjectsUsecase(ctx);
   const existingProjects = await projectsUsecase.getProjects(
     user,
-    { slug },
+    { slug, organization_id },
     { limit: 1, offset: 0 },
     { by: "created_at", order: "asc" },
   );
@@ -50,6 +47,7 @@ export async function seed_default_project(
     description: exampleApiProject.description,
     globals: exampleApiProject.globals,
     constants: exampleApiProject.constants,
+    organization_id,
   });
 
   const mockApisUsecase = MockApisUsecase(ctx);

@@ -1,9 +1,6 @@
 import type { AppContext } from "../../../server";
 import type { AuthenticatedUser } from "../../entities/authenticated_user";
-import {
-  HttpStatusCode,
-  MockApiException,
-} from "../../exceptions/exception";
+import { HttpStatusCode, MockApiException } from "../../exceptions/exception";
 import { seed_default_project } from "../mock_api/projects/seed_default_project";
 import {
   createOrganizationPlanSubscription,
@@ -45,8 +42,24 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
     return organization;
   };
 
+  const getDefaultOrganizationId = async (
+    userId: string,
+  ): Promise<string | null> => {
+    const org = await ctx.db
+      .selectFrom("organizations")
+      .select("id")
+      .where("created_by_user_id", "=", userId)
+      .where("is_default_for_owner", "=", true)
+      .where("deleted_at", "is", null)
+      .executeTakeFirst();
+
+    return org?.id ?? null;
+  };
+
   return {
     getUserProfile: async (user: AuthenticatedUser) => {
+      const defaultOrganizationId = await getDefaultOrganizationId(user.id);
+
       const organizations = await ctx.db
         .selectFrom("organization_memberships")
         .innerJoin(
@@ -54,16 +67,14 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
           "organizations.id",
           "organization_memberships.organization_id",
         )
-        .leftJoin(
-          "organization_plan_subscriptions",
-          (join) =>
-            join
-              .onRef(
-                "organization_plan_subscriptions.organization_id",
-                "=",
-                "organizations.id",
-              )
-              .on("organization_plan_subscriptions.status", "=", "active"),
+        .leftJoin("organization_plan_subscriptions", (join) =>
+          join
+            .onRef(
+              "organization_plan_subscriptions.organization_id",
+              "=",
+              "organizations.id",
+            )
+            .on("organization_plan_subscriptions.status", "=", "active"),
         )
         .leftJoin(
           "plan_types",
@@ -137,7 +148,7 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
           email: user.email,
           display_name: user.display_name,
           avatar_url: user.avatar_url,
-          default_organization_id: user.default_organization_id,
+          default_organization_id: defaultOrganizationId,
         },
         organizations: records,
       };
@@ -166,6 +177,7 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
           .values({
             name: input.name,
             created_by_user_id: user.id,
+            is_default_for_owner: false,
           })
           .returningAll()
           .executeTakeFirstOrThrow();
@@ -186,11 +198,6 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
         });
 
         return organization;
-      });
-
-      await seed_default_project(ctx, {
-        ...user,
-        default_organization_id: organization.id,
       });
 
       return organization;

@@ -1,8 +1,12 @@
 import { apiRequest } from "../../../lib/api/client";
 import type { ListResponse, Project, ProjectInput } from "../types";
 
-export const listProjects = (): Promise<ListResponse<Project>> => {
-  return apiRequest("/api/v1/projects?limit=50&offset=0");
+export const listProjects = (
+  organizationId: string,
+): Promise<ListResponse<Project>> => {
+  return apiRequest(
+    `/api/v1/projects?limit=50&offset=0&organization_id=${encodeURIComponent(organizationId)}`,
+  );
 };
 
 export const createProject = (input: ProjectInput): Promise<Project> => {

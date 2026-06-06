@@ -80,65 +80,57 @@ export const AuthService = (ctx: AppContext): IAuthService => {
       return existingUser;
     }
 
-    const user = await ctx.db.transaction().execute(async (trx): Promise<User> => {
-      const createdUser = await trx
-        .insertInto("users")
-        .values({
-          email: input.email,
-          display_name: input.display_name,
-          avatar_url: input.avatar_url,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
+    const { user, organization_id } = await ctx.db
+      .transaction()
+      .execute(async (trx) => {
+        const createdUser = await trx
+          .insertInto("users")
+          .values({
+            email: input.email,
+            display_name: input.display_name,
+            avatar_url: input.avatar_url,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
 
-      const organization = await trx
-        .insertInto("organizations")
-        .values({
-          name: "Default organization",
-          created_by_user_id: createdUser.id,
-        })
-        .returningAll()
-        .executeTakeFirstOrThrow();
+        const organization = await trx
+          .insertInto("organizations")
+          .values({
+            name: "Default organization",
+            created_by_user_id: createdUser.id,
+            is_default_for_owner: true,
+          })
+          .returningAll()
+          .executeTakeFirstOrThrow();
 
-      await trx
-        .updateTable("users")
-        .set({
-          default_organization_id: organization.id,
-        })
-        .where("id", "=", createdUser.id)
-        .execute();
+        await trx
+          .insertInto("organization_memberships")
+          .values({
+            organization_id: organization.id,
+            user_id: createdUser.id,
+            role: "owner",
+            status: "active",
+          })
+          .executeTakeFirstOrThrow();
 
-      await trx
-        .insertInto("organization_memberships")
-        .values({
+        await createOrganizationPlanSubscription(trx, {
           organization_id: organization.id,
-          user_id: createdUser.id,
-          role: "owner",
-          status: "active",
-        })
-        .executeTakeFirstOrThrow();
+          plan_key: "plus",
+        });
 
-      await createOrganizationPlanSubscription(trx, {
-        organization_id: organization.id,
-        plan_key: "plus",
+        await trx
+          .insertInto("auth_identities")
+          .values({
+            provider: input.provider,
+            provider_subject: input.provider_subject,
+            user_id: createdUser.id,
+          })
+          .executeTakeFirstOrThrow();
+
+        return { user: createdUser, organization_id: organization.id };
       });
 
-      await trx
-        .insertInto("auth_identities")
-        .values({
-          provider: input.provider,
-          provider_subject: input.provider_subject,
-          user_id: createdUser.id,
-        })
-        .executeTakeFirstOrThrow();
-
-      return {
-        ...createdUser,
-        default_organization_id: organization.id,
-      };
-    });
-
-    await seed_default_project(ctx, user);
+    await seed_default_project(ctx, user, organization_id);
 
     return user;
   };
@@ -161,7 +153,6 @@ export const AuthService = (ctx: AppContext): IAuthService => {
           "users.email as email",
           "users.display_name as display_name",
           "users.avatar_url as avatar_url",
-          "users.default_organization_id as default_organization_id",
           "authorized_sessions.token_hash as token_hash",
         ])
         .where(
@@ -184,7 +175,6 @@ export const AuthService = (ctx: AppContext): IAuthService => {
             email: session.email,
             display_name: session.display_name,
             avatar_url: session.avatar_url,
-            default_organization_id: session.default_organization_id,
           };
         }
       }

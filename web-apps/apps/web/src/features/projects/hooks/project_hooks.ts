@@ -9,10 +9,10 @@ import {
 } from "../api/projects_api";
 import type { ProjectInput } from "../types";
 
-export const useProjects = () => {
+export const useProjects = (organizationId: string) => {
   return useQuery({
-    queryKey: queryKeys.projects,
-    queryFn: listProjects,
+    queryKey: queryKeys.projects(organizationId),
+    queryFn: () => listProjects(organizationId),
   });
 };
 
@@ -24,13 +24,15 @@ export const useProject = (projectId: string | undefined) => {
   });
 };
 
-export const useCreateProject = () => {
+export const useCreateProject = (organizationId: string) => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createProject,
     async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.projects });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.projects(organizationId),
+      });
     },
   });
 };

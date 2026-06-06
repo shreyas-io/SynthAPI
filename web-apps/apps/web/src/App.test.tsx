@@ -69,6 +69,40 @@ describe("App", () => {
           JSON.stringify({
             status: "success",
             data: {
+              user: {
+                id: "user-1",
+                email: "demo@example.com",
+                display_name: "Demo User",
+                avatar_url: null,
+                default_organization_id: "org-1",
+              },
+              organizations: [
+                {
+                  id: "org-1",
+                  name: "Default org",
+                  created_by_user_id: "user-1",
+                  deleted_at: null,
+                  created_at: "2026-01-01T00:00:00.000Z",
+                  updated_at: "2026-01-01T00:00:00.000Z",
+                  membership: {
+                    role: "owner",
+                    status: "active",
+                    stale_reason: null,
+                    staled_at: null,
+                  },
+                  plan: null,
+                  ai_credits: { granted: 0, used: 0, remaining: 0 },
+                },
+              ],
+            },
+          }),
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            status: "success",
+            data: {
               total: 1,
               records: [
                 {
@@ -103,6 +137,36 @@ describe("App", () => {
           email: "demo@example.com",
           display_name: "Demo User",
           avatar_url: null,
+        });
+      }
+
+      if (url.endsWith("/api/v1/profile")) {
+        return success({
+          user: {
+            id: "user-1",
+            email: "demo@example.com",
+            display_name: "Demo User",
+            avatar_url: null,
+            default_organization_id: "org-1",
+          },
+          organizations: [
+            {
+              id: "org-1",
+              name: "Default org",
+              created_by_user_id: "user-1",
+              deleted_at: null,
+              created_at: "2026-01-01T00:00:00.000Z",
+              updated_at: "2026-01-01T00:00:00.000Z",
+              membership: {
+                role: "owner",
+                status: "active",
+                stale_reason: null,
+                staled_at: null,
+              },
+              plan: null,
+              ai_credits: { granted: 0, used: 0, remaining: 0 },
+            },
+          ],
         });
       }
 
