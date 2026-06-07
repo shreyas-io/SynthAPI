@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router";
-import { ChevronDown, LogOut, Sparkles, User, Hexagon } from "lucide-react";
+import { ChevronDown, LogOut, Sparkles, User, Hexagon, Folder } from "lucide-react";
 
 import {
   useCurrentUser,
@@ -61,7 +61,10 @@ export function AppLayout() {
           <i>SynthAPI</i>
         </Link>
         <nav className="app-nav-links">
-          <Link to="/projects">Projects</Link>
+          <Link to="/projects">
+            <Folder size={14} />
+            Projects
+          </Link>
         </nav>
         <div className="top-bar-actions">
           {selectedOrganizationId && credits.data && (
