@@ -235,6 +235,7 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   const [isChatListOpen, setIsChatListOpen] = useState(() => !chatIdFromUrl);
   const streamRef = useRef<EventSource | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const setUrlChatId = (chatId: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -294,6 +295,16 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
 
     transcript.scrollTop = transcript.scrollHeight;
   }, [selectedChatId, events.dataUpdatedAt, transcriptScrollKey]);
+
+  useLayoutEffect(() => {
+    const input = messageInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    input.style.height = "auto";
+    input.style.height = `${input.scrollHeight}px`;
+  }, [message]);
 
   useEffect(() => {
     return () => {
@@ -476,8 +487,10 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     };
   };
 
-  const sendMessage = async (event: FormEvent) => {
-    event.preventDefault();
+  const sendMessage = async (event?: { preventDefault: () => void }) => {
+    if (event) {
+      event.preventDefault();
+    }
     const trimmed = message.trim();
     if (!trimmed || isSending) {
       return;
@@ -658,6 +671,7 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
 
       <form className="agent-sidebar-footer" onSubmit={sendMessage}>
         <textarea
+          ref={messageInputRef}
           className="agent-input"
           placeholder={
             isDraftChat || selectedChatId
@@ -666,8 +680,14 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
           }
           value={message}
           onChange={(event) => setMessage(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              void sendMessage();
+            }
+          }}
           disabled={isSending || (!selectedChatId && !isDraftChat)}
-          rows={3}
+          rows={1}
         />
         <button
           type="submit"

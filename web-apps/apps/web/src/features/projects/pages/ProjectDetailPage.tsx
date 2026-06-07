@@ -199,7 +199,7 @@ export function ProjectDetailPage() {
                 <p className="eyebrow">Variables</p>
                 <h2>Project variables</h2>
               </div>
-              <button type="button" onClick={() => setVariablesOpen(false)}>
+              <button className="button secondary-btn" type="button" onClick={() => setVariablesOpen(false)}>
                 Close
               </button>
             </div>
@@ -237,6 +237,7 @@ export function ProjectDetailPage() {
               <p className="error">{updateMutation.error.message}</p>
             )}
             <button
+              className="button secondary-btn"
               type="button"
               disabled={updateMutation.isPending}
               onClick={saveVariables}

@@ -290,7 +290,7 @@ export function MockApiDetailPage() {
                 <p className="eyebrow">Variables</p>
                 <h2>Mock API variables</h2>
               </div>
-              <button type="button" onClick={() => setVariablesOpen(false)}>
+              <button className="button secondary-btn" type="button" onClick={() => setVariablesOpen(false)}>
                 Close
               </button>
             </div>
@@ -344,6 +344,7 @@ export function MockApiDetailPage() {
               <p className="error">{updateProjectMutation.error.message}</p>
             )}
             <button
+              className="button secondary-btn"
               type="button"
               disabled={
                 updateMockApiMutation.isPending ||
