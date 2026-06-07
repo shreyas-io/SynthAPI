@@ -13,8 +13,18 @@ type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 
 export type UsersTable = {
   id: ColumnType<string, string | undefined, never>;
-  username: string;
-  password_hash: string;
+  email: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+};
+
+export type AuthIdentitiesTable = {
+  id: ColumnType<string, string | undefined, never>;
+  provider: string;
+  provider_subject: string;
+  user_id: string;
   created_at: Timestamp;
   updated_at: Timestamp;
 };
@@ -32,6 +42,7 @@ export type AuthorizedSessionsTable = {
 
 export type Database = {
   users: UsersTable;
+  auth_identities: AuthIdentitiesTable;
   authorized_sessions: AuthorizedSessionsTable;
   projects: ProjectsTable;
   mock_apis: MockApisTable;

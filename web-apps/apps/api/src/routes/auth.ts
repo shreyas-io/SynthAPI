@@ -1,5 +1,5 @@
-import type { Express, Request } from "express";
-import * as z from "zod";
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import type { Express, Request, Response } from "express";
 
 import { AuthService } from "../domain/auth";
 import {
@@ -7,81 +7,179 @@ import {
   HttpStatusCode,
 } from "../domain/exceptions/exception";
 import { clearAuthCookie, setAuthCookie } from "../domain/auth_cookie";
+import { GoogleAuthProvider } from "../domain/auth_providers/google";
 import { asyncRoute } from "../middleware/async_route";
 import { authMiddleware } from "../middleware/auth";
 import type { ServerContext } from "../server";
+import type { getSecrets } from "../config/secrets";
 
-const signupBodySchema = z.object({
-  username: z.string().regex(/^[a-z0-9_]+$/),
-  password: z.string().min(1),
-});
+const oauthStateCookieName = "mock_stack_oauth_state";
+const oauthReturnCookieName = "mock_stack_oauth_return_to";
+const oauthCookieMaxAgeMs = 10 * 60 * 1000;
 
-const parseBasicAuth = (req: Request) => {
-  const header = req.header("authorization");
+type AuthSecrets = Awaited<ReturnType<typeof getSecrets>>;
 
-  if (!header?.startsWith("Basic ")) {
-    return null;
+const getString = (value: unknown): string | undefined => {
+  if (typeof value === "string") {
+    return value;
   }
 
-  const decoded = Buffer.from(header.slice("Basic ".length), "base64").toString(
-    "utf8",
-  );
-  const separatorIndex = decoded.indexOf(":");
-
-  if (separatorIndex === -1) {
-    return null;
+  if (Array.isArray(value) && typeof value[0] === "string") {
+    return value[0];
   }
 
-  return {
-    username: decoded.slice(0, separatorIndex),
-    password: decoded.slice(separatorIndex + 1),
-  };
+  return undefined;
 };
 
-export const addAuthRoutes = (app: Express, serverContext: ServerContext) => {
+const parseCookie = (req: Request, name: string): string | null => {
+  const cookieHeader = req.header("cookie");
+
+  if (!cookieHeader) return null;
+
+  const cookies = cookieHeader.split(";").map((cookie) => cookie.trim());
+  const cookie = cookies.find((item) => item.startsWith(`${name}=`));
+
+  if (!cookie) return null;
+
+  return decodeURIComponent(cookie.slice(name.length + 1));
+};
+
+const setTemporaryCookie = (res: Response, name: string, value: string) => {
+  res.cookie(name, value, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,
+    path: "/",
+    maxAge: oauthCookieMaxAgeMs,
+  });
+};
+
+const clearTemporaryCookie = (res: Response, name: string) => {
+  res.clearCookie(name, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: false,
+    path: "/",
+  });
+};
+
+const safeEquals = (a: string, b: string): boolean => {
+  const left = Buffer.from(a);
+  const right = Buffer.from(b);
+
+  return left.length === right.length && timingSafeEqual(left, right);
+};
+
+const normalizeReturnTo = (value: unknown): string => {
+  const returnTo = getString(value) ?? "/projects";
+
+  if (!returnTo.startsWith("/") || returnTo.startsWith("//")) {
+    return "/projects";
+  }
+
+  return returnTo;
+};
+
+const getWebBaseUrl = (secrets: AuthSecrets): string => {
+  return (secrets.WEB_APP_BASE_URL ?? "http://127.0.0.1:8787").replace(
+    /\/$/,
+    "",
+  );
+};
+
+const redirectToSigninError = (res: Response, secrets: AuthSecrets) => {
+  res.redirect(`${getWebBaseUrl(secrets)}/signin?error=google`);
+};
+
+const getGoogleProvider = (secrets: AuthSecrets) => {
+  if (
+    !secrets.GOOGLE_OAUTH_CLIENT_ID ||
+    !secrets.GOOGLE_OAUTH_CLIENT_SECRET ||
+    !secrets.GOOGLE_OAUTH_REDIRECT_URI
+  ) {
+    return null;
+  }
+
+  return GoogleAuthProvider({
+    client_id: secrets.GOOGLE_OAUTH_CLIENT_ID,
+    client_secret: secrets.GOOGLE_OAUTH_CLIENT_SECRET,
+    redirect_uri: secrets.GOOGLE_OAUTH_REDIRECT_URI,
+  });
+};
+
+export const addAuthRoutes = (
+  app: Express,
+  serverContext: ServerContext,
+  secrets: AuthSecrets,
+) => {
   const auth = AuthService(serverContext);
   const requireAuth = authMiddleware(serverContext);
 
-  app.post(
-    "/api/v1/auth/signup",
-    asyncRoute(async (req, res) => {
-      const body = signupBodySchema.safeParse(req.body);
-
-      if (!body.success) {
-        throw new ApiGatewayException({
-          public_message: "Invalid signup request",
-          status_code: HttpStatusCode.BAD_REQUEST,
-        });
-      }
-
-      res.status(201).json(await auth.signup(body.data));
+  app.get(
+    "/api/v1/auth/providers",
+    asyncRoute(async (_req, res) => {
+      res.json({
+        google: {
+          enabled: Boolean(getGoogleProvider(secrets)),
+        },
+      });
     }),
   );
 
-  app.post(
-    "/api/v1/auth/signin",
+  app.get(
+    "/api/v1/auth/google/start",
     asyncRoute(async (req, res) => {
-      const credentials = parseBasicAuth(req);
+      const google = getGoogleProvider(secrets);
 
-      if (!credentials) {
+      if (!google) {
         throw new ApiGatewayException({
-          public_message: "Unauthorized",
-          status_code: HttpStatusCode.UNAUTHORIZED,
+          public_message: "Google sign in is not configured",
+          status_code: HttpStatusCode.PRECONDITION_FAILED,
         });
       }
 
-      const signin = await auth.signin(credentials);
+      const state = randomBytes(32).toString("hex");
+      const returnTo = normalizeReturnTo(req.query.return_to);
 
-      if (!signin) {
-        throw new ApiGatewayException({
-          public_message: "Unauthorized",
-          status_code: HttpStatusCode.UNAUTHORIZED,
-        });
+      setTemporaryCookie(res, oauthStateCookieName, state);
+      setTemporaryCookie(res, oauthReturnCookieName, returnTo);
+
+      res.redirect(google.getAuthorizationUrl(state));
+    }),
+  );
+
+  app.get(
+    "/api/v1/auth/google/callback",
+    asyncRoute(async (req, res) => {
+      const google = getGoogleProvider(secrets);
+      const code = getString(req.query.code);
+      const state = getString(req.query.state);
+      const cookieState = parseCookie(req, oauthStateCookieName);
+      const returnTo = normalizeReturnTo(
+        parseCookie(req, oauthReturnCookieName),
+      );
+
+      clearTemporaryCookie(res, oauthStateCookieName);
+      clearTemporaryCookie(res, oauthReturnCookieName);
+
+      if (!google || !code || !state || !cookieState) {
+        redirectToSigninError(res, secrets);
+        return;
       }
 
-      setAuthCookie(res, signin.token, signin.expiresAt);
+      if (!safeEquals(state, cookieState)) {
+        redirectToSigninError(res, secrets);
+        return;
+      }
 
-      res.json(signin);
+      try {
+        const identity = await google.exchangeCallback(code);
+        const signin = await auth.signinWithProviderIdentity(identity);
+        setAuthCookie(res, signin.token, signin.expiresAt);
+        res.redirect(`${getWebBaseUrl(secrets)}${returnTo}`);
+      } catch {
+        redirectToSigninError(res, secrets);
+      }
     }),
   );
 

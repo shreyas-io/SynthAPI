@@ -1,7 +1,8 @@
 export type AuthUser = {
   id: string;
-  username: string;
-  password_hash: string;
+  email: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
   created_at: Date;
   updated_at: Date;
 };

@@ -47,7 +47,9 @@ export const AuthorizedSessionsRepository = (
       .innerJoin("users", "users.id", "authorized_sessions.user_id")
       .select([
         "users.id as user_id",
-        "users.username as username",
+        "users.email as email",
+        "users.display_name as display_name",
+        "users.avatar_url as avatar_url",
         "authorized_sessions.token_hash as token_hash",
       ])
       .where("authorized_sessions.token_prefix", "=", input.token_prefix)
@@ -59,7 +61,9 @@ export const AuthorizedSessionsRepository = (
       token_hash: row.token_hash,
       user: {
         id: row.user_id,
-        username: row.username,
+        email: row.email,
+        display_name: row.display_name,
+        avatar_url: row.avatar_url,
       },
     }));
   },

@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
 import argon2 from "argon2";
-import { ApiGatewayException } from "./exceptions/exception";
 import { ServerContext } from "../server";
-import { IAuthService } from "./interfaces/auth_service";
+import { IAuthService, type ProviderIdentity } from "./interfaces/auth_service";
+import { AuthIdentitiesRepository } from "../infrastructure/kysely/repositories/auth_identities";
 import { AuthorizedSessionsRepository } from "../infrastructure/kysely/repositories/authorized_sessions";
 import { UsersRepository } from "../infrastructure/kysely/repositories/users";
 
@@ -15,6 +15,7 @@ const createToken = () => randomBytes(token_length_bytes).toString("hex");
 export const AuthService = (ctx: ServerContext): IAuthService => {
   const repositories = {
     users: UsersRepository(ctx),
+    authIdentities: AuthIdentitiesRepository(ctx),
     authorizedSessions: AuthorizedSessionsRepository(ctx),
   };
 
@@ -22,64 +23,70 @@ export const AuthService = (ctx: ServerContext): IAuthService => {
     type: argon2.argon2id,
   };
 
-  return {
-    async signup(input) {
-      const username = input.username.trim();
-      const passwordHash = await argon2.hash(input.password, argon_options);
+  const createSession = async (
+    user_id: string,
+  ): Promise<{ token: string; expiresAt: string }> => {
+    const token = createToken();
+    const tokenHash = await argon2.hash(token, argon_options);
+    const expiresAt = new Date(Date.now() + session_ttl_ms);
 
-      try {
-        const user = await repositories.users.create({
-          username,
-          password_hash: passwordHash,
-        });
+    await repositories.authorizedSessions.create({
+      user_id,
+      token_prefix: token.slice(0, token_hint_length),
+      token_suffix: token.slice(-token_hint_length),
+      token_hash: tokenHash,
+      expires_at: expiresAt,
+    });
 
-        return {
-          id: user.id,
-          username: user.username,
-        };
-      } catch (error) {
-        if (error instanceof ApiGatewayException) throw error;
+    return {
+      token,
+      expiresAt: expiresAt.toISOString(),
+    };
+  };
 
-        throw new ApiGatewayException({
-          public_message: "Some error occurred",
-          cause: error,
-        });
-      }
-    },
-    async signin(input) {
-      const username = input.username.trim();
+  const getOrCreateProviderUser = async (input: ProviderIdentity) => {
+    const identities = await repositories.authIdentities.list({
+      filters: {
+        provider: input.provider,
+        provider_subject: input.provider_subject,
+      },
+      columns: ["user_id"],
+    });
+    const identity = identities.at(0);
 
-      const user = await repositories.users.findByUsername(username);
-
-      if (!user) {
-        return null;
-      }
-
-      const passwordMatches = await argon2.verify(
-        user.password_hash,
-        input.password,
-      );
-
-      if (!passwordMatches) {
-        return null;
-      }
-
-      const token = createToken();
-      const tokenHash = await argon2.hash(token, argon_options);
-      const expiresAt = new Date(Date.now() + session_ttl_ms);
-
-      await repositories.authorizedSessions.create({
-        user_id: user.id,
-        token_prefix: token.slice(0, token_hint_length),
-        token_suffix: token.slice(-token_hint_length),
-        token_hash: tokenHash,
-        expires_at: expiresAt,
+    if (identity) {
+      const users = await repositories.users.list({
+        filters: { ids: [identity.user_id] },
       });
+      const user = users.at(0);
 
-      return {
-        token,
-        expiresAt: expiresAt.toISOString(),
-      };
+      if (user) return user;
+    }
+
+    const existingUsers = input.email
+      ? await repositories.users.list({ filters: { email: input.email } })
+      : [];
+    const user =
+      existingUsers.at(0) ??
+      (await repositories.users.create({
+        email: input.email,
+        display_name: input.display_name,
+        avatar_url: input.avatar_url,
+      }));
+
+    await repositories.authIdentities.create({
+      provider: input.provider,
+      provider_subject: input.provider_subject,
+      user_id: user.id,
+    });
+
+    return user;
+  };
+
+  return {
+    async signinWithProviderIdentity(input) {
+      const user = await getOrCreateProviderUser(input);
+      return createSession(user.id);
     },
     async validateToken(token) {
       if (!/^[a-f0-9]{128}$/.test(token)) {

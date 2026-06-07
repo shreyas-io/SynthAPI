@@ -1,16 +1,22 @@
 import type { AuthenticatedUser } from "../entities/authenticated_user";
+import type { AuthProviderName } from "../entities/auth_identity";
 
-type SignupInput = {
-  username: string;
-  password: string;
+export type ProviderIdentity = {
+  provider: AuthProviderName;
+  provider_subject: string;
+  email: string | null;
+  display_name: string | null;
+  avatar_url: string | null;
 };
 
-type SigninInput = SignupInput;
+export type AuthSessionResult = {
+  token: string;
+  expiresAt: string;
+};
 
 export interface IAuthService {
-  signup: (input: SignupInput) => Promise<AuthenticatedUser>;
-  signin: (
-    input: SigninInput,
-  ) => Promise<{ token: string; expiresAt: string } | null>;
+  signinWithProviderIdentity: (
+    input: ProviderIdentity,
+  ) => Promise<AuthSessionResult>;
   validateToken: (token: string) => Promise<AuthenticatedUser | null>;
 }

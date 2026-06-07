@@ -1,24 +1,9 @@
+import { apiBaseUrl } from "../../../env";
 import { apiRequest } from "../../../lib/api/client";
-import type { AuthCredentials, AuthUser } from "../types";
+import type { AuthProviders, AuthUser } from "../types";
 
-const basicAuth = ({ username, password }: AuthCredentials): string => {
-  return `Basic ${btoa(`${username}:${password}`)}`;
-};
-
-export const signup = (input: AuthCredentials): Promise<AuthUser> => {
-  return apiRequest("/api/v1/auth/signup", {
-    method: "POST",
-    body: input,
-  });
-};
-
-export const signin = (input: AuthCredentials): Promise<void> => {
-  return apiRequest("/api/v1/auth/signin", {
-    method: "POST",
-    headers: {
-      authorization: basicAuth(input),
-    },
-  });
+export const getAuthProviders = (): Promise<AuthProviders> => {
+  return apiRequest("/api/v1/auth/providers");
 };
 
 export const signout = (): Promise<void> => {
@@ -29,4 +14,12 @@ export const signout = (): Promise<void> => {
 
 export const getCurrentUser = (): Promise<AuthUser> => {
   return apiRequest("/api/v1/auth/me");
+};
+
+export const getGoogleAuthStartUrl = (returnTo = "/projects"): string => {
+  const params = new URLSearchParams({
+    return_to: returnTo,
+  });
+
+  return `${apiBaseUrl}/api/v1/auth/google/start?${params.toString()}`;
 };

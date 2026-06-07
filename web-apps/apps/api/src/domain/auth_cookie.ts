@@ -24,8 +24,8 @@ export const setAuthCookie = (
 ) => {
   res.cookie(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    sameSite: "none",
-    secure: true,
+    sameSite: "lax",
+    secure: false,
     path: "/",
     expires: new Date(expiresAt),
   });
@@ -34,8 +34,8 @@ export const setAuthCookie = (
 export const clearAuthCookie = (res: Response) => {
   res.clearCookie(AUTH_COOKIE_NAME, {
     httpOnly: true,
-    sameSite: "none",
-    secure: true,
+    sameSite: "lax",
+    secure: false,
     path: "/",
   });
 };
