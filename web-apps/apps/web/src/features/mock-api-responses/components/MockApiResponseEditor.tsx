@@ -541,9 +541,6 @@ export function MockApiResponseEditor({
 
           {activeTab === "rules" && (
             <div className="editor-tab-panel rule-editor-panel flat-panel">
-              <div className="section-heading">
-                <h3>Rule tree</h3>
-              </div>
               {isDefault && !ruleTree ? (
                 <div className="empty-state">
                   Default responses do not use rule trees.

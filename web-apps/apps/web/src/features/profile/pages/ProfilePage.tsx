@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { AlertTriangle, RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 
+import { Avatar } from "../../../components/atoms/Avatar";
+import { ResourceCard } from "../../../components/molecules/ResourceCard";
 import {
   useCreateOrganization,
   useDeleteOrganization,
@@ -48,8 +50,8 @@ export function ProfilePage() {
 
   const { user, organizations } = profile.data;
 
-  const activeOrgs = organizations.filter((org) => org.deleted_at === null);
-  const deletedOrgs = organizations.filter((org) => org.deleted_at !== null);
+  const activeOrgs = organizations.filter((org) => org.deleted_at == null);
+  const deletedOrgs = organizations.filter((org) => org.deleted_at != null);
 
   const canDelete = (role: string) => role === "owner" || role === "admin";
 
@@ -68,17 +70,13 @@ export function ProfilePage() {
       <section className="profile-section card">
         <h2>User Details</h2>
         <div className="profile-info">
-          {user.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              alt={user.display_name ?? "User avatar"}
-              className="profile-avatar"
-            />
-          ) : (
-            <div className="profile-avatar profile-avatar-placeholder">
-              {(user.display_name ?? user.email ?? "?").charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            src={user.avatar_url}
+            label={user.display_name ?? user.email ?? "User"}
+            alt={user.display_name ?? "User avatar"}
+            className="profile-avatar"
+            fallbackClassName="profile-avatar-placeholder"
+          />
           <div className="profile-details">
             <p>
               <strong>Name:</strong> {user.display_name ?? "—"}
@@ -138,47 +136,40 @@ export function ProfilePage() {
             ) : (
               <div className="org-list">
                 {activeOrgs.map((org) => (
-                  <div key={org.id} className="org-card card">
-                    <div className="org-card-header">
-                      <h3>{org.name}</h3>
-                      <span className="pill">{org.membership.role}</span>
-                    </div>
-                    <div className="org-card-meta">
+                  <ResourceCard
+                    key={org.id}
+                    title={org.name}
+                    pill={org.membership.role}
+                    onDelete={
+                      canDelete(org.membership.role) &&
+                      org.id !== user.default_organization_id
+                        ? () => {
+                            if (
+                              confirm(
+                                `Are you sure you want to delete "${org.name}"?`,
+                              )
+                            ) {
+                              deleteOrgMutation.mutate(org.id);
+                            }
+                          }
+                        : undefined
+                    }
+                    deleteDisabled={deleteOrgMutation.isPending}
+                    deleteLabel={`Delete ${org.name}`}
+                  >
+                    <p>
+                      <strong>Status:</strong> {org.membership.status}
+                    </p>
+                    {org.plan && (
                       <p>
-                        <strong>Status:</strong> {org.membership.status}
+                        <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
                       </p>
-                      {org.plan && (
-                        <p>
-                          <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
-                        </p>
-                      )}
-                      <p>
-                        <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
-                        {org.ai_credits.granted} remaining
-                      </p>
-                    </div>
-                    {canDelete(org.membership.role) &&
-                      org.id !== user.default_organization_id && (
-                        <div className="org-card-actions">
-                          <button
-                            className="button danger-btn compact-action"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Are you sure you want to delete "${org.name}"?`,
-                                )
-                              ) {
-                                deleteOrgMutation.mutate(org.id);
-                              }
-                            }}
-                            disabled={deleteOrgMutation.isPending}
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                  </div>
+                    )}
+                    <p>
+                      <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
+                      {org.ai_credits.granted} remaining
+                    </p>
+                  </ResourceCard>
                 ))}
               </div>
             )}
@@ -195,50 +186,49 @@ export function ProfilePage() {
             {deletedOrgs.length === 0 ? (
               <p className="muted-text">No deleted organisations.</p>
             ) : (
-              <div className="org-list">
+              <div className="org-list deleted-grid">
                 {deletedOrgs.map((org) => (
-                  <div key={org.id} className="org-card card org-deleted">
-                    <div className="org-card-header">
-                      <h3>{org.name}</h3>
-                      <span className="pill">{org.membership.role}</span>
-                    </div>
-                    <div className="org-card-meta">
+                  <ResourceCard
+                    key={org.id}
+                    title={org.name}
+                    pill={org.membership.role}
+                    className="org-deleted"
+                    secondaryAction={
+                      canDelete(org.membership.role) &&
+                      org.id !== user.default_organization_id ? (
+                        <button
+                          className="button secondary-btn compact-action"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Restore organisation "${org.name}"?`,
+                              )
+                            ) {
+                              restoreOrgMutation.mutate(org.id);
+                            }
+                          }}
+                          disabled={restoreOrgMutation.isPending}
+                        >
+                          <RotateCcw size={14} />
+                          Restore
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    <p>
+                      <strong>Deleted:</strong>{" "}
+                      {new Date(org.deleted_at!).toLocaleString()}
+                    </p>
+                    {org.plan && (
                       <p>
-                        <strong>Deleted:</strong>{" "}
-                        {new Date(org.deleted_at!).toLocaleString()}
+                        <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
                       </p>
-                      {org.plan && (
-                        <p>
-                          <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
-                        </p>
-                      )}
-                      <p>
-                        <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
-                        {org.ai_credits.granted} remaining
-                      </p>
-                    </div>
-                    {canDelete(org.membership.role) &&
-                      org.id !== user.default_organization_id && (
-                        <div className="org-card-actions">
-                          <button
-                            className="button secondary-btn compact-action"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Restore organisation "${org.name}"?`,
-                                )
-                              ) {
-                                restoreOrgMutation.mutate(org.id);
-                              }
-                            }}
-                            disabled={restoreOrgMutation.isPending}
-                          >
-                            <RotateCcw size={14} />
-                            Restore
-                          </button>
-                        </div>
-                      )}
-                  </div>
+                    )}
+                    <p>
+                      <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
+                      {org.ai_credits.granted} remaining
+                    </p>
+                  </ResourceCard>
                 ))}
               </div>
             )}

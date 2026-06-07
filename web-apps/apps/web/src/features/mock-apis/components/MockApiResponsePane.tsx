@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useMockApiResponses } from "../../mock-api-responses/hooks/mock_api_response_hooks";
 import { useMockApi } from "../hooks/mock_api_hooks";
 
@@ -12,6 +13,9 @@ export function MockApiResponsePane({
 }) {
   const mockApi = useMockApi(mockApiId);
   const responses = useMockApiResponses(mockApiId);
+  const activeResponses =
+    responses.data?.records.filter((response) => response.deleted_at == null) ??
+    [];
 
   return (
     <aside className="mock-api-left-pane card">
@@ -20,7 +24,7 @@ export function MockApiResponsePane({
           <p className="eyebrow">Route</p>
           <h2>{mockApi.data.name}</h2>
           <p>
-            <span className="pill">{mockApi.data.method}</span>{" "}
+            <MethodPill method={mockApi.data.method} />{" "}
             <code>{mockApi.data.path}</code>
           </p>
           {mockApi.data.description && <p>{mockApi.data.description}</p>}
@@ -39,7 +43,7 @@ export function MockApiResponsePane({
         </div>
         {responses.isPending && <p>Loading responses...</p>}
         {responses.isError && <p className="error">{responses.error.message}</p>}
-        {responses.data?.records.map((response) => (
+        {activeResponses.map((response) => (
           <Link
             className={`response-list-item ${
               response.id === activeResponseId ? "active" : ""
@@ -51,7 +55,7 @@ export function MockApiResponsePane({
             {response.is_default && <span className="pill">Default</span>}
           </Link>
         ))}
-        {responses.data?.records.length === 0 && (
+        {activeResponses.length === 0 && (
           <p>No responses configured yet.</p>
         )}
       </section>

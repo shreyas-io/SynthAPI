@@ -50,25 +50,22 @@ describe("App", () => {
   });
 
   it("renders protected projects after session check", async () => {
-    vi.spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: "success",
-            data: {
-              id: "user-1",
-              email: "demo@example.com",
-              display_name: "Demo User",
-              avatar_url: null,
-            },
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: "success",
-            data: {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      const success = (data: unknown) =>
+        new Response(JSON.stringify({ status: "success", data }));
+
+      if (url.endsWith("/api/v1/auth/me")) {
+        return success({
+          id: "user-1",
+          email: "demo@example.com",
+          display_name: "Demo User",
+          avatar_url: null,
+        });
+      }
+
+      if (url.endsWith("/api/v1/profile")) {
+        return success({
               user: {
                 id: "user-1",
                 email: "demo@example.com",
@@ -94,28 +91,29 @@ describe("App", () => {
                   ai_credits: { granted: 0, used: 0, remaining: 0 },
                 },
               ],
+        });
+      }
+
+      if (url.endsWith("/api/v1/organizations/org-1/credits")) {
+        return success({ granted: 0, used: 0, remaining: 0 });
+      }
+
+      if (url.includes("/api/v1/projects?")) {
+        return success({
+          total: 1,
+          records: [
+            {
+              id: "project-1",
+              slug: "demo-project",
+              name: "Demo Project",
+              description: "A test project",
             },
-          }),
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify({
-            status: "success",
-            data: {
-              total: 1,
-              records: [
-                {
-                  id: "project-1",
-                  slug: "demo-project",
-                  name: "Demo Project",
-                  description: "A test project",
-                },
-              ],
-            },
-          }),
-        ),
-      );
+          ],
+        });
+      }
+
+      throw new Error(`Unexpected request: ${url}`);
+    });
 
     window.history.pushState({}, "", "/projects");
     render(<App />);

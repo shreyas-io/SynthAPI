@@ -1,12 +1,17 @@
-import { Link, useParams, useLocation, Outlet } from "react-router";
-import { Check, Copy, SlidersHorizontal } from "lucide-react";
+import { Link, useParams, useLocation, Outlet, useNavigate } from "react-router";
+import { AlertTriangle, Check, Copy, RotateCcw, SlidersHorizontal } from "lucide-react";
+import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useEffect, useState } from "react";
 
 import {
   VariablesEditor,
   VariablesViewer,
 } from "../../../components/organisms/VariablesEditor";
-import { useMockApiResponses } from "../../mock-api-responses/hooks/mock_api_response_hooks";
+import {
+  useDeletedMockApiResponses,
+  useMockApiResponses,
+  useRestoreMockApiResponse,
+} from "../../mock-api-responses/hooks/mock_api_response_hooks";
 import type { Variable } from "../../projects/types";
 import { useProject, useUpdateProject } from "../../projects/hooks/project_hooks";
 import { useMockApi, useMockApis, useUpdateMockApi } from "../hooks/mock_api_hooks";
@@ -22,14 +27,18 @@ function generateCurl(method: string, path: string, projectSlug?: string) {
   return `curl -X ${upper} ${url}`;
 }
 
+type ResponseTab = "active" | "deleted";
+
 export function MockApiDetailPage() {
   const { projectId, mockApiId } = useParams();
   const location = useLocation();
+  const navigate = useNavigate();
   const [apiDropdownOpen, setApiDropdownOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [variables, setVariables] = useState<Variable[]>([]);
   const [globals, setGlobals] = useState<Variable[]>([]);
   const [variablesOpen, setVariablesOpen] = useState(false);
+  const [responseTab, setResponseTab] = useState<ResponseTab>("active");
   const [variablesTab, setVariablesTab] = useState<
     "globals" | "constants" | "local"
   >("globals");
@@ -41,6 +50,8 @@ export function MockApiDetailPage() {
   const mockApi = useMockApi(mockApiId);
   const mockApis = useMockApis(projectId);
   const responses = useMockApiResponses(mockApiId);
+  const deletedResponsesQuery = useDeletedMockApiResponses(mockApiId);
+  const restoreResponse = useRestoreMockApiResponse(mockApiId);
   const project = useProject(projectId);
   const updateMockApiMutation = useUpdateMockApi(mockApiId);
   const updateProjectMutation = useUpdateProject(projectId);
@@ -53,6 +64,38 @@ export function MockApiDetailPage() {
     setGlobals(project.data?.globals ?? []);
   }, [project.data]);
 
+  useEffect(() => {
+    if (!mockApiId || !projectId || !responses.data?.records.length) return;
+    const basePath = `/projects/${projectId}/mock-apis/${mockApiId}`;
+    if (!location.pathname.endsWith(mockApiId)) return;
+
+    const defaultResponse = responses.data.records.find((r) => r.is_default);
+    if (defaultResponse) {
+      navigate(`${basePath}/responses/${defaultResponse.id}`, { replace: true });
+      return;
+    }
+
+    const lastResponseId = localStorage.getItem(`mock-api-last-response-${mockApiId}`);
+    if (lastResponseId) {
+      const lastResponse = responses.data.records.find((r) => r.id === lastResponseId);
+      if (lastResponse) {
+        navigate(`${basePath}/responses/${lastResponseId}`, { replace: true });
+      }
+    }
+  }, [responses.data?.records, mockApiId, projectId, location.pathname, navigate]);
+
+  useEffect(() => {
+    const match = location.pathname.match(/\/responses\/([^/]+)$/);
+    if (match && match[1] && mockApiId) {
+      localStorage.setItem(`mock-api-last-response-${mockApiId}`, match[1]);
+    }
+  }, [location.pathname, mockApiId]);
+
+  const activeApis = mockApis.data?.records ?? [];
+  const activeResponses = responses.data?.records ?? [];
+  const deletedResponses = deletedResponsesQuery.data?.records ?? [];
+  const currentResponses = responseTab === "active" ? responses : deletedResponsesQuery;
+
   return (
     <main className="workspace-canvas">
         {mockApi.data && (
@@ -64,21 +107,21 @@ export function MockApiDetailPage() {
                   className="api-selector-toggle"
                   onClick={() => setApiDropdownOpen((v) => !v)}
                 >
-                  <span className="pill">{mockApi.data.method}</span>
+                  <MethodPill method={mockApi.data.method} />
                   <span className="api-selector-name">{mockApi.data.name}</span>
                   <span aria-hidden="true">⌄</span>
                 </button>
                 {apiDropdownOpen && (
                   <div className="api-selector-list" role="listbox">
                     {mockApis.isPending && <p className="muted-text">Loading...</p>}
-                    {mockApis.data?.records.map((api) => (
+                    {activeApis.map((api) => (
                       <Link
                         key={api.id}
                         to={`/projects/${projectId}/mock-apis/${api.id}`}
                         className={`api-selector-item ${api.id === mockApiId ? "active" : ""}`}
                         onClick={() => setApiDropdownOpen(false)}
                       >
-                        <span className="pill">{api.method}</span>
+                        <MethodPill method={api.method} />
                         <code className="path-text">{api.path}</code>
                       </Link>
                     ))}
@@ -128,31 +171,104 @@ export function MockApiDetailPage() {
         )}
 
         <div className="workspace-row response-strip">
-           {responses.isPending && <span className="muted-text">Loading responses...</span>}
-           {responses.isError && <span className="error">{responses.error.message}</span>}
-           <span className="response-strip-label">Responses</span>
-           {responses.data?.records.map((response) => {
-             const isActive = location.pathname.includes(`/responses/${response.id}`);
-             return (
-               <Link
-                 className={`response-tab ${isActive ? "active" : ""}`}
-                 to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/${response.id}`}
-                 key={response.id}
-               >
-                 {response.name} {response.is_default && " (default)"}
-               </Link>
-             );
-           })}
-           <Link 
-             className="response-tab add-response-tab"
-             to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/new`}
-             title="New Response"
-           >
-             +
-           </Link>
+          <span className="response-strip-label">Responses</span>
+          <span className="response-status-toggle" aria-label="Response status">
+            <button
+              type="button"
+              className={`response-status-tab ${
+                responseTab === "active" ? "active" : ""
+              }`}
+              onClick={() => setResponseTab("active")}
+            >
+              Active
+            </button>
+            <button
+              type="button"
+              className={`response-status-tab ${
+                responseTab === "deleted" ? "active" : ""
+              }`}
+              onClick={() => setResponseTab("deleted")}
+            >
+              Deleted
+            </button>
+          </span>
+           {responseTab === "active" && (
+             <>
+             {currentResponses.isPending && <span className="muted-text">Loading responses...</span>}
+             {currentResponses.isError && <span className="error">{currentResponses.error.message}</span>}
+             {activeResponses.map((response) => {
+               const isActive = location.pathname.includes(`/responses/${response.id}`);
+               return (
+                 <Link
+                   className={`response-tab ${isActive ? "active" : ""}`}
+                   to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/${response.id}`}
+                   key={response.id}
+                 >
+                   {response.name} {response.is_default && " (default)"}
+                 </Link>
+               );
+             })}
+             <Link 
+               className="response-tab add-response-tab"
+               to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/new`}
+               title="New Response"
+             >
+               +
+             </Link>
+             </>
+           )}
         </div>
 
-      {location.pathname.endsWith(mockApiId) ? (
+        {responseTab === "deleted" && (
+          <section className="profile-section">
+            <div className="org-deleted-banner">
+              <AlertTriangle size={16} />
+              Deleted responses are hidden from response matching.
+            </div>
+            {currentResponses.isPending && <p>Loading responses...</p>}
+            {currentResponses.isError && <p className="error">{currentResponses.error.message}</p>}
+            {deletedResponses.length === 0 ? (
+              <p className="muted-text">No deleted responses.</p>
+            ) : (
+              <div className="org-list deleted-grid">
+                {deletedResponses.map((response) => (
+                  <div className="org-card card org-deleted" key={response.id}>
+                    <div className="org-card-header">
+                      <h3>{response.name}</h3>
+                      {response.is_default && <span className="pill">Default</span>}
+                    </div>
+                    <div className="org-card-meta">
+                      <p>
+                        <strong>Deleted:</strong>{" "}
+                        {new Date(response.deleted_at!).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="org-card-actions">
+                      <button
+                        type="button"
+                        className="button secondary-btn compact-action"
+                        onClick={() => restoreResponse.mutate(response.id)}
+                        disabled={restoreResponse.isPending}
+                      >
+                        <RotateCcw size={14} />
+                        Restore
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {restoreResponse.isError && (
+              <p className="error">Failed to restore response.</p>
+            )}
+          </section>
+        )}
+
+      {responseTab === "deleted" ? (
+        <section className="workspace-empty">
+          <p>Select a response status or restore a deleted response.</p>
+        </section>
+      ) : location.pathname.endsWith(mockApiId) ? (
         <section className="workspace-empty">
           <p>Select or create a response.</p>
         </section>

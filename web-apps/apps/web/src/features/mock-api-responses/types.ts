@@ -77,6 +77,7 @@ export type MockApiResponse = {
   };
   rule_tree: RuleTree | null;
   post_response_actions: PostResponseAction[] | null;
+  deleted_at: string | null;
 };
 
-export type MockApiResponseInput = Omit<MockApiResponse, "id">;
+export type MockApiResponseInput = Omit<MockApiResponse, "id" | "deleted_at">;

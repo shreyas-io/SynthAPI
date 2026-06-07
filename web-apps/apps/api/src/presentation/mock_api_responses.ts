@@ -52,11 +52,13 @@ export const addMockApiResponseRoutes = (
         ids?: string[];
         mock_api_ids: string[];
         name?: string;
+        fetch_deleted?: boolean;
       } = {
         mock_api_ids: [req.params.id as string],
       };
       const ids = getStringArray(req.query.id);
       const name = getString(req.query.name);
+      const fetch_deleted = req.query.fetch_deleted === "true";
 
       if (ids?.length) {
         filters.ids = ids;
@@ -65,6 +67,8 @@ export const addMockApiResponseRoutes = (
       if (name) {
         filters.name = name;
       }
+
+      filters.fetch_deleted = fetch_deleted;
 
       const parsedFilters = listMockApiResponsesFilterDto.safeParse(filters);
       if (!parsedFilters.success) {
@@ -149,6 +153,16 @@ export const addMockApiResponseRoutes = (
         req.params.response_id as string,
       );
       res.status(204).send();
+    }),
+  );
+
+  app.post(
+    "/api/v1/mock-apis/:id/responses/:response_id/restore",
+    asyncRoute(async (req, res) => {
+      await mock_api_responses.restoreMockApiResponse(
+        req.params.response_id as string,
+      );
+      res.json({});
     }),
   );
 };

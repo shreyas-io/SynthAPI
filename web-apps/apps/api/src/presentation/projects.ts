@@ -78,6 +78,7 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
         slug?: string;
         name?: string;
         description?: string;
+        fetch_deleted?: boolean;
       } = {};
       const organization_id = getString(req.query.organization_id);
       if (!organization_id) {
@@ -91,6 +92,7 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
       const slug = getString(req.query.slug);
       const name = getString(req.query.name);
       const description = getString(req.query.description);
+      const fetch_deleted = req.query.fetch_deleted === "true";
 
       if (ids?.length) {
         filters.ids = ids;
@@ -107,6 +109,8 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
       if (description) {
         filters.description = description;
       }
+
+      filters.fetch_deleted = fetch_deleted;
 
       const parsedFilters = listProjectsFilterDto.safeParse(filters);
       if (!parsedFilters.success) {
@@ -190,6 +194,17 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
         req.params.id as string,
       );
       res.status(204).send();
+    }),
+  );
+
+  app.post(
+    "/api/v1/projects/:id/restore",
+    asyncRoute(async (req, res) => {
+      await projects.restoreProject(
+        getAuthenticatedUser(req.user),
+        req.params.id as string,
+      );
+      res.json({});
     }),
   );
 };

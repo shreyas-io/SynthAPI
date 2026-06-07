@@ -17,6 +17,7 @@ export type MockApi = {
   name: string;
   description: string | null;
   variables?: Variable[] | null;
+  deleted_at: string | null;
   created_at: string;
 };
 

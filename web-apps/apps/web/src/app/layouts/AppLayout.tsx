@@ -7,6 +7,7 @@ import {
   useOrganizationCredits,
   useProfile,
 } from "../../features/profile/hooks/profile_hooks";
+import { Avatar } from "../../components/atoms/Avatar";
 import { useSelectedOrganization } from "../context/OrganizationContext";
 
 export function AppLayout() {
@@ -44,7 +45,7 @@ export function AppLayout() {
 
   const activeOrgs =
     (profile.data?.organizations ?? []).filter(
-      (org) => org.deleted_at === null,
+      (org) => org.deleted_at == null,
     );
   const selectedOrg = activeOrgs.find(
     (org) => org.id === selectedOrganizationId,
@@ -53,7 +54,7 @@ export function AppLayout() {
   return (
     <div className="app-shell">
       <header className="app-top-bar">
-        <Link className="brand" to="/projects">synthapi</Link>
+        <Link className="brand" to="/projects">SynthAPI</Link>
         <nav className="app-nav-links">
           <Link to="/projects">Projects</Link>
         </nav>
@@ -110,15 +111,12 @@ export function AppLayout() {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
           >
-            {user.data?.avatar_url ? (
-              <img
-                src={user.data.avatar_url}
-                alt=""
-                className="profile-dropdown-avatar"
-              />
-            ) : (
-              <User size={16} />
-            )}
+            <Avatar
+              src={user.data?.avatar_url}
+              label={displayName}
+              className="profile-dropdown-avatar"
+              fallbackClassName="profile-dropdown-avatar-placeholder"
+            />
             <span className="profile-dropdown-name">{displayName}</span>
             <ChevronDown size={14} />
           </button>

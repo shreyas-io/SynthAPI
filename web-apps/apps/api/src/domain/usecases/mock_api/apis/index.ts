@@ -18,6 +18,7 @@ type MockApiFilters = {
   path?: string | undefined;
   name?: string | undefined;
   description?: string | undefined;
+  fetch_deleted?: boolean | undefined;
 };
 
 type MockApiPagination = {
@@ -59,8 +60,11 @@ export const MockApisUsecase = (ctx: AppContext) => {
     getMockApi: async (id: string): Promise<MockApiEt> => {
       const mock_api = await ctx.db
         .selectFrom("mock_apis")
-        .selectAll()
-        .where("id", "=", id)
+        .innerJoin("projects", "projects.id", "mock_apis.project_id")
+        .selectAll("mock_apis")
+        .where("mock_apis.id", "=", id)
+        .where("mock_apis.deleted_at", "is", null)
+        .where("projects.deleted_at", "is", null)
         .executeTakeFirst();
 
       if (!mock_api) {
@@ -103,6 +107,7 @@ export const MockApisUsecase = (ctx: AppContext) => {
           "path",
           "name",
           "description",
+          "deleted_at",
           "created_at",
         ]);
 
@@ -144,6 +149,14 @@ export const MockApisUsecase = (ctx: AppContext) => {
         );
       }
 
+      if (filters.fetch_deleted) {
+        countQuery = countQuery.where("deleted_at", "is not", null);
+        recordsQuery = recordsQuery.where("deleted_at", "is not", null);
+      } else {
+        countQuery = countQuery.where("deleted_at", "is", null);
+        recordsQuery = recordsQuery.where("deleted_at", "is", null);
+      }
+
       recordsQuery = recordsQuery
         .orderBy(sort.by, sort.order)
         .limit(pagination.limit)
@@ -172,11 +185,52 @@ export const MockApisUsecase = (ctx: AppContext) => {
             : {}),
         })
         .where("id", "=", id)
+        .where("deleted_at", "is", null)
         .execute();
     },
     async deleteMockApi(id: string): Promise<void> {
+      const mock_api = await ctx.db
+        .selectFrom("mock_apis")
+        .select(["id", "deleted_at"])
+        .where("id", "=", id)
+        .executeTakeFirst();
+
+      if (!mock_api) {
+        throw new MockApiException({
+          public_message: "Mock API not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      if (mock_api.deleted_at) {
+        return;
+      }
+
       await ctx.db
-        .deleteFrom("mock_apis")
+        .updateTable("mock_apis")
+        .set({ deleted_at: new Date() })
+        .where("id", "=", id)
+        .execute();
+    },
+    async restoreMockApi(id: string): Promise<void> {
+      const mock_api = await ctx.db
+        .selectFrom("mock_apis")
+        .innerJoin("projects", "projects.id", "mock_apis.project_id")
+        .select(["mock_apis.id"])
+        .where("mock_apis.id", "=", id)
+        .where("projects.deleted_at", "is", null)
+        .executeTakeFirst();
+
+      if (!mock_api) {
+        throw new MockApiException({
+          public_message: "Mock API not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      await ctx.db
+        .updateTable("mock_apis")
+        .set({ deleted_at: null })
         .where("id", "=", id)
         .execute();
     },

@@ -4,7 +4,11 @@ export const queryKeys = {
   profile: ["profile"] as const,
   organizationCredits: (organizationId: string) =>
     ["organizations", organizationId, "credits"] as const,
-  projects: (organizationId: string) => ["projects", organizationId] as const,
+  projectListRoot: (organizationId: string) => ["projects", organizationId] as const,
+  projects: (
+    organizationId: string,
+    params?: Record<string, string | number | boolean | undefined>,
+  ) => ["projects", organizationId, params ?? {}] as const,
   project: (id: string) => ["projects", "detail", id] as const,
   projectChats: (projectId: string) => ["projects", projectId, "chats"] as const,
   projectChatEvents: (projectId: string, chatId: string) =>

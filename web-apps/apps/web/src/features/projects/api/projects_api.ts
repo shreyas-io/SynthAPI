@@ -1,11 +1,38 @@
 import { apiRequest } from "../../../lib/api/client";
 import type { ListResponse, Project, ProjectInput } from "../types";
 
+export type ListProjectsParams = {
+  limit: number;
+  offset: number;
+  name?: string;
+  description?: string;
+  fetch_deleted?: boolean;
+};
+
 export const listProjects = (
   organizationId: string,
+  params: ListProjectsParams,
 ): Promise<ListResponse<Project>> => {
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+    offset: String(params.offset),
+    organization_id: organizationId,
+  });
+
+  if (params.name) {
+    query.set("name", params.name);
+  }
+
+  if (params.description) {
+    query.set("description", params.description);
+  }
+
+  if (params.fetch_deleted) {
+    query.set("fetch_deleted", "true");
+  }
+
   return apiRequest(
-    `/api/v1/projects?limit=50&offset=0&organization_id=${encodeURIComponent(organizationId)}`,
+    `/api/v1/projects?${query.toString()}`,
   );
 };
 
@@ -27,5 +54,17 @@ export const updateProject = (
   return apiRequest(`/api/v1/projects/${id}`, {
     method: "PUT",
     body: input,
+  });
+};
+
+export const deleteProject = (id: string): Promise<void> => {
+  return apiRequest(`/api/v1/projects/${id}`, {
+    method: "DELETE",
+  });
+};
+
+export const restoreProject = (id: string): Promise<void> => {
+  return apiRequest(`/api/v1/projects/${id}/restore`, {
+    method: "POST",
   });
 };

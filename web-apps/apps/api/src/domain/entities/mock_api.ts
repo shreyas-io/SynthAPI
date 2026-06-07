@@ -8,6 +8,7 @@ export type MockApiEt = {
   name: string;
   description: string | null;
   variables: Array<VariableEt> | null;
+  deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };
