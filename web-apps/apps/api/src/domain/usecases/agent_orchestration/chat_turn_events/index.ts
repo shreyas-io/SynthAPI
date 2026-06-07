@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import {
@@ -43,7 +43,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
   ): Promise<number> => {
     if (!hasFilters(filters)) return 0;
 
-    let query = ctx.database.db
+    let query = ctx.db
       .selectFrom("chat_turn_events")
       .select(sql<number>`count(*)::int`.as("count"));
 
@@ -75,7 +75,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
   };
 
   const getChatTurnEvent = async (id: string): Promise<ChatTurnEventEt> => {
-    const chat_turn_event = (await ctx.database.db
+    const chat_turn_event = (await ctx.db
       .selectFrom("chat_turn_events")
       .selectAll()
       .where("id", "=", id)
@@ -96,7 +96,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
       input: ChatTurnEventInput,
     ): Promise<ChatTurnEventEt> => {
       const id = uuidv7();
-      await ctx.database.db
+      await ctx.db
         .insertInto("chat_turn_events")
         .values({
           id,
@@ -119,7 +119,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
         return { total: 0, records: [] };
       }
 
-      let recordsQuery = ctx.database.db.selectFrom("chat_turn_events");
+      let recordsQuery = ctx.db.selectFrom("chat_turn_events");
 
       if (filters.ids?.length) {
         recordsQuery = recordsQuery.where("id", "in", filters.ids);
@@ -176,7 +176,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
       return countChatTurnEvents(filters);
     },
     async deleteChatTurnEvent(id: string): Promise<void> {
-      await ctx.database.db
+      await ctx.db
         .deleteFrom("chat_turn_events")
         .where("id", "=", id)
         .execute();

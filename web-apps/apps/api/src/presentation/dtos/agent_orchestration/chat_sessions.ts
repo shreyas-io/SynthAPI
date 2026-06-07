@@ -10,6 +10,11 @@ export const createChatSessionDto = z.object({
   status: chatSessionStatusDto.default("active"),
 });
 
+export const createProjectChatSessionDto = z.object({
+  name: z.string().max(255),
+  description: z.string().max(2048).nullable().optional(),
+});
+
 export const updateChatSessionDto = z.object({
   name: z.string().max(255),
   description: z.string().max(2048).nullable(),

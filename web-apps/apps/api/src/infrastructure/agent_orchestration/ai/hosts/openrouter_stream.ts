@@ -2,7 +2,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { createAiGateway } from "ai-gateway-provider";
 import { streamText, type ModelMessage, type StreamTextResult, type ToolSet } from "ai";
 
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { AgentOrchestrationException } from "../../../../domain/exceptions/exception";
 
 export type OpenRouterStreamInput = {
@@ -21,16 +21,16 @@ export async function streamTextViaOpenRouter(
 ): Promise<StreamTextResult<any, any>> {
   try {
     const openrouter = createOpenRouter({
-      apiKey: ctx.environment.OPENROUTER_API_KEY,
+      apiKey: ctx.env.OPENROUTER_API_KEY,
     });
 
     let model;
 
     if (input.model_gateway === "cloudflare_aig") {
       const gateway = createAiGateway({
-        accountId: ctx.environment.CLOUDFLARE_ACCOUNT_ID,
-        gateway: ctx.environment.CLOUDFLARE_AI_GATEWAY_ID,
-        apiKey: ctx.environment.CLOUDFLARE_AI_GATEWAY_TOKEN,
+        accountId: ctx.env.CLOUDFLARE_ACCOUNT_ID,
+        gateway: ctx.env.CLOUDFLARE_AI_GATEWAY_ID,
+        apiKey: ctx.env.CLOUDFLARE_AI_GATEWAY_TOKEN,
       });
       model = gateway(openrouter(input.model));
     } else {

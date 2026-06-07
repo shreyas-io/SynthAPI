@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import {
   HttpStatusCode,
   MockApiException,
@@ -64,15 +64,15 @@ const executeVariableAction = async (
   const variable_context = getVariableContext(input.execution_context, action);
 
   if (action.type === "unset") {
-    await ctx.keyValueStore.delete(key);
+    await ctx.kvStore.delete(key);
     delete variable_context[action.key];
     return;
   }
 
   if (action.type === "increment" || action.type === "decrement") {
     const amount = action.type === "increment" ? action.amount : -action.amount;
-    const value = await ctx.keyValueStore.increment(key, amount);
-    await ctx.keyValueStore.set(key, value, { ttl_seconds });
+    const value = await ctx.kvStore.increment(key, amount);
+    await ctx.kvStore.set(key, value, { ttl_seconds });
     variable_context[action.key] = value;
     return;
   }
@@ -83,12 +83,12 @@ const executeVariableAction = async (
   );
 
   if (action.type === "set") {
-    await ctx.keyValueStore.set(key, value, { ttl_seconds });
+    await ctx.kvStore.set(key, value, { ttl_seconds });
     variable_context[action.key] = value;
     return;
   }
 
-  const existing_value = await ctx.keyValueStore.get(key);
+  const existing_value = await ctx.kvStore.get(key);
   const array_value = existing_value ?? [];
 
   if (!Array.isArray(array_value)) {
@@ -103,7 +103,7 @@ const executeVariableAction = async (
       ? [...array_value, value]
       : array_value.filter((item) => !_.isEqual(item, value));
 
-  await ctx.keyValueStore.set(key, updated_value, { ttl_seconds });
+  await ctx.kvStore.set(key, updated_value, { ttl_seconds });
   variable_context[action.key] = updated_value;
 };
 

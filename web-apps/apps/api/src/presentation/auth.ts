@@ -9,27 +9,13 @@ import {
 import { clearAuthCookie, setAuthCookie } from "../domain/auth_cookie";
 import { GoogleAuthProvider } from "../domain/auth_providers/google";
 import { asyncRoute } from "../middleware/async_route";
-import { authMiddleware } from "../middleware/auth";
-import type { ServerContext } from "../server";
-import type { getSecrets } from "../config/secrets";
+import { bearerAuthMiddleware } from "../middleware/auth";
+import type { AppContext } from "../server";
+import { getString } from "./utils";
 
-const oauthStateCookieName = "mock_stack_oauth_state";
-const oauthReturnCookieName = "mock_stack_oauth_return_to";
-const oauthCookieMaxAgeMs = 10 * 60 * 1000;
-
-type AuthSecrets = Awaited<ReturnType<typeof getSecrets>>;
-
-const getString = (value: unknown): string | undefined => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-
-  return undefined;
-};
+const OAUTH_STATE_COOKIE_NAME = "mock_stack_oauth_state";
+const OAUTH_RETURN_COOKIE_NAME = "mock_stack_oauth_return_to";
+const OAUTH_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
 
 const parseCookie = (req: Request, name: string): string | null => {
   const cookieHeader = req.header("cookie");
@@ -50,7 +36,7 @@ const setTemporaryCookie = (res: Response, name: string, value: string) => {
     sameSite: "lax",
     secure: false,
     path: "/",
-    maxAge: oauthCookieMaxAgeMs,
+    maxAge: OAUTH_COOKIE_MAX_AGE_MS,
   });
 };
 
@@ -80,18 +66,15 @@ const normalizeReturnTo = (value: unknown): string => {
   return returnTo;
 };
 
-const getWebBaseUrl = (secrets: AuthSecrets): string => {
-  return (secrets.WEB_APP_BASE_URL ?? "http://127.0.0.1:8787").replace(
-    /\/$/,
-    "",
-  );
+const getWebBaseUrl = (secrets: AppContext["env"]): string => {
+  return secrets.WEB_APP_BASE_URL.replace(/\/$/, "");
 };
 
-const redirectToSigninError = (res: Response, secrets: AuthSecrets) => {
+const redirectToSigninError = (res: Response, secrets: AppContext["env"]) => {
   res.redirect(`${getWebBaseUrl(secrets)}/signin?error=google`);
 };
 
-const getGoogleProvider = (secrets: AuthSecrets) => {
+const getGoogleProvider = (secrets: AppContext["env"]) => {
   if (
     !secrets.GOOGLE_OAUTH_CLIENT_ID ||
     !secrets.GOOGLE_OAUTH_CLIENT_SECRET ||
@@ -107,20 +90,16 @@ const getGoogleProvider = (secrets: AuthSecrets) => {
   });
 };
 
-export const addAuthRoutes = (
-  app: Express,
-  serverContext: ServerContext,
-  secrets: AuthSecrets,
-) => {
-  const auth = AuthService(serverContext);
-  const requireAuth = authMiddleware(serverContext);
+export const addAuthRoutes = (app: Express, ctx: AppContext) => {
+  const auth = AuthService(ctx);
+  const requireAuth = bearerAuthMiddleware(ctx);
 
   app.get(
     "/api/v1/auth/providers",
     asyncRoute(async (_req, res) => {
       res.json({
         google: {
-          enabled: Boolean(getGoogleProvider(secrets)),
+          enabled: Boolean(getGoogleProvider(ctx.env)),
         },
       });
     }),
@@ -129,7 +108,7 @@ export const addAuthRoutes = (
   app.get(
     "/api/v1/auth/google/start",
     asyncRoute(async (req, res) => {
-      const google = getGoogleProvider(secrets);
+      const google = getGoogleProvider(ctx.env);
 
       if (!google) {
         throw new ApiGatewayException({
@@ -141,8 +120,8 @@ export const addAuthRoutes = (
       const state = randomBytes(32).toString("hex");
       const returnTo = normalizeReturnTo(req.query.return_to);
 
-      setTemporaryCookie(res, oauthStateCookieName, state);
-      setTemporaryCookie(res, oauthReturnCookieName, returnTo);
+      setTemporaryCookie(res, OAUTH_STATE_COOKIE_NAME, state);
+      setTemporaryCookie(res, OAUTH_RETURN_COOKIE_NAME, returnTo);
 
       res.redirect(google.getAuthorizationUrl(state));
     }),
@@ -151,24 +130,24 @@ export const addAuthRoutes = (
   app.get(
     "/api/v1/auth/google/callback",
     asyncRoute(async (req, res) => {
-      const google = getGoogleProvider(secrets);
+      const google = getGoogleProvider(ctx.env);
       const code = getString(req.query.code);
       const state = getString(req.query.state);
-      const cookieState = parseCookie(req, oauthStateCookieName);
+      const cookieState = parseCookie(req, OAUTH_STATE_COOKIE_NAME);
       const returnTo = normalizeReturnTo(
-        parseCookie(req, oauthReturnCookieName),
+        parseCookie(req, OAUTH_RETURN_COOKIE_NAME),
       );
 
-      clearTemporaryCookie(res, oauthStateCookieName);
-      clearTemporaryCookie(res, oauthReturnCookieName);
+      clearTemporaryCookie(res, OAUTH_STATE_COOKIE_NAME);
+      clearTemporaryCookie(res, OAUTH_RETURN_COOKIE_NAME);
 
       if (!google || !code || !state || !cookieState) {
-        redirectToSigninError(res, secrets);
+        redirectToSigninError(res, ctx.env);
         return;
       }
 
       if (!safeEquals(state, cookieState)) {
-        redirectToSigninError(res, secrets);
+        redirectToSigninError(res, ctx.env);
         return;
       }
 
@@ -176,9 +155,9 @@ export const addAuthRoutes = (
         const identity = await google.exchangeCallback(code);
         const signin = await auth.signinWithProviderIdentity(identity);
         setAuthCookie(res, signin.token, signin.expiresAt);
-        res.redirect(`${getWebBaseUrl(secrets)}${returnTo}`);
+        res.redirect(`${getWebBaseUrl(ctx.env)}${returnTo}`);
       } catch {
-        redirectToSigninError(res, secrets);
+        redirectToSigninError(res, ctx.env);
       }
     }),
   );

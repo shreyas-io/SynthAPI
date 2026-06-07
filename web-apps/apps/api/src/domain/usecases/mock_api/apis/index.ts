@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
 import {
   HttpStatusCode,
@@ -12,12 +12,12 @@ type MockApiInput = Pick<
 >;
 
 type MockApiFilters = {
-  ids?: string[];
-  project_ids?: string[];
-  method?: string;
-  path?: string;
-  name?: string;
-  description?: string;
+  ids?: string[] | undefined;
+  project_ids?: string[] | undefined;
+  method?: string | undefined;
+  path?: string | undefined;
+  name?: string | undefined;
+  description?: string | undefined;
 };
 
 type MockApiPagination = {
@@ -33,7 +33,7 @@ type MockApiSort = {
 export const MockApisUsecase = (ctx: AppContext) => {
   return {
     createMockApi: async (input: MockApiInput): Promise<MockApiEt> => {
-      const mock_api = await ctx.database.db
+      const mock_api = await ctx.db
         .insertInto("mock_apis")
         .values({
           project_id: input.project_id,
@@ -57,7 +57,7 @@ export const MockApisUsecase = (ctx: AppContext) => {
       return mock_api;
     },
     getMockApi: async (id: string): Promise<MockApiEt> => {
-      const mock_api = await ctx.database.db
+      const mock_api = await ctx.db
         .selectFrom("mock_apis")
         .selectAll()
         .where("id", "=", id)
@@ -91,10 +91,10 @@ export const MockApisUsecase = (ctx: AppContext) => {
         };
       }
 
-      let countQuery = ctx.database.db
+      let countQuery = ctx.db
         .selectFrom("mock_apis")
         .select(sql<number>`count(*)::int`.as("count"));
-      let recordsQuery = ctx.database.db
+      let recordsQuery = ctx.db
         .selectFrom("mock_apis")
         .select([
           "id",
@@ -159,7 +159,7 @@ export const MockApisUsecase = (ctx: AppContext) => {
       };
     },
     async updateMockApi(id: string, input: MockApiInput): Promise<void> {
-      await ctx.database.db
+      await ctx.db
         .updateTable("mock_apis")
         .set({
           project_id: input.project_id,
@@ -175,7 +175,7 @@ export const MockApisUsecase = (ctx: AppContext) => {
         .execute();
     },
     async deleteMockApi(id: string): Promise<void> {
-      await ctx.database.db
+      await ctx.db
         .deleteFrom("mock_apis")
         .where("id", "=", id)
         .execute();

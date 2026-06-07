@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
 import {
   HttpStatusCode,
@@ -8,11 +8,11 @@ import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import type { ProjectEt } from "../../../entities/project";
 
 type ProjectFilters = {
-  ids?: string[];
-  organization_ids?: string[];
-  slug?: string;
-  name?: string;
-  description?: string;
+  ids?: string[] | undefined;
+  organization_ids?: string[] | undefined;
+  slug?: string | undefined;
+  name?: string | undefined;
+  description?: string | undefined;
 };
 
 type ProjectPagination = {
@@ -38,7 +38,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       });
     }
 
-    const membership = await ctx.database.db
+    const membership = await ctx.db
       .selectFrom("organization_memberships")
       .select(["id"])
       .where("organization_id", "=", organizationId)
@@ -65,7 +65,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       >,
     ) => {
       const organizationId = await getAccessibleOrganizationId(user);
-      const project = await ctx.database.db
+      const project = await ctx.db
         .insertInto("projects")
         .values({
           organization_id: organizationId,
@@ -93,7 +93,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       id: string,
     ): Promise<ProjectEt> => {
       const organizationId = await getAccessibleOrganizationId(user);
-      const project = await ctx.database.db
+      const project = await ctx.db
         .selectFrom("projects")
         .selectAll()
         .where("id", "=", id)
@@ -119,10 +119,10 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         ...filters,
         organization_ids: [organizationId],
       };
-      let countQuery = ctx.database.db
+      let countQuery = ctx.db
         .selectFrom("projects")
         .select(sql<number>`count(*)::int`.as("count"));
-      let recordsQuery = ctx.database.db
+      let recordsQuery = ctx.db
         .selectFrom("projects")
         .select(["id", "organization_id", "slug", "name", "description"]);
 
@@ -191,7 +191,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       >,
     ): Promise<void> => {
       const organizationId = await getAccessibleOrganizationId(user);
-      const project = await ctx.database.db
+      const project = await ctx.db
         .selectFrom("projects")
         .select(["id"])
         .where("id", "=", id)
@@ -205,7 +205,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         });
       }
 
-      await ctx.database.db
+      await ctx.db
         .updateTable("projects")
         .set({
           name: input.name,
@@ -223,7 +223,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       id: string,
     ): Promise<void> => {
       const organizationId = await getAccessibleOrganizationId(user);
-      const project = await ctx.database.db
+      const project = await ctx.db
         .selectFrom("projects")
         .select(["id"])
         .where("id", "=", id)
@@ -237,7 +237,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         });
       }
 
-      await ctx.database.db
+      await ctx.db
         .deleteFrom("projects")
         .where("id", "=", id)
         .execute();

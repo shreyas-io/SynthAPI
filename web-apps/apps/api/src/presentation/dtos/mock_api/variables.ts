@@ -35,7 +35,7 @@ const object_variable_type = z.object({
   value: z.record(z.string(), z.any()),
 });
 
-export const variable_types = z.discriminatedUnion("type", [
+export const variableTypesDto = z.discriminatedUnion("type", [
   array_variable_type,
   string_variable_type,
   number_variable_type,

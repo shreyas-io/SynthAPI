@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { mockApiPostResponseAction } from "./mock_api_post_response_actions";
+import { mockApiPostResponseActionDto } from "./mock_api_post_response_actions";
 import { createMockApiRuleTreeDto } from "./mock_api_rule_tree";
 
 const responseBodyDto = z.discriminatedUnion("type", [
@@ -29,7 +29,7 @@ export const createMockApiResponseDto = z.object({
   is_default: z.boolean().default(false),
   response: responseDto,
   rule_tree: createMockApiRuleTreeDto.nullable().optional(),
-  post_response_actions: z.array(mockApiPostResponseAction).optional(),
+  post_response_actions: z.array(mockApiPostResponseActionDto).optional(),
 });
 
 export const listMockApiResponsesFilterDto = z.object({

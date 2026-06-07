@@ -5,31 +5,26 @@ import {
   ApiGatewayException,
   HttpStatusCode,
 } from "../domain/exceptions/exception";
+import { AgentChatUsecase } from "../domain/usecases/agent_orchestration/agent_chat";
+import { ChatSessionsUsecase } from "../domain/usecases/agent_orchestration/chat_sessions";
+import { ChatTurnEventsUsecase } from "../domain/usecases/agent_orchestration/chat_turn_events";
+import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
 import { asyncRoute } from "../middleware/async_route";
-import type { OrchestrationEngine } from "../server";
-import type { ProjectsSdk } from "./projects";
+import type { AppContext } from "../server";
+import { createProjectChatSessionDto } from "./dtos/agent_orchestration/chat_sessions";
+import { createProjectChatTurnDto } from "./dtos/agent_orchestration/agent_chat";
+import { getNumber, getString } from "./utils";
 
-export type ProjectChatsSdk = {
-  agent_orchestration: OrchestrationEngine;
+type ProjectsUsecaseApi = ReturnType<typeof ProjectsUsecase>;
+type AgentChatUsecaseApi = ReturnType<typeof AgentChatUsecase>;
+type ChatSessionsUsecaseApi = ReturnType<typeof ChatSessionsUsecase>;
+
+const getChatSessionSortBy = (value: unknown): "name" | "created_at" => {
+  return value === "name" || value === "created_at" ? value : "created_at";
 };
 
-const getString = (value: unknown): string | undefined => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value) && typeof value[0] === "string") {
-    return value[0];
-  }
-
-  return undefined;
-};
-
-const getNumber = (value: unknown, fallback: number): number => {
-  const stringValue = getString(value);
-  const numberValue = stringValue ? Number(stringValue) : fallback;
-
-  return Number.isFinite(numberValue) ? numberValue : fallback;
+const getSortOrder = (value: unknown): "asc" | "desc" => {
+  return value === "asc" || value === "desc" ? value : "desc";
 };
 
 const getAuthenticatedUser = (
@@ -46,7 +41,7 @@ const getAuthenticatedUser = (
 };
 
 const validateProjectAccess = async (
-  projects: ProjectsSdk,
+  projects: ProjectsUsecaseApi,
   user: AuthenticatedUser,
   project_id: string,
 ): Promise<void> => {
@@ -54,11 +49,11 @@ const validateProjectAccess = async (
 };
 
 const validateChatOwnership = async (
-  agent_orchestration: OrchestrationEngine,
+  chat_sessions: ChatSessionsUsecaseApi,
   project_id: string,
   chat_id: string,
 ): Promise<void> => {
-  const count = await agent_orchestration.chat_sessions.countChatSessions({
+  const count = await chat_sessions.countChatSessions({
     ids: [chat_id],
     project_ids: [project_id],
   });
@@ -71,11 +66,11 @@ const validateChatOwnership = async (
 };
 
 const validateTurnOwnership = async (
-  agent_orchestration: OrchestrationEngine,
+  agent_chat: AgentChatUsecaseApi,
   chat_id: string,
   turn_id: string,
 ) => {
-  const turnStatus = await agent_orchestration.agent_chat.getTurnStatus(turn_id);
+  const turnStatus = await agent_chat.getTurnStatus(turn_id);
 
   if (turnStatus.chat_session_id !== chat_id) {
     throw Object.assign(new Error(`Turn not found with ID '${turn_id}'`), {
@@ -86,12 +81,12 @@ const validateTurnOwnership = async (
   return turnStatus;
 };
 
-export const addProjectChatRoutes = (
-  app: Express,
-  agent_orchestration: OrchestrationEngine,
-  projects: ProjectsSdk,
-) => {
-  // GET /api/v1/projects/:project_id/chats
+export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
+  const projects = ProjectsUsecase(ctx);
+  const agent_chat = AgentChatUsecase(ctx);
+  const chat_sessions = ChatSessionsUsecase(ctx);
+  const chat_turn_events = ChatTurnEventsUsecase(ctx);
+
   app.get(
     "/api/v1/projects/:project_id/chats",
     asyncRoute(async (req, res) => {
@@ -104,15 +99,15 @@ export const addProjectChatRoutes = (
         project_ids: [project_id],
       };
 
-      const result = await agent_orchestration.chat_sessions.listChatSessions(
+      const result = await chat_sessions.getChatSessions(
         filters,
         {
           limit: getNumber(req.query.limit, 50),
           offset: getNumber(req.query.offset, 0),
         },
         {
-          by: getString(req.query.sort_by) ?? "created_at",
-          order: getString(req.query.sort_order) ?? "desc",
+          by: getChatSessionSortBy(getString(req.query.sort_by)),
+          order: getSortOrder(getString(req.query.sort_order)),
         },
       );
 
@@ -126,17 +121,22 @@ export const addProjectChatRoutes = (
     asyncRoute(async (req, res) => {
       const project_id = req.params.project_id as string;
       const user = getAuthenticatedUser(req.user);
-      const { name, description } = req.body as {
-        name: string;
-        description?: string | null;
-      };
+      const parsed = createProjectChatSessionDto.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsed.error.issues),
+        });
+      }
+      const { name, description } = parsed.data;
 
       await validateProjectAccess(projects, user, project_id);
 
       const session =
-        await agent_orchestration.chat_sessions.createChatSessionWithDefaultAgentConfig(
-          { project_id, name, description: description ?? null },
-        );
+        await chat_sessions.createChatSessionWithDefaultAgentConfig({
+          project_id,
+          name,
+          description: description ?? null,
+        });
 
       res.status(201).json(session);
     }),
@@ -151,12 +151,15 @@ export const addProjectChatRoutes = (
       const user = getAuthenticatedUser(req.user);
 
       await validateProjectAccess(projects, user, project_id);
-      await validateChatOwnership(agent_orchestration, project_id, chat_id);
+      await validateChatOwnership(chat_sessions, project_id, chat_id);
 
-      const { message, mode } = req.body as {
-        message: string;
-        mode?: "execution" | "planning";
-      };
+      const parsed = createProjectChatTurnDto.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsed.error.issues),
+        });
+      }
+      const { message, mode } = parsed.data;
 
       const user_input = [
         {
@@ -165,11 +168,10 @@ export const addProjectChatRoutes = (
         },
       ];
 
-      const turnId = await agent_orchestration.agent_chat.createChatTurn(
-        chat_id,
-        { user_input, mode: mode ?? "execution" },
-        { project_id, user },
-      );
+      const turnId = await agent_chat.createChatTurn(chat_id, {
+        user_input,
+        mode,
+      });
 
       res.status(201).json({ id: turnId });
     }),
@@ -185,13 +187,9 @@ export const addProjectChatRoutes = (
       const user = getAuthenticatedUser(req.user);
 
       await validateProjectAccess(projects, user, project_id);
-      await validateChatOwnership(agent_orchestration, project_id, chat_id);
+      await validateChatOwnership(chat_sessions, project_id, chat_id);
 
-      const status = await validateTurnOwnership(
-        agent_orchestration,
-        chat_id,
-        turn_id,
-      );
+      const status = await validateTurnOwnership(agent_chat, chat_id, turn_id);
 
       res.json(status);
     }),
@@ -206,17 +204,16 @@ export const addProjectChatRoutes = (
       const user = getAuthenticatedUser(req.user);
 
       await validateProjectAccess(projects, user, project_id);
-      await validateChatOwnership(agent_orchestration, project_id, chat_id);
+      await validateChatOwnership(chat_sessions, project_id, chat_id);
 
-      const result =
-        await agent_orchestration.chat_turn_events.listChatTurnEvents(
-          { chat_session_ids: [chat_id] },
-          {
-            limit: getNumber(req.query.limit, 50),
-            offset: getNumber(req.query.offset, 0),
-          },
-          { by: "sequence", order: "asc" },
-        );
+      const result = await chat_turn_events.getChatTurnEvents(
+        { chat_session_ids: [chat_id] },
+        {
+          limit: getNumber(req.query.limit, 50),
+          offset: getNumber(req.query.offset, 0),
+        },
+        { by: "sequence", order: "asc" },
+      );
 
       res.json(result);
     }),
@@ -232,8 +229,8 @@ export const addProjectChatRoutes = (
       const user = getAuthenticatedUser(req.user);
 
       await validateProjectAccess(projects, user, project_id);
-      await validateChatOwnership(agent_orchestration, project_id, chat_id);
-      await validateTurnOwnership(agent_orchestration, chat_id, turn_id);
+      await validateChatOwnership(chat_sessions, project_id, chat_id);
+      await validateTurnOwnership(agent_chat, chat_id, turn_id);
 
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache, no-transform");
@@ -242,12 +239,11 @@ export const addProjectChatRoutes = (
       res.flushHeaders?.();
 
       // 1. Replay existing events from the database
-      const existingEvents =
-        await agent_orchestration.chat_turn_events.listChatTurnEvents(
-          { chat_turn_ids: [turn_id] },
-          { limit: 100, offset: 0 },
-          { by: "sequence", order: "asc" },
-        );
+      const existingEvents = await chat_turn_events.getChatTurnEvents(
+        { chat_turn_ids: [turn_id] },
+        { limit: 100, offset: 0 },
+        { by: "sequence", order: "asc" },
+      );
 
       for (const event of existingEvents.records) {
         res.write(`data: ${JSON.stringify(event)}\n\n`);
@@ -267,23 +263,16 @@ export const addProjectChatRoutes = (
       let unsubscribe = () => {};
 
       try {
-        unsubscribe = agent_orchestration.agent_chat.subscribeToTurn(
-          turn_id,
-          (event) => {
-            res.write(`data: ${JSON.stringify(event)}\n\n`);
+        unsubscribe = agent_chat.subscribeToTurn(turn_id, (event) => {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
 
-            if (event.type === "turn-settled") {
-              unsubscribe();
-              res.end();
-            }
-          },
-        );
+          if (event.type === "turn-settled") {
+            unsubscribe();
+            res.end();
+          }
+        });
 
-        agent_orchestration.agent_chat.executeChatTurn(
-          chat_id,
-          turn_id,
-          { project_id, user },
-        );
+        agent_chat.executeChatTurn(chat_id, turn_id, { project_id, user });
 
         req.on("close", () => {
           unsubscribe();

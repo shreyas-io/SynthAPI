@@ -2,11 +2,11 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { AppContext } from "./application/agent_orchestration/context";
 import {
   upsertAgentConfig,
   upsertAgentConfigInputSchema,
 } from "./domain/usecases/agent_orchestration/agent_configs";
+import type { AppContext } from "./server";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.join(dirname, "../agent_config_migrations");
@@ -15,9 +15,7 @@ export const runAgentConfigMigrations = async (
   ctx: AppContext,
 ): Promise<void> => {
   const files = await fs.readdir(migrationsFolder);
-  const jsonFiles = files
-    .filter((f) => f.endsWith(".json"))
-    .sort();
+  const jsonFiles = files.filter((f) => f.endsWith(".json")).sort();
 
   if (!jsonFiles.length) return;
 
@@ -29,7 +27,9 @@ export const runAgentConfigMigrations = async (
     const entries = JSON.parse(content);
 
     if (!Array.isArray(entries)) {
-      console.warn(`[agent-config-migrations] ${file}: expected an array, skipping`);
+      console.warn(
+        `[agent-config-migrations] ${file}: expected an array, skipping`,
+      );
       continue;
     }
 

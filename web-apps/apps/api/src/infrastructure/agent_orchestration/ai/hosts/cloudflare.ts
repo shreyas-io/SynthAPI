@@ -1,7 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText, type ModelMessage, type ToolSet } from "ai";
 
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { AgentOrchestrationException } from "../../../../domain/exceptions/exception";
 
 export type CloudflareWorkersAiInput = {
@@ -20,9 +20,9 @@ export async function generateTextViaCloudflareWorkersAi(
   try {
     const provider = createOpenAICompatible({
       name: "cloudflare-workers-ai",
-      baseURL: `https://gateway.ai.cloudflare.com/v1/${ctx.environment.CLOUDFLARE_ACCOUNT_ID}/${ctx.environment.CLOUDFLARE_AI_GATEWAY_ID}/compat`,
+      baseURL: `https://gateway.ai.cloudflare.com/v1/${ctx.env.CLOUDFLARE_ACCOUNT_ID}/${ctx.env.CLOUDFLARE_AI_GATEWAY_ID}/compat`,
       headers: {
-        authorization: `Bearer ${ctx.environment.CLOUDFLARE_AI_GATEWAY_TOKEN}`,
+        authorization: `Bearer ${ctx.env.CLOUDFLARE_AI_GATEWAY_TOKEN}`,
       },
     });
 

@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import {
@@ -51,7 +51,7 @@ export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
     if (!hasFilters(filters)) return 0;
 
     const row = await applyFilters(
-      ctx.database.db
+      ctx.db
         .selectFrom("chat_turn_blobs")
         .select(sql<number>`count(*)::int`.as("count")),
       filters,
@@ -61,7 +61,7 @@ export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
   };
 
   const getChatTurnBlob = async (id: string): Promise<ChatTurnBlobEt> => {
-    const chat_turn_blob = await ctx.database.db
+    const chat_turn_blob = await ctx.db
       .selectFrom("chat_turn_blobs")
       .selectAll()
       .where("id", "=", id)
@@ -82,7 +82,7 @@ export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
       input: ChatTurnBlobInput,
     ): Promise<ChatTurnBlobEt> => {
       const id = uuidv7();
-      await ctx.database.db
+      await ctx.db
         .insertInto("chat_turn_blobs")
         .values({
           id,
@@ -105,7 +105,7 @@ export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
       }
 
       let recordsQuery = applyFilters(
-        ctx.database.db.selectFrom("chat_turn_blobs").selectAll(),
+        ctx.db.selectFrom("chat_turn_blobs").selectAll(),
         filters,
       );
       recordsQuery = recordsQuery
@@ -124,7 +124,7 @@ export const ChatTurnBlobsUsecase = (ctx: AppContext) => {
       return countChatTurnBlobs(filters);
     },
     async deleteChatTurnBlob(id: string): Promise<void> {
-      await ctx.database.db
+      await ctx.db
         .deleteFrom("chat_turn_blobs")
         .where("id", "=", id)
         .execute();

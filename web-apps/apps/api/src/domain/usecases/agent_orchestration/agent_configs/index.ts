@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { uuidv7 } from "uuidv7";
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import { toolKeys } from "../../../entities/agent_orchestration/tool_keys";
 import type { AgentConfigEt } from "../../../entities/agent_orchestration/agent_config";
 import { llmConfigSchema } from "../../../entities/agent_orchestration/generation";
@@ -69,7 +69,7 @@ export const upsertAgentConfig =
       version: input.version,
     };
 
-    const existingConfig = await ctx.database.db
+    const existingConfig = await ctx.db
       .selectFrom("agent_configs")
       .select(["id", "version"])
       .where("key", "=", input.key)
@@ -80,7 +80,7 @@ export const upsertAgentConfig =
     }
 
     if (existingConfig) {
-      await ctx.database.db
+      await ctx.db
         .updateTable("agent_configs")
         .set({
           key: config.key,
@@ -101,7 +101,7 @@ export const upsertAgentConfig =
         .where("id", "=", existingConfig.id)
         .execute();
     } else {
-      await ctx.database.db
+      await ctx.db
         .insertInto("agent_configs")
         .values({
           id: input.id ?? uuidv7(),
@@ -127,7 +127,7 @@ export const upsertAgentConfig =
 export const getAgentConfigByKey =
   (ctx: AppContext) =>
   async (key: string): Promise<AgentConfigEt | undefined> => {
-    return (await ctx.database.db
+    return (await ctx.db
       .selectFrom("agent_configs")
       .selectAll()
       .where("key", "=", key)
@@ -136,7 +136,7 @@ export const getAgentConfigByKey =
 
 export const getEnabledAgentConfigs =
   (ctx: AppContext) => async (): Promise<AgentConfigEt[]> => {
-    return (await ctx.database.db
+    return (await ctx.db
       .selectFrom("agent_configs")
       .selectAll()
       .where("enabled", "=", true)

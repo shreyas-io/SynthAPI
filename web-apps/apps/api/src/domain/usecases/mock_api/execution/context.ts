@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../application/agent_orchestration/context";
+import type { AppContext } from "../../../../server";
 import {
   ExecutionContextEt,
   QueryParams,
@@ -30,7 +30,7 @@ export async function upsertMockApiVariables(
   mock_api: Pick<MockApiEt, "id" | "variables">,
   project: Pick<ProjectEt, "id" | "globals">,
 ) {
-  const kv_store = ctx.keyValueStore;
+  const kv_store = ctx.kvStore;
 
   await Promise.all([
     Promise.all(
@@ -82,7 +82,7 @@ export async function getMockApiExecutionContext(
   project: Pick<ProjectEt, "id" | "globals" | "constants">,
   request?: MockApiExecutionRequest,
 ): Promise<ExecutionContextEt> {
-  const kv_store = ctx.keyValueStore;
+  const kv_store = ctx.kvStore;
 
   const [variables, globals] = await Promise.all([
     variablesToRecord(mock_api.variables, async (variable) => {
