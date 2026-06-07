@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { uuidv7 } from "uuidv7";
+import type { AppContext } from "../../../../application/agent_orchestration/context";
 import { toolKeys } from "../../../entities/agent_orchestration/tool_keys";
 import type { AgentConfigEt } from "../../../entities/agent_orchestration/agent_config";
 import { llmConfigSchema } from "../../../entities/agent_orchestration/generation";
 import type { ToolKey } from "../../../entities/agent_orchestration/tool_keys";
 import type { ToolDefinition } from "../../../entities/agent_orchestration/tool";
-import type { IAgentConfigsRepository } from "../../../interfaces/repositories/agent_orchestration/agent_configs";
 import { AgentToolRegistry } from "../tools/registry";
 
 const llmConfigInputSchema = llmConfigSchema.extend({
@@ -50,7 +51,7 @@ const withResolvedTools = (config: LlmConfigInput) => {
 };
 
 export const upsertAgentConfig =
-  (repo: IAgentConfigsRepository) =>
+  (ctx: AppContext) =>
   async (input: UpsertAgentConfigInput): Promise<void> => {
     const config: Omit<AgentConfigEt, "id" | "created_at" | "updated_at"> = {
       key: input.key,
@@ -68,31 +69,76 @@ export const upsertAgentConfig =
       version: input.version,
     };
 
-    const existing = await repo.list({
-      filters: { keys: [input.key] },
-      columns: ["id", "version"],
-    });
-    const existingConfig = existing[0];
+    const existingConfig = await ctx.database.db
+      .selectFrom("agent_configs")
+      .select(["id", "version"])
+      .where("key", "=", input.key)
+      .executeTakeFirst();
 
     if (existingConfig && existingConfig.version === input.version) {
       return;
     }
 
     if (existingConfig) {
-      await repo.update(existingConfig.id, config);
+      await ctx.database.db
+        .updateTable("agent_configs")
+        .set({
+          key: config.key,
+          name: config.name,
+          description: config.description,
+          pricing_config: JSON.stringify(config.pricing_config),
+          chat_config: JSON.stringify(config.chat_config),
+          chat_fallback_config: JSON.stringify(config.chat_fallback_config),
+          planning_config: JSON.stringify(config.planning_config),
+          compaction_config: JSON.stringify(
+            config.compaction_config ?? config.planning_config,
+          ),
+          compaction_threshold_tokens:
+            config.compaction_threshold_tokens ?? 0,
+          enabled: config.enabled,
+          version: config.version,
+        })
+        .where("id", "=", existingConfig.id)
+        .execute();
     } else {
-      await repo.create(config, input.id);
+      await ctx.database.db
+        .insertInto("agent_configs")
+        .values({
+          id: input.id ?? uuidv7(),
+          key: config.key,
+          name: config.name,
+          description: config.description,
+          pricing_config: JSON.stringify(config.pricing_config),
+          chat_config: JSON.stringify(config.chat_config),
+          chat_fallback_config: JSON.stringify(config.chat_fallback_config),
+          planning_config: JSON.stringify(config.planning_config),
+          compaction_config: JSON.stringify(
+            config.compaction_config ?? config.planning_config,
+          ),
+          compaction_threshold_tokens:
+            config.compaction_threshold_tokens ?? 0,
+          enabled: config.enabled,
+          version: config.version,
+        })
+        .executeTakeFirstOrThrow();
     }
   };
 
 export const getAgentConfigByKey =
-  (repo: IAgentConfigsRepository) =>
+  (ctx: AppContext) =>
   async (key: string): Promise<AgentConfigEt | undefined> => {
-    const results = await repo.list({ filters: { keys: [key] } });
-    return results[0];
+    return (await ctx.database.db
+      .selectFrom("agent_configs")
+      .selectAll()
+      .where("key", "=", key)
+      .executeTakeFirst()) as unknown as AgentConfigEt | undefined;
   };
 
 export const getEnabledAgentConfigs =
-  (repo: IAgentConfigsRepository) => async (): Promise<AgentConfigEt[]> => {
-    return repo.list({ filters: { enabled: true } });
+  (ctx: AppContext) => async (): Promise<AgentConfigEt[]> => {
+    return (await ctx.database.db
+      .selectFrom("agent_configs")
+      .selectAll()
+      .where("enabled", "=", true)
+      .execute()) as unknown as AgentConfigEt[];
   };

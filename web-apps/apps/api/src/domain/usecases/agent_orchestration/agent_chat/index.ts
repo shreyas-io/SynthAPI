@@ -1,4 +1,6 @@
 import type { AppContext } from "../../../../application/agent_orchestration/context";
+import { sql } from "kysely";
+import { uuidv7 } from "uuidv7";
 import type { LLMConfig } from "../../../entities/agent_orchestration/generation";
 import type {
   ChatSessionTurnEt,
@@ -8,10 +10,6 @@ import type {
   ChatTurnEventPayload,
   ChatTurnEventType,
 } from "../../../entities/agent_orchestration/chat_turn_event";
-import { ChatSessionsRepository } from "../../../../infrastructure/kysely/repositories/agent_orchestration/chat_sessions";
-import { ChatSessionTurnsRepository } from "../../../../infrastructure/kysely/repositories/agent_orchestration/chat_session_turns";
-import { ChatTurnEventsRepository } from "../../../../infrastructure/kysely/repositories/agent_orchestration/chat_turn_events";
-import { AgentConfigsRepository } from "../../../../infrastructure/kysely/repositories/agent_orchestration/agent_configs";
 import { streamText } from "../../../../infrastructure/agent_orchestration/ai/stream";
 import {
   AgentOrchestrationException,
@@ -23,10 +21,6 @@ import type { ToolKey } from "../../../entities/agent_orchestration/tool_keys";
 import type { ToolWorkspaceContext } from "../tools/types";
 
 export const AgentChatUsecase = (ctx: AppContext) => {
-  const chat_sessions_repo = ChatSessionsRepository(ctx.database);
-  const chat_turns = ChatSessionTurnsRepository(ctx.database);
-  const chat_events = ChatTurnEventsRepository(ctx.database);
-  const agent_configs = AgentConfigsRepository(ctx.database);
   const llm = streamText(ctx);
   const eventBus = ctx.eventBus;
   const toolRegistry = AgentToolRegistry();
@@ -37,19 +31,30 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     event_type: ChatTurnEventType;
     payload: ChatTurnEventPayload;
   }) => {
-    await chat_events.create(input);
+    await ctx.database.db
+      .insertInto("chat_turn_events")
+      .values({
+        id: uuidv7(),
+        chat_turn_id: input.chat_turn_id,
+        sequence: input.sequence,
+        event_type: input.event_type,
+        payload: JSON.stringify(input.payload),
+      })
+      .executeTakeFirstOrThrow();
     eventBus.publish(input.chat_turn_id, input.payload);
   };
 
   const getNextSequence = async (chat_turn_id: string) => {
-    const events = await chat_events.list({
-      filters: { chat_turn_ids: [chat_turn_id] },
-      columns: ["sequence"],
-      sort: { by: "sequence", order: "desc" },
-      pagination: { limit: 1, offset: 0 },
-    });
+    const event = await ctx.database.db
+      .selectFrom("chat_turn_events")
+      .select(["sequence"])
+      .where("chat_turn_id", "=", chat_turn_id)
+      .orderBy("sequence", "desc")
+      .limit(1)
+      .offset(0)
+      .executeTakeFirst();
 
-    return (events[0]?.sequence ?? 0) + 1;
+    return (event?.sequence ?? 0) + 1;
   };
 
   const settleTurn = async (input: {
@@ -59,10 +64,16 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     conversation_context: ChatSessionTurnEt["conversation_context"];
     error?: string;
   }) => {
-    await chat_turns.update(input.chat_turn_id, {
-      conversation_context: input.conversation_context,
-      status: input.status,
-    });
+    await ctx.database.db
+      .updateTable("chat_session_turns")
+      .set({
+        conversation_context: input.conversation_context
+          ? JSON.stringify(input.conversation_context)
+          : null,
+        status: input.status,
+      })
+      .where("id", "=", input.chat_turn_id)
+      .execute();
 
     await createAndPublishEvent({
       chat_turn_id: input.chat_turn_id,
@@ -77,8 +88,17 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   };
 
   const getAgentConfig = async (id: string) => {
-    const configs = await agent_configs.list({ filters: { ids: [id] } });
-    const config = configs[0];
+    const config = (await ctx.database.db
+      .selectFrom("agent_configs")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst()) as unknown as
+      | {
+          id: string;
+          planning_config: unknown;
+          chat_config: unknown;
+        }
+      | undefined;
     if (!config) {
       throw new AgentOrchestrationException({
         public_message: "Agent config not found.",
@@ -101,21 +121,29 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       turn_id: string,
       workspace?: ToolWorkspaceContext,
     ): Promise<void> => {
-      const count = await chat_sessions_repo.count({
-        filters: { ids: [chat_session_id] },
-      });
-      if (count === 0) {
+      const sessionCount = await ctx.database.db
+        .selectFrom("chat_sessions")
+        .select(sql<number>`count(*)::int`.as("count"))
+        .where("id", "=", chat_session_id)
+        .executeTakeFirstOrThrow();
+      if (sessionCount.count === 0) {
         throw new AgentOrchestrationException({
           public_message: "Chat session not found.",
           status_code: HttpStatusCode.NOT_FOUND,
         });
       }
 
-      const turns = await chat_turns.list({
-        filters: { ids: [turn_id], chat_session_ids: [chat_session_id] },
-        columns: ["status", "chat_session_id", "mode", "user_input"],
-      });
-      const turn = turns.at(0);
+      const turn = (await ctx.database.db
+        .selectFrom("chat_session_turns")
+        .select(["status", "chat_session_id", "mode", "user_input"])
+        .where("id", "=", turn_id)
+        .where("chat_session_id", "=", chat_session_id)
+        .executeTakeFirst()) as unknown as
+        | Pick<
+            ChatSessionTurnEt,
+            "status" | "chat_session_id" | "mode" | "user_input"
+          >
+        | undefined;
 
       if (!turn) {
         throw new AgentOrchestrationException({
@@ -131,22 +159,25 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       let sequence = await getNextSequence(turn_id);
 
       try {
-        const previousTurns = await chat_turns.list({
-          filters: {
-            chat_session_ids: [chat_session_id],
-            statuses: ["completed"],
-          },
-          columns: ["conversation_context"],
-          sort: { by: "created_at", order: "desc" },
-          pagination: { limit: 1, offset: 0 },
-        });
+        const previousTurn = (await ctx.database.db
+          .selectFrom("chat_session_turns")
+          .select(["conversation_context"])
+          .where("chat_session_id", "=", chat_session_id)
+          .where("status", "=", "completed")
+          .orderBy("created_at", "desc")
+          .limit(1)
+          .offset(0)
+          .executeTakeFirst()) as unknown as
+          | Pick<ChatSessionTurnEt, "conversation_context">
+          | undefined;
         const initialRaw =
-          previousTurns[0]?.conversation_context?.raw_context ?? null;
+          previousTurn?.conversation_context?.raw_context ?? null;
 
-        const session = await chat_sessions_repo.list({
-          filters: { ids: [turn.chat_session_id] },
-        });
-        const chatSession = session.at(0);
+        const chatSession = await ctx.database.db
+          .selectFrom("chat_sessions")
+          .selectAll()
+          .where("id", "=", turn.chat_session_id)
+          .executeTakeFirst();
         if (!chatSession) {
           throw new AgentOrchestrationException({
             public_message: "Chat session not found.",

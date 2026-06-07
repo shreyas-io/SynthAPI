@@ -1,9 +1,10 @@
 import type { AppContext } from "../../../../application/agent_orchestration/context";
+import { sql } from "kysely";
+import { uuidv7 } from "uuidv7";
 import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import { ChatSessionsRepository } from "../../../../infrastructure/kysely/repositories/agent_orchestration/chat_sessions";
 import type { ChatSessionEt } from "../../../entities/agent_orchestration/chat_session";
 
 type ChatSessionInput = Pick<
@@ -32,13 +33,73 @@ type ChatSessionSort = {
 };
 
 export const ChatSessionsUsecase = (ctx: AppContext) => {
-  const chat_sessions_repository = ChatSessionsRepository(ctx.database);
+  const hasFilters = (filters: ChatSessionFilters) =>
+    Boolean(
+      filters.ids?.length ||
+        filters.agent_config_ids?.length ||
+        filters.project_ids?.length ||
+        filters.name ||
+        filters.description ||
+        filters.statuses?.length,
+    );
+
+  const applyFilters = <QB extends { where: (...args: any[]) => any }>(
+    query: QB,
+    filters: ChatSessionFilters,
+  ) => {
+    let filtered = query;
+
+    if (filters.ids?.length) {
+      filtered = filtered.where("id", "in", filters.ids);
+    }
+    if (filters.agent_config_ids?.length) {
+      filtered = filtered.where(
+        "agent_config_id",
+        "in",
+        filters.agent_config_ids,
+      );
+    }
+    if (filters.project_ids?.length) {
+      filtered = filtered.where("project_id", "in", filters.project_ids);
+    }
+    if (filters.name) {
+      filtered = filtered.where("name", "ilike", `%${filters.name}%`);
+    }
+    if (filters.description) {
+      filtered = filtered.where(
+        "description",
+        "ilike",
+        `%${filters.description}%`,
+      );
+    }
+    if (filters.statuses?.length) {
+      filtered = filtered.where("status", "in", filters.statuses);
+    }
+
+    return filtered;
+  };
+
+  const countChatSessions = async (
+    filters: ChatSessionFilters,
+  ): Promise<number> => {
+    if (!hasFilters(filters)) return 0;
+
+    const row = await applyFilters(
+      ctx.database.db
+        .selectFrom("chat_sessions")
+        .select(sql<number>`count(*)::int`.as("count")),
+      filters,
+    ).executeTakeFirstOrThrow();
+
+    return row.count;
+  };
 
   const getChatSession = async (id: string): Promise<ChatSessionEt> => {
-    const chat_sessions = await chat_sessions_repository.list({
-      filters: { ids: [id] },
-    });
-    const chat_session = chat_sessions.at(0);
+    const chat_session = await ctx.database.db
+      .selectFrom("chat_sessions")
+      .selectAll()
+      .where("id", "=", id)
+      .executeTakeFirst() as ChatSessionEt | undefined;
 
     if (!chat_session) {
       throw new AgentOrchestrationException({
@@ -54,7 +115,18 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
     createChatSession: async (
       input: ChatSessionInput,
     ): Promise<ChatSessionEt> => {
-      const id = await chat_sessions_repository.create(input);
+      const id = uuidv7();
+      await ctx.database.db
+        .insertInto("chat_sessions")
+        .values({
+          id,
+          agent_config_id: input.agent_config_id,
+          project_id: input.project_id,
+          name: input.name,
+          description: input.description,
+          status: input.status,
+        })
+        .executeTakeFirstOrThrow();
 
       return getChatSession(id);
     },
@@ -64,28 +136,48 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
       pagination: ChatSessionPagination,
       sort: ChatSessionSort,
     ) => {
+      if (!hasFilters(filters) && !pagination) {
+        return { total: 0, records: [] };
+      }
+
+      let recordsQuery = applyFilters(
+        ctx.database.db.selectFrom("chat_sessions").selectAll(),
+        filters,
+      );
+      recordsQuery = recordsQuery
+        .orderBy(sort.by, sort.order)
+        .limit(pagination.limit)
+        .offset(pagination.offset);
+
       const [total, records] = await Promise.all([
-        chat_sessions_repository.count({ filters }),
-        chat_sessions_repository.list({
-          filters,
-          pagination,
-          sort,
-        }),
+        countChatSessions(filters),
+        recordsQuery.execute() as Promise<ChatSessionEt[]>,
       ]);
 
       return { total, records };
     },
     countChatSessions(filters: ChatSessionFilters): Promise<number> {
-      return chat_sessions_repository.count({ filters });
+      return countChatSessions(filters);
     },
-    updateChatSession(
+    async updateChatSession(
       id: string,
       input: ChatSessionUpdateInput,
     ): Promise<void> {
-      return chat_sessions_repository.update(id, input);
+      await ctx.database.db
+        .updateTable("chat_sessions")
+        .set({
+          name: input.name,
+          description: input.description,
+          status: input.status,
+        })
+        .where("id", "=", id)
+        .execute();
     },
-    deleteChatSession(id: string): Promise<void> {
-      return chat_sessions_repository.delete(id);
+    async deleteChatSession(id: string): Promise<void> {
+      await ctx.database.db
+        .deleteFrom("chat_sessions")
+        .where("id", "=", id)
+        .execute();
     },
   };
 };

@@ -9,14 +9,14 @@ import { createMockApiApplication } from "./application/mockapi";
 import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
 import { runMigrations } from "./infrastructure/kysely/run_migrations";
 import { runAgentConfigMigrations } from "./run_agent_config_migrations";
-import { AgentConfigsRepository } from "./infrastructure/kysely/repositories/agent_orchestration/agent_configs";
+import { InMemoryEventBus } from "./infrastructure/agent_orchestration/event_bus";
 import { createPyodideWorkerPool } from "./infrastructure/pyodide";
 import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
 import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
-import type { Kysely, Transaction } from "kysely";
+import type { Kysely } from "kysely";
 import type { Database } from "./infrastructure/kysely/models/index";
 
 type ApiApp = {
@@ -25,7 +25,7 @@ type ApiApp = {
 };
 
 export type ServerContext = {
-  db: Kysely<Database> | Transaction<Database>;
+  db: Kysely<Database>;
 };
 
 export type OrchestrationEngine = Awaited<
@@ -36,9 +36,6 @@ export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
   const apiGatewayDatabase = createApiGatewayDatabase(secrets);
   await runMigrations(apiGatewayDatabase.db);
-
-  const agentConfigsRepo = AgentConfigsRepository(apiGatewayDatabase);
-  await runAgentConfigMigrations(agentConfigsRepo);
 
   const serverContext: ServerContext = {
     db: apiGatewayDatabase.db,
@@ -55,6 +52,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
     worker_memory_limit_mb: 28,
     worker_boot_timeout_ms: 10_000,
   });
+  const agentEventBus = InMemoryEventBus();
   const mockApiApplicationDependencies = {
     database: apiGatewayDatabase,
     keyValueStore,
@@ -72,7 +70,10 @@ export const createApiApp = async (): Promise<ApiApp> => {
       OPENROUTER_API_KEY: secrets.OPENROUTER_API_KEY,
       OLLAMA_BASE_URL: secrets.OLLAMA_BASE_URL,
     },
+    eventBus: agentEventBus,
   };
+
+  await runAgentConfigMigrations(agentOrchestrationDependencies);
 
   const application = await createMockApiApplication(
     mockApiApplicationDependencies,

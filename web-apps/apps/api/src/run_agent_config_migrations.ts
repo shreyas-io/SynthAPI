@@ -2,7 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import type { IAgentConfigsRepository } from "./domain/interfaces/repositories/agent_orchestration/agent_configs";
+import type { AppContext } from "./application/agent_orchestration/context";
 import {
   upsertAgentConfig,
   upsertAgentConfigInputSchema,
@@ -12,7 +12,7 @@ const dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationsFolder = path.join(dirname, "../agent_config_migrations");
 
 export const runAgentConfigMigrations = async (
-  repo: IAgentConfigsRepository,
+  ctx: AppContext,
 ): Promise<void> => {
   const files = await fs.readdir(migrationsFolder);
   const jsonFiles = files
@@ -21,7 +21,7 @@ export const runAgentConfigMigrations = async (
 
   if (!jsonFiles.length) return;
 
-  const upsert = upsertAgentConfig(repo);
+  const upsert = upsertAgentConfig(ctx);
 
   for (const file of jsonFiles) {
     const filePath = path.join(migrationsFolder, file);
