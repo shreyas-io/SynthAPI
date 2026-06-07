@@ -4,8 +4,7 @@ import type { ListResponse, Project, ProjectInput } from "../types";
 export type ListProjectsParams = {
   limit: number;
   offset: number;
-  name?: string;
-  description?: string;
+  search?: string;
   fetch_deleted?: boolean;
 };
 
@@ -19,12 +18,8 @@ export const listProjects = (
     organization_id: organizationId,
   });
 
-  if (params.name) {
-    query.set("name", params.name);
-  }
-
-  if (params.description) {
-    query.set("description", params.description);
+  if (params.search) {
+    query.set("search", params.search);
   }
 
   if (params.fetch_deleted) {

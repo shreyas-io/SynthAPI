@@ -13,6 +13,7 @@ type ProjectFilters = {
   slug?: string | undefined;
   name?: string | undefined;
   description?: string | undefined;
+  search?: string | undefined;
   fetch_deleted?: boolean | undefined;
 };
 
@@ -252,6 +253,21 @@ export const ProjectsUsecase = (ctx: AppContext) => {
           "projects.description",
           "ilike",
           `%${scopedFilters.description}%`,
+        );
+      }
+
+      if (scopedFilters.search) {
+        countQuery = countQuery.where((eb) =>
+          eb.or([
+            eb("name", "ilike", `%${scopedFilters.search}%`),
+            eb("description", "ilike", `%${scopedFilters.search}%`),
+          ])
+        );
+        recordsQuery = recordsQuery.where((eb) =>
+          eb.or([
+            eb("projects.name", "ilike", `%${scopedFilters.search}%`),
+            eb("projects.description", "ilike", `%${scopedFilters.search}%`),
+          ])
         );
       }
 

@@ -32,15 +32,12 @@ const getDeletedByLabel = (project: { deleted_by?: { display_name: string | null
 export function ProjectsPage() {
   const { selectedOrganizationId } = useSelectedOrganization();
   const [page, setPage] = useState(0);
-  const [nameFilter, setNameFilter] = useState("");
-  const [descriptionFilter, setDescriptionFilter] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const projectListParams = {
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
-    ...(nameFilter.trim() ? { name: nameFilter.trim() } : {}),
-    ...(descriptionFilter.trim()
-      ? { description: descriptionFilter.trim() }
-      : {}),
+    ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
   };
   const projects = useProjects(selectedOrganizationId ?? "", {
     ...projectListParams,
@@ -77,36 +74,33 @@ export function ProjectsPage() {
       {currentData.isPending && <p>Loading projects...</p>}
       {currentData.isError && <p className="error">{currentData.error.message}</p>}
       <>
-        <div className="project-list-controls">
+        <form
+          className="project-list-controls"
+          onSubmit={(event) => {
+            event.preventDefault();
+            setSearchQuery(searchInput);
+            resetPagination();
+          }}
+        >
           <label>
-            Name
+            Search
             <div className="search-input">
               <Search size={14} />
               <input
-                value={nameFilter}
-                onChange={(event) => {
-                  setNameFilter(event.target.value);
-                  resetPagination();
-                }}
-                placeholder="Search by name"
+                value={searchInput}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="Search projects..."
               />
+              <button
+                type="submit"
+                className="button secondary-btn compact-action"
+                style={{ marginLeft: "0.25rem" }}
+              >
+                Search
+              </button>
             </div>
           </label>
-          <label>
-            Description
-            <div className="search-input">
-              <Search size={14} />
-              <input
-                value={descriptionFilter}
-                onChange={(event) => {
-                  setDescriptionFilter(event.target.value);
-                  resetPagination();
-                }}
-                placeholder="Search by description"
-              />
-            </div>
-          </label>
-        </div>
+        </form>
 
         <div className="org-tabs">
           <button

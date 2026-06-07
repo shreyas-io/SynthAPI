@@ -28,10 +28,12 @@ export const updateProjectConstantsToolInputDto = z.object({
   constants: z.array(variableDto),
 });
 
-export const listMockApisToolInputDto = listMockApisFilterDto.omit({
-  ids: true,
-  project_ids: true,
-});
+export const listMockApisToolInputDto = listMockApisFilterDto
+  .omit({
+    ids: true,
+    project_ids: true,
+  })
+  .merge(paginationDto);
 
 export const getMockApiToolInputDto = z.object({
   mock_api_id: z.uuidv7(),
@@ -62,4 +64,8 @@ export const getMockApiResponseToolInputDto = z.object({
 
 export const createMockApiResponseToolInputDto = createMockApiResponseDto;
 
-export const updateMockApiResponseToolInputDto = createMockApiResponseDto;
+export const updateMockApiResponseToolInputDto = createMockApiResponseDto
+  .partial()
+  .extend({
+    response_id: z.uuidv7(),
+  });
