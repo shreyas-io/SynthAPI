@@ -409,25 +409,25 @@ export function MockApiResponseEditor({
             </button>
           </div>
           <div className="toolbar-actions">
-             {onDelete && (
-               <button
-                 type="button"
-                 className="button danger-btn compact-action"
-                 disabled={isPending || isDeleting}
-                 onClick={onDelete}
-               >
-                 <Trash2 size={14} />
-                 {isDeleting ? "Deleting..." : "Delete"}
-               </button>
-             )}
-             <button
-               className="compact-action icon-only-action"
-               disabled={isPending || !mockApiId}
-               aria-label={submitLabel}
-               title={submitLabel}
-             >
-               <Save size={14} />
-             </button>
+            <button
+              type="submit"
+              className="button primary-btn compact-action"
+              disabled={isPending || !mockApiId}
+            >
+              <Save size={14} />
+              {submitLabel}
+            </button>
+            {onDelete && (
+              <button
+                type="button"
+                className="button danger-btn compact-action"
+                disabled={isPending || isDeleting}
+                onClick={onDelete}
+              >
+                <Trash2 size={14} />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            )}
           </div>
         </div>
       </div>

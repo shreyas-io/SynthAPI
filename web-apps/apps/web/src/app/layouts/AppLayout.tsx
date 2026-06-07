@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router";
-import { ChevronDown, LogOut, Sparkles, User } from "lucide-react";
+import { ChevronDown, LogOut, Sparkles, User, Hexagon } from "lucide-react";
 
-import { useCurrentUser, useSignout } from "../../features/auth/hooks/auth_hooks";
+import {
+  useCurrentUser,
+  useSignout,
+} from "../../features/auth/hooks/auth_hooks";
 import {
   useOrganizationCredits,
   useProfile,
@@ -43,10 +46,9 @@ export function AppLayout() {
 
   const displayName = user.data?.display_name ?? user.data?.email ?? "Profile";
 
-  const activeOrgs =
-    (profile.data?.organizations ?? []).filter(
-      (org) => org.deleted_at == null,
-    );
+  const activeOrgs = (profile.data?.organizations ?? []).filter(
+    (org) => org.deleted_at == null,
+  );
   const selectedOrg = activeOrgs.find(
     (org) => org.id === selectedOrganizationId,
   );
@@ -54,11 +56,20 @@ export function AppLayout() {
   return (
     <div className="app-shell">
       <header className="app-top-bar">
-        <Link className="brand" to="/projects">SynthAPI</Link>
+        <Link className="brand" to="/projects">
+          <Hexagon className="brand-logo-icon" size={18} strokeWidth={3.5} />
+          <i>SynthAPI</i>
+        </Link>
         <nav className="app-nav-links">
           <Link to="/projects">Projects</Link>
         </nav>
-        <div className="top-bar-center">
+        <div className="top-bar-actions">
+          {selectedOrganizationId && credits.data && (
+            <div className="org-credits-badge" title="AI credits remaining">
+              <Sparkles size={14} />
+              <span>{credits.data.remaining}</span>
+            </div>
+          )}
           <div ref={orgMenuRef} className="api-selector">
             <button
               className="api-selector-toggle"
@@ -97,57 +108,51 @@ export function AppLayout() {
               </div>
             )}
           </div>
-          {selectedOrganizationId && credits.data && (
-            <div className="org-credits-badge" title="AI credits remaining">
-              <Sparkles size={14} />
-              <span>{credits.data.remaining}</span>
-            </div>
-          )}
-        </div>
-        <div ref={menuRef} className="profile-dropdown">
-          <button
-            className="profile-dropdown-toggle"
-            onClick={() => setMenuOpen((open) => !open)}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
-          >
-            <Avatar
-              src={user.data?.avatar_url}
-              label={displayName}
-              className="profile-dropdown-avatar"
-              fallbackClassName="profile-dropdown-avatar-placeholder"
-            />
-            <span className="profile-dropdown-name">{displayName}</span>
-            <ChevronDown size={14} />
-          </button>
-          {menuOpen && (
-            <div className="profile-dropdown-menu" role="menu">
-              <Link
-                className="profile-dropdown-item"
-                to="/profile"
-                onClick={() => setMenuOpen(false)}
-                role="menuitem"
-              >
-                <User size={14} />
-                View profile
-              </Link>
-              <button
-                className="profile-dropdown-item"
-                onClick={() =>
-                  signoutMutation.mutate(undefined, {
-                    onSuccess() {
-                      setMenuOpen(false);
-                      navigate("/signin");
-                    },
-                  })
-                }
-                role="menuitem"
-              >
-                <LogOut size={14} />
-                Sign out
-              </button>
-            </div>
-          )}
+          <div ref={menuRef} className="profile-dropdown">
+            <button
+              className="profile-dropdown-toggle"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
+            >
+              <Avatar
+                src={user.data?.avatar_url}
+                label={displayName}
+                className="profile-dropdown-avatar"
+                fallbackClassName="profile-dropdown-avatar-placeholder"
+              />
+              <span className="profile-dropdown-name">{displayName}</span>
+              <ChevronDown size={14} />
+            </button>
+            {menuOpen && (
+              <div className="profile-dropdown-menu" role="menu">
+                <Link
+                  className="profile-dropdown-item"
+                  to="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  role="menuitem"
+                >
+                  <User size={14} />
+                  View profile
+                </Link>
+                <button
+                  className="profile-dropdown-item"
+                  onClick={() =>
+                    signoutMutation.mutate(undefined, {
+                      onSuccess() {
+                        setMenuOpen(false);
+                        navigate("/signin");
+                      },
+                    })
+                  }
+                  role="menuitem"
+                >
+                  <LogOut size={14} />
+                  Sign out
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
       <div className="app-main">

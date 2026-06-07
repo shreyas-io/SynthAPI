@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
 import { AlertTriangle, RotateCcw } from "lucide-react";
 
 import { Avatar } from "../../../components/atoms/Avatar";
@@ -14,7 +13,6 @@ import {
 type OrgTab = "active" | "deleted";
 
 export function ProfilePage() {
-  const navigate = useNavigate();
   const profile = useProfile();
   const createOrgMutation = useCreateOrganization();
   const deleteOrgMutation = useDeleteOrganization();
@@ -59,12 +57,6 @@ export function ProfilePage() {
     <main className="page profile-page">
       <div className="page-header">
         <h1>Profile</h1>
-        <button
-          className="button secondary-btn compact-action"
-          onClick={() => navigate("/projects")}
-        >
-          Back to projects
-        </button>
       </div>
 
       <section className="profile-section card">

@@ -481,7 +481,7 @@ export function RuleTreeEditor({
           minZoom={0.2}
           colorMode="light"
         >
-          <Background color="#333" gap={16} />
+          <Background color="#272822" gap={16} />
           <Controls />
         </ReactFlow>
       </div>

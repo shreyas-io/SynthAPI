@@ -1,5 +1,12 @@
 import { Link, useParams, useLocation, Outlet, useNavigate } from "react-router";
-import { AlertTriangle, Check, Copy, RotateCcw, SlidersHorizontal } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  Copy,
+  RotateCcw,
+  SlidersHorizontal,
+} from "lucide-react";
 import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useEffect, useState } from "react";
 
@@ -107,9 +114,8 @@ export function MockApiDetailPage() {
                   className="api-selector-toggle"
                   onClick={() => setApiDropdownOpen((v) => !v)}
                 >
-                  <MethodPill method={mockApi.data.method} />
                   <span className="api-selector-name">{mockApi.data.name}</span>
-                  <span aria-hidden="true">⌄</span>
+                  <ChevronDown size={14} />
                 </button>
                 {apiDropdownOpen && (
                   <div className="api-selector-list" role="listbox">
@@ -121,8 +127,7 @@ export function MockApiDetailPage() {
                         className={`api-selector-item ${api.id === mockApiId ? "active" : ""}`}
                         onClick={() => setApiDropdownOpen(false)}
                       >
-                        <MethodPill method={api.method} />
-                        <code className="path-text">{api.path}</code>
+                        <span>{api.name}</span>
                       </Link>
                     ))}
                     <Link
@@ -135,14 +140,15 @@ export function MockApiDetailPage() {
                   </div>
                 )}
               </div>
-              <p>
+              <div className="route-meta">
+                <MethodPill method={mockApi.data.method} />
                 <code>{mockApi.data.path}</code>
-              </p>
+              </div>
             </div>
             <div className="toolbar-actions">
               <button
                 type="button"
-                className="button secondary-btn compact-action"
+                className="button secondary-btn compact-action copy-curl-action"
                 onClick={() => {
                   if (!mockApi.data) return;
                   const curl = generateCurl(
@@ -161,7 +167,7 @@ export function MockApiDetailPage() {
               <button
                 type="button"
                 onClick={() => setVariablesOpen(true)}
-                className="button secondary-btn compact-action"
+                className="button secondary-btn compact-action variables-action"
               >
                 <SlidersHorizontal size={14} />
                 Variables
@@ -220,7 +226,7 @@ export function MockApiDetailPage() {
         </div>
 
         {responseTab === "deleted" && (
-          <section className="profile-section">
+          <section className="profile-section deleted-responses-section">
             <div className="org-deleted-banner">
               <AlertTriangle size={16} />
               Deleted responses are hidden from response matching.

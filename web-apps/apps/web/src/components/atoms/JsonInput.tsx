@@ -34,12 +34,38 @@ export function JsonInput({ label, value, onChange, error }: JsonInputProps) {
         <Editor
           height="100%"
           defaultLanguage="json"
-          theme="light"
+          theme="mock-stack-dark"
           value={value}
           onChange={(val) => onChange(val || "")}
+          beforeMount={(monaco) => {
+            monaco.editor.defineTheme("mock-stack-dark", {
+              base: "vs-dark",
+              inherit: true,
+              rules: [
+                { token: "string.key.json", foreground: "66d9ef" },
+                { token: "string.value.json", foreground: "fd971f" },
+                { token: "number.json", foreground: "ae81ff" },
+                { token: "keyword.json", foreground: "f92672" },
+              ],
+              colors: {
+                "editor.background": "#080808",
+                "editor.foreground": "#f8f8f2",
+                "editor.lineHighlightBackground": "#111111",
+                "editor.selectionBackground": "#3e3d32",
+                "editorCursor.foreground": "#66d9ef",
+                "editorIndentGuide.background1": "#1a1a1a",
+                "editorIndentGuide.activeBackground1": "#75715e",
+              },
+            });
+          }}
           options={{
             minimap: { enabled: false },
+            glyphMargin: false,
+            folding: false,
             lineNumbers: "off",
+            lineDecorationsWidth: 8,
+            lineNumbersMinChars: 0,
+            padding: { top: 8, bottom: 8 },
             scrollBeyondLastLine: false,
             tabSize: 2,
             formatOnPaste: true,
