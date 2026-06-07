@@ -1,5 +1,5 @@
 import type { Selectable } from "kysely";
-import type { IUsersRepository } from "../../../domain/interfaces/repositories/users.js";
+import type { IUsersRepository } from "../../../domain/interfaces/repositories/users/users.js";
 import type { ServerContext } from "../../../server.js";
 import type { UsersTable } from "../models/index.js";
 import type { User } from "../../../domain/entities/user.js";

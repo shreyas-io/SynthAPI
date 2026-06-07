@@ -1,31 +1,29 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../shared/api/query_keys";
-import { createProject } from "../api/projects_api";
+import { useCreateProject } from "../hooks/project_hooks";
 
 export function NewProjectPage() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const mutation = useMutation({
-    mutationFn: createProject,
-    async onSuccess(project) {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.projects });
-      navigate(`/projects/${project.id}`);
-    },
-  });
+  const mutation = useCreateProject();
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    mutation.mutate({
-      name,
-      description,
-      globals: [],
-      constants: [],
-    });
+    mutation.mutate(
+      {
+        name,
+        description,
+        globals: [],
+        constants: [],
+      },
+      {
+        onSuccess(project) {
+          navigate(`/projects/${project.id}`);
+        },
+      },
+    );
   };
 
   return (

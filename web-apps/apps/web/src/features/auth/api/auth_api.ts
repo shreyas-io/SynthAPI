@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../shared/api/client";
+import { apiRequest } from "../../../lib/api/client";
 import type { AuthCredentials, AuthUser } from "../types";
 
 const basicAuth = ({ username, password }: AuthCredentials): string => {

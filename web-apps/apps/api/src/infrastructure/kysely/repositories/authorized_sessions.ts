@@ -1,7 +1,7 @@
 import type { Selectable } from "kysely";
 import type { AuthorizedSessionsTable } from "../models/index.js";
 import type { AuthorizedSession } from "../../../domain/entities/authorized_session.js";
-import type { IAuthorizedSessionsRepository } from "../../../domain/interfaces/repositories/auth_sessionts.js";
+import type { IAuthorizedSessionsRepository } from "../../../domain/interfaces/repositories/users/auth_session.js";
 import type { ServerContext } from "../../../server.js";
 
 type AuthorizedSessionRow = Selectable<AuthorizedSessionsTable>;

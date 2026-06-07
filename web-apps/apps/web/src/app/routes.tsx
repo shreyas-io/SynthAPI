@@ -11,6 +11,7 @@ import { NewProjectPage } from "../features/projects/pages/NewProjectPage";
 import { ProjectDetailPage } from "../features/projects/pages/ProjectDetailPage";
 import { ProjectsPage } from "../features/projects/pages/ProjectsPage";
 import { AppLayout } from "./layouts/AppLayout";
+import { ProjectWorkspaceLayout } from "./layouts/ProjectWorkspaceLayout";
 
 export function AppRoutes() {
   return (
@@ -21,17 +22,21 @@ export function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<NewProjectPage />} />
-          <Route path="/projects/:projectId" element={<ProjectDetailPage />} />
-          <Route path="/projects/:projectId/mock-apis/new" element={<NewMockApiPage />} />
-          <Route path="/mock-apis/:mockApiId" element={<MockApiDetailPage />} />
-          <Route
-            path="/mock-apis/:mockApiId/responses/new"
-            element={<NewMockApiResponsePage />}
-          />
-          <Route
-            path="/mock-apis/:mockApiId/responses/:responseId"
-            element={<MockApiResponseDetailPage />}
-          />
+          
+          <Route path="/projects/:projectId" element={<ProjectWorkspaceLayout />}>
+            <Route index element={<ProjectDetailPage />} />
+            <Route path="mock-apis/new" element={<NewMockApiPage />} />
+            <Route path="mock-apis/:mockApiId" element={<MockApiDetailPage />}>
+               <Route
+                 path="responses/new"
+                 element={<NewMockApiResponsePage />}
+               />
+               <Route
+                 path="responses/:responseId"
+                 element={<MockApiResponseDetailPage />}
+               />
+            </Route>
+          </Route>
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/signin" replace />} />

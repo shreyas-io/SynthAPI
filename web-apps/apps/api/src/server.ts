@@ -4,13 +4,17 @@ import cors from "cors";
 import express, { type Express } from "express";
 
 import { getSecrets } from "./config/secrets";
+import { createAgentOrchestrationApplication } from "./application/agent_orchestration";
+import { createMockApiApplication } from "./application/mockapi";
 import { createApiGatewayDatabase } from "./infrastructure/kysely/index";
+import { runMigrations } from "./infrastructure/kysely/run_migrations";
+import { runAgentConfigMigrations } from "./run_agent_config_migrations";
+import { AgentConfigsRepository } from "./infrastructure/kysely/repositories/agent_orchestration/agent_configs";
+import { createPyodideWorkerPool } from "./infrastructure/pyodide";
 import { errorMiddleware } from "./middleware/error";
 import { responseMiddleware } from "./middleware/response";
 import { addRoutes } from "./routes/index";
 import { addPublicMockApiRoutes } from "./routes/public_mock_apis";
-import { createApplication as createAgentOrchestrationApplication } from "@mock-stack/agent-orchestration-engine";
-import { createApplication } from "@mock-stack/mockapi-engine";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import type { Kysely } from "kysely";
 import type { Database } from "./infrastructure/kysely/models/index";
@@ -24,36 +28,44 @@ export type ServerContext = {
   db: Kysely<Database>;
 };
 
+export type OrchestrationEngine = Awaited<
+  ReturnType<typeof createAgentOrchestrationApplication>
+>;
+
 export const createApiApp = async (): Promise<ApiApp> => {
   const secrets = await getSecrets();
   const apiGatewayDatabase = createApiGatewayDatabase(secrets);
+  await runMigrations(apiGatewayDatabase.db);
+
+  const agentConfigsRepo = AgentConfigsRepository(apiGatewayDatabase);
+  await runAgentConfigMigrations(agentConfigsRepo);
+
   const serverContext: ServerContext = {
     db: apiGatewayDatabase.db,
   };
 
   const keyValueStore = RedisKeyValueStore({
     redis_host: secrets.REDIS_HOST,
-    redis_pass: secrets.REDIS_PASS,
+    redis_pass: secrets.REDIS_PASSWORD,
     redis_port: secrets.REDIS_PORT,
   });
-  const applicationDependencies = {
-    environment: {
-      DB_USER: secrets.APPLICATION_DB_USER,
-      DB_PASS: secrets.APPLICATION_DB_PASS,
-      DB_HOST: secrets.APPLICATION_DB_HOST,
-      DB_PORT: secrets.APPLICATION_DB_PORT,
-      DB_NAME: secrets.APPLICATION_DB_NAME,
-    },
+  const pyodide = createPyodideWorkerPool({
+    size: 1,
+    max_queue_size: 100,
+    worker_memory_limit_mb: 28,
+    worker_boot_timeout_ms: 10_000,
+  });
+  const mockApiApplicationDependencies = {
+    database: apiGatewayDatabase,
     keyValueStore,
+    pyodide,
   };
 
   const agentOrchestrationDependencies = {
+    database: apiGatewayDatabase,
+    keyValueStore,
+    pyodide,
     environment: {
-      DB_USER: secrets.AGENT_ORCHESTRATION_DB_USER,
-      DB_PASS: secrets.AGENT_ORCHESTRATION_DB_PASS,
-      DB_HOST: secrets.AGENT_ORCHESTRATION_DB_HOST,
-      DB_PORT: secrets.AGENT_ORCHESTRATION_DB_PORT,
-      DB_NAME: secrets.AGENT_ORCHESTRATION_DB_NAME,
       CLOUDFLARE_ACCOUNT_ID: secrets.CLOUDFLARE_ACCOUNT_ID,
       CLOUDFLARE_AI_GATEWAY_ID: secrets.CLOUDFLARE_AI_GATEWAY_ID,
       CLOUDFLARE_AI_GATEWAY_TOKEN: secrets.CLOUDFLARE_AI_GATEWAY_TOKEN,
@@ -62,8 +74,13 @@ export const createApiApp = async (): Promise<ApiApp> => {
     },
   };
 
-  const application = createApplication(applicationDependencies);
-  const agentOrchestration = createAgentOrchestrationApplication(agentOrchestrationDependencies);
+  const application = await createMockApiApplication(
+    mockApiApplicationDependencies,
+  );
+  const agent_orchestration = createAgentOrchestrationApplication(
+    agentOrchestrationDependencies,
+  );
+
   const app = express();
 
   app.use(
@@ -80,7 +97,14 @@ export const createApiApp = async (): Promise<ApiApp> => {
   addPublicMockApiRoutes(app, application.mock_apis);
   app.use(responseMiddleware);
 
-  addRoutes(app, application, serverContext);
+  addRoutes(
+    app,
+    {
+      ...application,
+      agent_orchestration,
+    },
+    serverContext,
+  );
   app.use(errorMiddleware);
 
   return {
@@ -88,8 +112,9 @@ export const createApiApp = async (): Promise<ApiApp> => {
     async destroy() {
       await apiGatewayDatabase.destroy();
       await application.destroy();
-      await agentOrchestration.destroy();
+      await agent_orchestration.destroy();
       await keyValueStore.destroy();
+      await pyodide.destroy();
     },
   };
 };

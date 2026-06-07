@@ -4,6 +4,7 @@ export enum HttpStatusCode {
   FORBIDDEN = 403,
   NOT_FOUND = 404,
   CONFLICT = 409,
+  PRECONDITION_FAILED = 412,
   INTERNAL_SERVER_ERROR = 500,
 }
 
@@ -25,5 +26,19 @@ export class ApiGatewayException extends Error {
     this.public_message = input.public_message;
     this.status_code =
       input.status_code ?? HttpStatusCode.INTERNAL_SERVER_ERROR;
+  }
+}
+
+export class MockApiException extends ApiGatewayException {
+  constructor(input: ApiGatewayExceptionInput) {
+    super(input);
+    this.name = "MockApiException";
+  }
+}
+
+export class AgentOrchestrationException extends ApiGatewayException {
+  constructor(input: ApiGatewayExceptionInput) {
+    super(input);
+    this.name = "AgentOrchestrationException";
   }
 }

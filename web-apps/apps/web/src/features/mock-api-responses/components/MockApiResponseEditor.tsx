@@ -1,23 +1,16 @@
 import { FormEvent, useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Save } from "lucide-react";
 
-import { JsonInput } from "../../../shared/components/JsonInput";
-import { queryKeys } from "../../../shared/api/query_keys";
-import { getMockApi } from "../../mock-apis/api/mock_apis_api";
-import { getProject } from "../../projects/api/projects_api";
-import type { Variable } from "../../projects/types";
+import { JsonInput } from "../../../components/atoms/JsonInput";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
 import type {
   MockApiResponse,
   MockApiResponseInput,
   PostResponseAction,
-  PostResponseActionValue,
   ResponseBody,
   RuleTree,
   VariableScope,
 } from "../types";
-
-type EditorTab = "response" | "rule_tree" | "post_actions";
 
 type KeyValueRow = {
   id: string;
@@ -30,7 +23,7 @@ type MockApiResponseEditorProps = {
   initialResponse?: MockApiResponse;
   submitLabel: string;
   isPending: boolean;
-  errorMessage?: string;
+  errorMessage?: string | undefined;
   onSubmit: (input: Omit<MockApiResponseInput, "mock_api_id">) => void;
 };
 
@@ -48,65 +41,45 @@ const createId = () => crypto.randomUUID();
 
 const stringifyValue = (value: unknown): string => {
   if (typeof value === "string") return value;
-  if (value === undefined) return "";
-  return JSON.stringify(value, null, 2);
+  return JSON.stringify(value);
 };
 
-const parseValue = (value: string): PostResponseActionValue => {
-  if (!value.trim()) return "";
-
-  return JSON.parse(value) as PostResponseActionValue;
+const parseValue = (value: string): unknown => {
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
 };
 
-const rowsFromRecord = (record: Record<string, unknown>): KeyValueRow[] => {
-  const rows = Object.entries(record).map(([key, value]) => ({
+const rowsFromRecord = (record: Record<string, unknown>): KeyValueRow[] =>
+  Object.entries(record).map(([key, value]) => ({
     id: createId(),
     key,
     value: stringifyValue(value),
   }));
 
-  return rows.length ? rows : [{ id: createId(), key: "", value: "" }];
-};
-
-const recordFromRows = (rows: KeyValueRow[]): Record<string, string> => {
-  return Object.fromEntries(
-    rows
-      .map((row) => [row.key.trim(), row.value] as const)
-      .filter(([key]) => key.length > 0),
-  );
-};
+const recordFromRows = (rows: KeyValueRow[]): Record<string, unknown> =>
+  rows.reduce((acc, { key, value }) => {
+    if (!key.trim()) return acc;
+    return { ...acc, [key]: parseValue(value) };
+  }, {});
 
 const bodyTextFromResponse = (body: ResponseBody): string => {
   if (body.type === "empty") return "";
-  if (body.type === "text") return body.value;
-  return JSON.stringify(body.value, null, 2);
-};
-
-type LegacyRulePredicate = RuleTree["predicates"][number] & {
-  children?: RuleTree[];
+  if (body.type === "json") return JSON.stringify(body.value, null, 2);
+  return body.value;
 };
 
 const normalizeRuleTree = (ruleTree: RuleTree | null): RuleTree | null => {
   if (!ruleTree) return null;
 
-  const predicates = ruleTree.predicates.map((predicate) => {
-    const { children: _children, ...next } = predicate as LegacyRulePredicate;
-
-    return next;
-  });
-  const predicateBranches = ruleTree.predicates
-    .map((predicate) => predicate as LegacyRulePredicate)
-    .filter((predicate) => predicate.children?.length)
-    .map((predicate) => {
-      const { children, ...next } = predicate;
-
-      return {
-        label: `${predicate.label} branch`,
-        type: "and" as const,
-        predicates: [next],
-        children: (children ?? []).map(normalizeRuleTree).filter(Boolean),
-      } as RuleTree;
-    });
+  const predicates = ruleTree.predicates.filter((pred) => pred.actual.trim());
+  const predicateBranches = predicates.map((pred) => ({
+    label: pred.label,
+    type: "and" as const,
+    predicates: [pred],
+  }));
 
   return {
     label: ruleTree.label,
@@ -175,140 +148,44 @@ function KeyValueRows({
         <h3>{label}</h3>
         <button
           type="button"
+          className="button secondary-btn compact-action"
           onClick={() => onChange([...rows, { id: createId(), key: "", value: "" }])}
         >
           Add
         </button>
       </div>
-      {rows.map((row) => (
-        <div className="key-value-row" key={row.id}>
+      {rows.map((row, index) => (
+        <div key={row.id} className="key-value-row">
           <input
             placeholder="key"
             value={row.key}
-            onChange={(event) =>
+            onChange={(e) =>
               onChange(
-                rows.map((item) =>
-                  item.id === row.id ? { ...item, key: event.target.value } : item,
-                ),
+                rows.map((r) => (r.id === row.id ? { ...r, key: e.target.value } : r)),
               )
             }
           />
           <input
             placeholder="value"
             value={row.value}
-            onChange={(event) =>
+            onChange={(e) =>
               onChange(
-                rows.map((item) =>
-                  item.id === row.id
-                    ? { ...item, value: event.target.value }
-                    : item,
+                rows.map((r) =>
+                  r.id === row.id ? { ...r, value: e.target.value } : r,
                 ),
               )
             }
           />
           <button
             type="button"
-            onClick={() => onChange(rows.filter((item) => item.id !== row.id))}
+            className="button secondary-btn icon-btn"
+            onClick={() => onChange(rows.filter((r) => r.id !== row.id))}
           >
-            Remove
+            ×
           </button>
         </div>
       ))}
     </section>
-  );
-}
-
-function VariablesList({
-  title,
-  prefix,
-  variables,
-}: {
-  title: string;
-  prefix: "constants" | "globals" | "variables";
-  variables: Variable[] | null | undefined;
-}) {
-  return (
-    <section className="variable-reference-section">
-      <h3>{title}</h3>
-      {!variables?.length && <p>No variables configured.</p>}
-      {variables?.map((variable) => (
-        <div className="variable-reference-card" key={variable.name}>
-          <strong>{variable.name}</strong>
-          <small>
-            {variable.type} · {`{{${prefix}.${variable.name}}}`}
-          </small>
-          <code>{stringifyValue(variable.value)}</code>
-        </div>
-      ))}
-    </section>
-  );
-}
-
-function VariablesReference({ mockApiId }: { mockApiId: string }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const mockApi = useQuery({
-    queryKey: queryKeys.mockApi(mockApiId),
-    queryFn: () => getMockApi(mockApiId),
-  });
-  const project = useQuery({
-    queryKey: queryKeys.project(mockApi.data?.project_id ?? ""),
-    enabled: Boolean(mockApi.data?.project_id),
-    queryFn: () => {
-      if (!mockApi.data?.project_id) {
-        throw new Error("Missing project ID");
-      }
-
-      return getProject(mockApi.data.project_id);
-    },
-  });
-
-  return (
-    <>
-      <button
-        className="variable-reference-toggle"
-        type="button"
-        onClick={() => setIsOpen((current) => !current)}
-      >
-        <span>
-          <span className="eyebrow">Variables</span>
-          <strong>Template references</strong>
-        </span>
-        <span>Open</span>
-      </button>
-      {isOpen && (
-        <div className="variable-reference-modal-backdrop">
-          <aside className="variable-reference-modal card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Variables</p>
-                <h2>Template references</h2>
-              </div>
-              <button type="button" onClick={() => setIsOpen(false)}>
-                Close
-              </button>
-            </div>
-            {(mockApi.isPending || project.isPending) && <p>Loading variables...</p>}
-            {mockApi.isError && <p className="error">{mockApi.error.message}</p>}
-            {project.isError && <p className="error">{project.error.message}</p>}
-            <VariablesList
-              title="Constants"
-              prefix="constants"
-              variables={project.data?.constants}
-            />
-            <VariablesList
-              title="Globals"
-              prefix="globals"
-              variables={project.data?.globals}
-            />
-            <VariablesList
-              title="Local variables"
-              prefix="variables"
-              variables={mockApi.data?.variables}
-            />
-          </aside>
-        </div>
-      )}
-    </>
   );
 }
 
@@ -321,132 +198,78 @@ function PostActionForm({
   onChange: (action: PostResponseAction) => void;
   onRemove: () => void;
 }) {
-  const [valueText, setValueText] = useState(
-    "value" in action ? stringifyValue(action.value) : "",
-  );
-  const [valueError, setValueError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setValueText("value" in action ? stringifyValue(action.value) : "");
-    setValueError(null);
-  }, [action]);
-
   return (
-    <article className="post-action-card">
+    <div className="post-action-card form">
       <div className="section-heading">
-        <h3>{action.type}</h3>
-        <button type="button" onClick={onRemove}>
-          Remove
+        <select
+          value={action.type}
+          onChange={(e) =>
+            onChange(
+              createAction(e.target.value as PostResponseAction["type"], action.order),
+            )
+          }
+        >
+          {actionTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+        <button type="button" className="icon-btn" onClick={onRemove}>
+          ×
         </button>
-      </div>
-      <div className="form-grid">
-        <label>
-          Type
-          <select
-            value={action.type}
-            onChange={(event) =>
-              onChange(
-                createAction(
-                  event.target.value as PostResponseAction["type"],
-                  action.order,
-                ),
-              )
-            }
-          >
-            {actionTypes.map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Order
-          <input
-            type="number"
-            value={action.order}
-            onChange={(event) =>
-              onChange({ ...action, order: Number(event.target.value) })
-            }
-          />
-        </label>
       </div>
 
       {action.type === "script" ? (
-        <label>
-          Python code
-          <textarea
-            value={action.code}
-            onChange={(event) => onChange({ ...action, code: event.target.value })}
-          />
-        </label>
+        <JsonInput
+          label="Python script"
+          value={action.code}
+          onChange={(value) => onChange({ ...action, code: value })}
+        />
       ) : (
-        <>
-          <div className="form-grid">
-            <label>
-              Scope
-              <select
-                value={action.scope}
-                onChange={(event) =>
-                  onChange({
-                    ...action,
-                    scope: event.target.value as VariableScope,
-                  })
-                }
-              >
-                <option value="local">local</option>
-                <option value="global">global</option>
-              </select>
-            </label>
-            <label>
-              Key
-              <input
-                value={action.key}
-                onChange={(event) =>
-                  onChange({ ...action, key: event.target.value })
-                }
-              />
-            </label>
-          </div>
-
-          {(action.type === "increment" || action.type === "decrement") && (
+        <div className="form-grid">
+          <label>
+            Scope
+            <select
+              value={action.scope}
+              onChange={(e) =>
+                onChange({ ...action, scope: e.target.value as VariableScope })
+              }
+            >
+              <option value="local">local</option>
+              <option value="global">global</option>
+            </select>
+          </label>
+          <label>
+            Key
+            <input
+              placeholder="e.g. counter"
+              value={action.key}
+              onChange={(e) => onChange({ ...action, key: e.target.value })}
+            />
+          </label>
+          {action.type === "increment" || action.type === "decrement" ? (
             <label>
               Amount
               <input
                 type="number"
                 value={action.amount}
-                onChange={(event) =>
-                  onChange({ ...action, amount: Number(event.target.value) })
-                }
+                onChange={(e) => onChange({ ...action, amount: Number(e.target.value) })}
+              />
+            </label>
+          ) : action.type === "unset" ? null : (
+            <label>
+              Value
+              <input
+                placeholder="e.g. {{request.body.id}}"
+                value={String((action as any).value ?? "")}
+                onChange={(e) => onChange({ ...action, value: e.target.value } as PostResponseAction)}
               />
             </label>
           )}
-
-          {(action.type === "set" ||
-            action.type === "append" ||
-            action.type === "remove") && (
-            <JsonInput
-              label="Value"
-              value={valueText}
-              error={valueError}
-              onChange={(value) => {
-                setValueText(value);
-
-                try {
-                  onChange({
-                    ...action,
-                    value: parseValue(value),
-                  });
-                  setValueError(null);
-                } catch {
-                  setValueError("Invalid JSON.");
-                }
-              }}
-            />
-          )}
-        </>
+        </div>
       )}
-    </article>
+    </div>
   );
 }
 
@@ -462,8 +285,9 @@ export function MockApiResponseEditor({
     type: "json" as const,
     value: { ok: true },
   };
-  const [activeTab, setActiveTab] = useState<EditorTab>("response");
+
   const [name, setName] = useState(initialResponse?.name ?? "");
+  const [activeTab, setActiveTab] = useState<"response" | "actions" | "rules">("response");
   const [isDefault, setIsDefault] = useState(initialResponse?.is_default ?? false);
   const [statusCode, setStatusCode] = useState(
     initialResponse?.response.status_code ?? 200,
@@ -533,7 +357,6 @@ export function MockApiResponseEditor({
       }
     } catch {
       setBodyJsonError("Invalid JSON.");
-      setActiveTab("response");
       return;
     }
 
@@ -552,37 +375,52 @@ export function MockApiResponseEditor({
   };
 
   return (
-    <form className="response-editor-shell" onSubmit={submit}>
-      <section className="response-editor-main card">
-        <div className="editor-toolbar">
-          <div>
-            <p className="eyebrow">Mock API response</p>
-            <h1>{initialResponse ? initialResponse.name : "Create mock response"}</h1>
-          </div>
-          <VariablesReference mockApiId={mockApiId} />
-          <button disabled={isPending || !mockApiId}>{submitLabel}</button>
-        </div>
-
-        <nav className="editor-tabs" aria-label="Response editor tabs">
-          {[
-            ["response", "Mock API Response"],
-            ["rule_tree", "Rule Tree"],
-            ["post_actions", "Post Actions"],
-          ].map(([tab, label]) => (
+    <form className="response-editor-shell flat-editor" onSubmit={submit}>
+      <div className="workspace-row editor-toolbar dense-editor-toolbar">
+        <div className="editor-title-row">
+          <h2>{initialResponse ? initialResponse.name : "Create response"}</h2>
+          <div className="editor-tabs compact-tabs inline-tabs">
             <button
-              className={activeTab === tab ? "active" : ""}
-              key={tab}
+              className={activeTab === "response" ? "active" : ""}
               type="button"
-              onClick={() => setActiveTab(tab as EditorTab)}
+              onClick={() => setActiveTab("response")}
             >
-              {label}
+              Response
             </button>
-          ))}
-        </nav>
+            <button
+              className={activeTab === "actions" ? "active" : ""}
+              type="button"
+              onClick={() => setActiveTab("actions")}
+            >
+              Actions
+            </button>
+            <button
+              className={activeTab === "rules" ? "active" : ""}
+              type="button"
+              onClick={() => setActiveTab("rules")}
+            >
+              Rules
+            </button>
+          </div>
+          <div className="toolbar-actions">
+             <button
+               className="compact-action icon-only-action"
+               disabled={isPending || !mockApiId}
+               aria-label={submitLabel}
+               title={submitLabel}
+             >
+               <Save size={14} />
+             </button>
+          </div>
+        </div>
+      </div>
 
-        {activeTab === "response" && (
-          <section className="editor-tab-panel form">
-            <div className="form-grid">
+      <section className="response-editor-main">
+        <div className="response-editor-stack">
+
+          {activeTab === "response" && (
+            <div className="editor-tab-panel form flat-panel">
+              <div className="field-grid">
               <label>
                 Name
                 <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -595,106 +433,112 @@ export function MockApiResponseEditor({
                   onChange={(e) => setStatusCode(Number(e.target.value))}
                 />
               </label>
-            </div>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={isDefault}
-                onChange={(e) => setIsDefault(e.target.checked)}
-              />
-              Default response
-            </label>
-            <label>
-              Body type
-              <select
-                value={bodyType}
-                onChange={(event) =>
-                  setBodyType(event.target.value as ResponseBody["type"])
-                }
-              >
-                <option value="json">json</option>
-                <option value="text">text</option>
-                <option value="empty">empty</option>
-              </select>
-            </label>
-            {bodyType !== "empty" && (
-              bodyType === "json" ? (
-                <JsonInput
-                  label="Response body"
-                  value={bodyText}
-                  error={bodyJsonError}
-                  onChange={(value) => {
-                    setBodyText(value);
-                    setBodyJsonError(null);
-                  }}
+              <label>
+                Set as Default Response
+                <input
+                  type="checkbox"
+                  checked={isDefault}
+                  onChange={(e) => setIsDefault(e.target.checked)}
                 />
-              ) : (
-                <label>
-                  Response body
-                  <textarea
+              </label>
+              <label>
+                Body type
+                <select
+                  value={bodyType}
+                  onChange={(event) =>
+                    setBodyType(event.target.value as ResponseBody["type"])
+                  }
+                >
+                  <option value="json">json</option>
+                  <option value="text">text</option>
+                  <option value="empty">empty</option>
+                </select>
+              </label>
+              </div>
+              {bodyType !== "empty" && (
+                bodyType === "json" ? (
+                  <JsonInput
+                    label="Response body"
                     value={bodyText}
-                    onChange={(e) => setBodyText(e.target.value)}
+                    error={bodyJsonError}
+                    onChange={(value) => {
+                      setBodyText(value);
+                      setBodyJsonError(null);
+                    }}
                   />
-                </label>
-              )
-            )}
-            <KeyValueRows label="Headers" rows={headers} onChange={setHeaders} />
-            <KeyValueRows label="Cookies" rows={cookies} onChange={setCookies} />
-          </section>
-        )}
-
-        {activeTab === "rule_tree" && (
-          <section className="editor-tab-panel">
-            {isDefault && !ruleTree ? (
-              <div className="empty-state">
-                Default responses do not use rule trees.
-              </div>
-            ) : (
-              <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
-            )}
-          </section>
-        )}
-
-        {activeTab === "post_actions" && (
-          <section className="editor-tab-panel post-actions-panel">
-            <div className="section-heading">
-              <div>
-                <h2>Post response actions</h2>
-                <p>Actions run after the mock response is selected.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setPostActions([
-                    ...postActions,
-                    createAction("set", postActions.length + 1),
-                  ])
-                }
-              >
-                Add action
-              </button>
+                ) : (
+                  <label>
+                    Response body
+                    <textarea
+                      value={bodyText}
+                      onChange={(e) => setBodyText(e.target.value)}
+                    />
+                  </label>
+                )
+              )}
+              <KeyValueRows label="Headers" rows={headers} onChange={setHeaders} />
+              <KeyValueRows label="Cookies" rows={cookies} onChange={setCookies} />
             </div>
-            {!postActions.length && <p>No post response actions configured.</p>}
-            {postActions.map((action, index) => (
-              <PostActionForm
-                action={action}
-                key={index}
-                onChange={(nextAction) =>
-                  setPostActions(
-                    postActions.map((item, itemIndex) =>
-                      itemIndex === index ? nextAction : item,
-                    ),
-                  )
-                }
-                onRemove={() =>
-                  setPostActions(
-                    postActions.filter((_item, itemIndex) => itemIndex !== index),
-                  )
-                }
-              />
-            ))}
-          </section>
-        )}
+          )}
+
+          {activeTab === "actions" && (
+            <div className="editor-tab-panel post-actions-panel flat-panel">
+              <div className="section-heading">
+                <div>
+                  <h3>Post response actions</h3>
+                </div>
+                <button
+                  type="button"
+                  className="button secondary-btn compact-action"
+                  onClick={() =>
+                    setPostActions([
+                      ...postActions,
+                      createAction("set", postActions.length + 1),
+                    ])
+                  }
+                >
+                  + Add
+                </button>
+              </div>
+              {!postActions.length && <p className="muted-text">No post response actions configured.</p>}
+              {postActions.map((action, index) => (
+                <PostActionForm
+                  action={action}
+                  key={index}
+                  onChange={(nextAction) =>
+                    setPostActions(
+                      postActions.map((item, itemIndex) =>
+                        itemIndex === index ? nextAction : item,
+                      ),
+                    )
+                  }
+                  onRemove={() =>
+                    setPostActions(
+                      postActions.filter((_item, itemIndex) => itemIndex !== index),
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
+
+          {activeTab === "rules" && (
+            <div className="editor-tab-panel rule-editor-panel flat-panel">
+              <div className="section-heading">
+                <h3>Rule tree</h3>
+              </div>
+              {isDefault && !ruleTree ? (
+                <div className="empty-state">
+                  Default responses do not use rule trees.
+                </div>
+              ) : (
+                <div className="rule-editor-frame">
+                  <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {(formError || errorMessage) && (
           <p className="error">{formError ?? errorMessage}</p>

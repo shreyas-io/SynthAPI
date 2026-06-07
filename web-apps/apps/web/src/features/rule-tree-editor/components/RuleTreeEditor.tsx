@@ -19,7 +19,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 
-import { JsonInput } from "../../../shared/components/JsonInput";
+import { JsonInput } from "../../../components/atoms/JsonInput";
 import type { PredicateValue, RulePredicate, RuleTree } from "../../mock-api-responses/types";
 
 const operatorsWithoutExpected = [
@@ -48,6 +48,28 @@ const operatorsWithExpected = [
 ] as const;
 
 const operators = [...operatorsWithoutExpected, ...operatorsWithExpected] as const;
+
+const operatorAliases: Record<string, string> = {
+  null: "Is Null",
+  not_null: "Is Not Null",
+  empty_array: "Is Empty Array",
+  not_empty_array: "Is Not Empty Array",
+  is_set: "Is Set (Exists)",
+  is_not_set: "Is Not Set (Missing)",
+  string_empty: "Is Empty String",
+  string_not_empty: "Is Not Empty String",
+  equals: "Equals",
+  not_equals: "Does Not Equal",
+  regex: "Matches Regex",
+  gt: "Greater Than (>)",
+  gte: "Greater Than or Equal (>=)",
+  lt: "Less Than (<)",
+  lte: "Less Than or Equal (<=)",
+  array_includes: "Array Includes",
+  string_includes: "String Contains",
+  string_not_includes: "String Does Not Contain",
+  valid_json_schema: "Valid JSON",
+};
 
 const operatorNeedsExpected = (operator: string) =>
   (operatorsWithExpected as readonly string[]).includes(operator);
@@ -132,28 +154,6 @@ type PredicateNodeData = {
   expected: string;
   onChange: (updates: Partial<PredicateNodeData>) => void;
   onRemove: () => void;
-};
-
-const operatorAliases: Record<string, string> = {
-  null: "Is Null",
-  not_null: "Is Not Null",
-  empty_array: "Is Empty Array",
-  not_empty_array: "Is Not Empty Array",
-  is_set: "Is Set (Exists)",
-  is_not_set: "Is Not Set (Missing)",
-  string_empty: "Is Empty String",
-  string_not_empty: "Is Not Empty String",
-  equals: "Equals",
-  not_equals: "Does Not Equal",
-  regex: "Matches Regex",
-  gt: "Greater Than (>)",
-  gte: "Greater Than or Equal (>=)",
-  lt: "Less Than (<)",
-  lte: "Less Than or Equal (<=)",
-  array_includes: "Array Includes",
-  string_includes: "String Contains",
-  string_not_includes: "String Does Not Contain",
-  valid_json_schema: "Valid JSON",
 };
 
 function PredicateNode({ data }: { data: PredicateNodeData }) {
@@ -450,9 +450,9 @@ export function RuleTreeEditor({
   }, [nodes, setNodes, setEdges]);
 
   return (
-    <section className="card rule-editor">
-      <header className="editor-toolbar" style={{ display: "flex", gap: "1rem" }}>
-        <div style={{ flex: 1 }}>
+    <section className="rule-editor">
+      <header className="editor-toolbar rule-editor-toolbar">
+        <div className="rule-editor-title">
           <p className="eyebrow">Rule tree</p>
           <h2>React Flow Builder</h2>
         </div>
@@ -469,7 +469,7 @@ export function RuleTreeEditor({
         </div>
       </header>
 
-      <div style={{ width: "100%", height: "600px", border: "1px solid rgba(24,34,53,0.1)", borderRadius: "18px", overflow: "hidden", background: "#fcfaf7" }}>
+      <div className="rule-flow-frame">
         <ReactFlow
           nodes={enhancedNodes}
           edges={edges}
@@ -479,8 +479,9 @@ export function RuleTreeEditor({
           nodeTypes={nodeTypes}
           fitView
           minZoom={0.2}
+          colorMode="light"
         >
-          <Background color="#ccc" gap={16} />
+          <Background color="#333" gap={16} />
           <Controls />
         </ReactFlow>
       </div>

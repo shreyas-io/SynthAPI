@@ -1,9 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { queryKeys } from "../../../shared/api/query_keys";
-import { createMockApi } from "../api/mock_apis_api";
+import { useCreateMockApi } from "../hooks/mock_api_hooks";
 import type { HttpMethod } from "../types";
 
 const methods: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
@@ -11,39 +9,35 @@ const methods: HttpMethod[] = ["GET", "POST", "PUT", "PATCH", "DELETE"];
 export function NewMockApiPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [method, setMethod] = useState<HttpMethod>("POST");
   const [path, setPath] = useState("/posts");
   const [description, setDescription] = useState("");
-  const mutation = useMutation({
-    mutationFn: createMockApi,
-    async onSuccess(mockApi) {
-      if (projectId) {
-        await queryClient.invalidateQueries({
-          queryKey: queryKeys.mockApis(projectId),
-        });
-      }
-      navigate(`/mock-apis/${mockApi.id}`);
-    },
-  });
+  const mutation = useCreateMockApi(projectId);
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (!projectId) return;
 
-    mutation.mutate({
-      project_id: projectId,
-      name,
-      method,
-      path,
-      description,
-      variables: [],
-    });
+    mutation.mutate(
+      {
+        project_id: projectId,
+        name,
+        method,
+        path,
+        description,
+        variables: [],
+      },
+      {
+        onSuccess(mockApi) {
+          navigate(`/projects/${projectId}/mock-apis/${mockApi.id}`);
+        },
+      },
+    );
   };
 
   return (
-    <main className="page narrow">
+    <main className="page-content dense-page-content narrow">
       <form className="card form" onSubmit={submit}>
         <p className="eyebrow">New mock API</p>
         <h1>Create endpoint</h1>

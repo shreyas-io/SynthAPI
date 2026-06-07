@@ -1,4 +1,4 @@
-import { apiRequest } from "../../../shared/api/client";
+import { apiRequest } from "../../../lib/api/client";
 import type { ListResponse, Project, ProjectInput } from "../types";
 
 export const listProjects = (): Promise<ListResponse<Project>> => {

@@ -14,12 +14,14 @@ export type ApiGatewayDatabase = {
   destroy: () => Promise<void>;
 };
 
+export type DatabaseClient = ApiGatewayDatabase;
+
 const buildConnectionString = (secrets: Secrets): string => {
-  const user = encodeURIComponent(secrets.API_GATEWAY_DB_USER);
-  const password = encodeURIComponent(secrets.API_GATEWAY_DB_PASS);
-  const host = secrets.API_GATEWAY_DB_HOST;
-  const port = String(secrets.API_GATEWAY_DB_PORT);
-  const name = secrets.API_GATEWAY_DB_NAME;
+  const user = encodeURIComponent(secrets.DB_USER);
+  const password = encodeURIComponent(secrets.DB_PASS);
+  const host = secrets.DB_HOST;
+  const port = String(secrets.DB_PORT);
+  const name = secrets.DB_NAME;
 
   return `postgres://${user}:${password}@${host}:${port}/${name}`;
 };

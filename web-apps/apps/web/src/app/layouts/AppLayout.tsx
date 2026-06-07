@@ -1,30 +1,37 @@
 import { Link, Outlet, useNavigate } from "react-router";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { LogOut } from "lucide-react";
 
-import { queryKeys } from "../../shared/api/query_keys";
-import { signout } from "../../features/auth/api/auth_api";
+import { useSignout } from "../../features/auth/hooks/auth_hooks";
 
 export function AppLayout() {
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const signoutMutation = useMutation({
-    mutationFn: signout,
-    async onSuccess() {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.authUser });
-      navigate("/signin");
-    },
-  });
+  const signoutMutation = useSignout();
 
   return (
     <div className="app-shell">
+      <header className="app-top-bar">
+        <Link className="brand" to="/projects">synthapi</Link>
+        <nav className="app-nav-links">
+          <Link to="/projects">Projects</Link>
+        </nav>
+        <button
+          className="button secondary-btn compact-action"
+          onClick={() =>
+            signoutMutation.mutate(undefined, {
+              onSuccess() {
+                navigate("/signin");
+              },
+            })
+          }
+        >
+          <LogOut size={14} />
+          Sign out
+        </button>
+      </header>
       <div className="app-main">
-        <header className="top-header">
-          <Link className="button" to="/projects">
-            Projects
-          </Link>
-          <button onClick={() => signoutMutation.mutate()}>Sign out</button>
-        </header>
-        <Outlet />
+        <div className="app-content-wrapper">
+          <Outlet />
+        </div>
       </div>
     </div>
   );
