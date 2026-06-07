@@ -30,7 +30,11 @@ export const addRoutes = (
   addHealthRoutes(app, application);
   addAuthRoutes(app, serverContext, secrets);
   app.use("/api/v1", authMiddleware(serverContext));
-  addProjectChatRoutes(app, application.agent_orchestration);
+  addProjectChatRoutes(
+    app,
+    application.agent_orchestration,
+    application.projects,
+  );
   addMockApiRoutes(app, application.mock_apis);
   addMockApiResponseRoutes(app, application.mock_api_responses);
   addProjectRoutes(app, application.projects);

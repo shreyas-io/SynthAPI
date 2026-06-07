@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 
+import type { AuthenticatedUser } from "../../domain/entities/authenticated_user";
 import { MockApiException } from "../../domain/exceptions/exception";
 import { ProjectsUsecase } from "../../domain/usecases/mock_api/projects";
 import type { AppContext } from "../agent_orchestration/context";
@@ -35,7 +36,7 @@ export function ProjectsApplication(ctx: AppContext) {
   const projects = ProjectsUsecase(ctx);
 
   return {
-    createProject: (data: unknown) => {
+    createProject: (user: AuthenticatedUser, data: unknown) => {
       const { data: input, success, error } = createProjectDto.safeParse(data);
 
       if (!success) {
@@ -44,7 +45,7 @@ export function ProjectsApplication(ctx: AppContext) {
         });
       }
 
-      return projects.createProject({
+      return projects.createProject(user, {
         slug: getProjectSlug(input.name),
         name: input.name,
         description: input.description,
@@ -52,8 +53,14 @@ export function ProjectsApplication(ctx: AppContext) {
         constants: input.constants ?? null,
       });
     },
-    getProject: (id: string) => projects.getProject(id),
-    listProjects: (filters: unknown, pagination: unknown, sort: unknown) => {
+    getProject: (user: AuthenticatedUser, id: string) =>
+      projects.getProject(user, id),
+    listProjects: (
+      user: AuthenticatedUser,
+      filters: unknown,
+      pagination: unknown,
+      sort: unknown,
+    ) => {
       const {
         data: parsed_filters,
         success: filters_success,
@@ -97,12 +104,17 @@ export function ProjectsApplication(ctx: AppContext) {
       }
 
       return projects.getProjects(
+        user,
         project_filters,
         parsed_pagination,
         parsed_sort,
       );
     },
-    updateProject: async (id: string, data: unknown) => {
+    updateProject: async (
+      user: AuthenticatedUser,
+      id: string,
+      data: unknown,
+    ) => {
       const { data: input, success, error } = createProjectDto.safeParse(data);
 
       if (!success) {
@@ -111,13 +123,14 @@ export function ProjectsApplication(ctx: AppContext) {
         });
       }
 
-      await projects.updateProject(id, {
+      await projects.updateProject(user, id, {
         name: input.name,
         description: input.description,
         globals: input.globals ?? null,
         constants: input.constants ?? null,
       });
     },
-    deleteProject: (id: string) => projects.deleteProject(id),
+    deleteProject: (user: AuthenticatedUser, id: string) =>
+      projects.deleteProject(user, id),
   };
 }

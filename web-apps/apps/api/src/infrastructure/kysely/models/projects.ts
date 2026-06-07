@@ -5,6 +5,7 @@ type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
 
 export type ProjectsTable = {
   id: ColumnType<string, string | undefined, never>;
+  organization_id: ColumnType<string, string | undefined, string>;
   slug: string;
   name: string;
   description: string;

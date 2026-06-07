@@ -1,17 +1,38 @@
 import type { Express } from "express";
 
+import type { AuthenticatedUser } from "../domain/entities/authenticated_user";
+import {
+  ApiGatewayException,
+  HttpStatusCode,
+} from "../domain/exceptions/exception";
 import { asyncRoute } from "../middleware/async_route";
 
 export type ProjectsSdk = {
-  createProject: (data: unknown) => Promise<unknown>;
-  getProject: (id: string) => Promise<unknown>;
+  createProject: (user: AuthenticatedUser, data: unknown) => Promise<unknown>;
+  getProject: (user: AuthenticatedUser, id: string) => Promise<unknown>;
   listProjects: (
+    user: AuthenticatedUser,
     filters: unknown,
     pagination: unknown,
     sort: unknown,
   ) => Promise<unknown>;
-  updateProject: (id: string, data: unknown) => Promise<void>;
-  deleteProject: (id: string) => Promise<void>;
+  updateProject: (
+    user: AuthenticatedUser,
+    id: string,
+    data: unknown,
+  ) => Promise<void>;
+  deleteProject: (user: AuthenticatedUser, id: string) => Promise<void>;
+};
+
+const getAuthenticatedUser = (user: Express.Request["user"]) => {
+  if (!user) {
+    throw new ApiGatewayException({
+      public_message: "Unauthorized",
+      status_code: HttpStatusCode.UNAUTHORIZED,
+    });
+  }
+
+  return user;
 };
 
 const getString = (value: unknown): string | undefined => {
@@ -52,7 +73,10 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
   app.post(
     "/api/v1/projects",
     asyncRoute(async (req, res) => {
-      const project = await projects.createProject(req.body);
+      const project = await projects.createProject(
+        getAuthenticatedUser(req.user),
+        req.body,
+      );
       res.status(201).json(project);
     }),
   );
@@ -89,6 +113,7 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
 
       res.json(
         await projects.listProjects(
+          getAuthenticatedUser(req.user),
           filters,
           {
             limit: getNumber(req.query.limit, 20),
@@ -106,14 +131,23 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
   app.get(
     "/api/v1/projects/:id",
     asyncRoute(async (req, res) => {
-      res.json(await projects.getProject(req.params.id as string));
+      res.json(
+        await projects.getProject(
+          getAuthenticatedUser(req.user),
+          req.params.id as string,
+        ),
+      );
     }),
   );
 
   app.put(
     "/api/v1/projects/:id",
     asyncRoute(async (req, res) => {
-      await projects.updateProject(req.params.id as string, req.body);
+      await projects.updateProject(
+        getAuthenticatedUser(req.user),
+        req.params.id as string,
+        req.body,
+      );
       res.json({});
     }),
   );
@@ -121,7 +155,10 @@ export const addProjectRoutes = (app: Express, projects: ProjectsSdk) => {
   app.delete(
     "/api/v1/projects/:id",
     asyncRoute(async (req, res) => {
-      await projects.deleteProject(req.params.id as string);
+      await projects.deleteProject(
+        getAuthenticatedUser(req.user),
+        req.params.id as string,
+      );
       res.status(204).send();
     }),
   );

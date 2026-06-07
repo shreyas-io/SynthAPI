@@ -1,7 +1,13 @@
 import type { Express, Response } from "express";
 
+import type { AuthenticatedUser } from "../domain/entities/authenticated_user";
+import {
+  ApiGatewayException,
+  HttpStatusCode,
+} from "../domain/exceptions/exception";
 import { asyncRoute } from "../middleware/async_route";
 import type { OrchestrationEngine } from "../server";
+import type { ProjectsSdk } from "./projects";
 
 export type ProjectChatsSdk = {
   agent_orchestration: OrchestrationEngine;
@@ -24,6 +30,27 @@ const getNumber = (value: unknown, fallback: number): number => {
   const numberValue = stringValue ? Number(stringValue) : fallback;
 
   return Number.isFinite(numberValue) ? numberValue : fallback;
+};
+
+const getAuthenticatedUser = (
+  user: Express.Request["user"],
+): AuthenticatedUser => {
+  if (!user) {
+    throw new ApiGatewayException({
+      public_message: "Unauthorized",
+      status_code: HttpStatusCode.UNAUTHORIZED,
+    });
+  }
+
+  return user;
+};
+
+const validateProjectAccess = async (
+  projects: ProjectsSdk,
+  user: AuthenticatedUser,
+  project_id: string,
+): Promise<void> => {
+  await projects.getProject(user, project_id);
 };
 
 const validateChatOwnership = async (
@@ -62,12 +89,16 @@ const validateTurnOwnership = async (
 export const addProjectChatRoutes = (
   app: Express,
   agent_orchestration: OrchestrationEngine,
+  projects: ProjectsSdk,
 ) => {
   // GET /api/v1/projects/:project_id/chats
   app.get(
     "/api/v1/projects/:project_id/chats",
     asyncRoute(async (req, res) => {
       const project_id = req.params.project_id as string;
+      const user = getAuthenticatedUser(req.user);
+
+      await validateProjectAccess(projects, user, project_id);
 
       const filters: { project_ids?: string[] } = {
         project_ids: [project_id],
@@ -94,10 +125,13 @@ export const addProjectChatRoutes = (
     "/api/v1/projects/:project_id/chats",
     asyncRoute(async (req, res) => {
       const project_id = req.params.project_id as string;
+      const user = getAuthenticatedUser(req.user);
       const { name, description } = req.body as {
         name: string;
         description?: string | null;
       };
+
+      await validateProjectAccess(projects, user, project_id);
 
       const session =
         await agent_orchestration.chat_sessions.createChatSessionWithDefaultAgentConfig(
@@ -114,7 +148,9 @@ export const addProjectChatRoutes = (
     asyncRoute(async (req, res) => {
       const project_id = req.params.project_id as string;
       const chat_id = req.params.chat_id as string;
+      const user = getAuthenticatedUser(req.user);
 
+      await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(agent_orchestration, project_id, chat_id);
 
       const { message, mode } = req.body as {
@@ -132,7 +168,7 @@ export const addProjectChatRoutes = (
       const turnId = await agent_orchestration.agent_chat.createChatTurn(
         chat_id,
         { user_input, mode: mode ?? "execution" },
-        { project_id },
+        { project_id, user },
       );
 
       res.status(201).json({ id: turnId });
@@ -146,7 +182,9 @@ export const addProjectChatRoutes = (
       const project_id = req.params.project_id as string;
       const chat_id = req.params.chat_id as string;
       const turn_id = req.params.turn_id as string;
+      const user = getAuthenticatedUser(req.user);
 
+      await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(agent_orchestration, project_id, chat_id);
 
       const status = await validateTurnOwnership(
@@ -165,7 +203,9 @@ export const addProjectChatRoutes = (
     asyncRoute(async (req, res) => {
       const project_id = req.params.project_id as string;
       const chat_id = req.params.chat_id as string;
+      const user = getAuthenticatedUser(req.user);
 
+      await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(agent_orchestration, project_id, chat_id);
 
       const result =
@@ -189,7 +229,9 @@ export const addProjectChatRoutes = (
       const project_id = req.params.project_id as string;
       const chat_id = req.params.chat_id as string;
       const turn_id = req.params.turn_id as string;
+      const user = getAuthenticatedUser(req.user);
 
+      await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(agent_orchestration, project_id, chat_id);
       await validateTurnOwnership(agent_orchestration, chat_id, turn_id);
 
@@ -240,7 +282,7 @@ export const addProjectChatRoutes = (
         agent_orchestration.agent_chat.executeChatTurn(
           chat_id,
           turn_id,
-          { project_id },
+          { project_id, user },
         );
 
         req.on("close", () => {

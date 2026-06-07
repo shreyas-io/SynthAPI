@@ -11,6 +11,7 @@ const toUser = (row: UserRow): User => ({
   email: row.email,
   display_name: row.display_name,
   avatar_url: row.avatar_url,
+  default_organization_id: row.default_organization_id,
   created_at: row.created_at,
   updated_at: row.updated_at,
 });
@@ -78,6 +79,9 @@ export const UsersRepository = (ctx: ServerContext): IUsersRepository => ({
       .executeTakeFirstOrThrow();
 
     return toUser(row);
+  },
+  async update(id, input): Promise<void> {
+    await ctx.db.updateTable("users").set(input).where("id", "=", id).execute();
   },
   list: list(ctx),
 });
