@@ -62,6 +62,17 @@ const toSerializableValue = (value: unknown): unknown => {
   return value;
 };
 
+const destroyPyProxy = (value: unknown): void => {
+  if (
+    value &&
+    typeof value === "object" &&
+    "destroy" in value &&
+    typeof value.destroy === "function"
+  ) {
+    value.destroy();
+  }
+};
+
 const boot = async (): Promise<void> => {
   pyodide = await loadPyodide({
     indexURL: data.pyodide_index_url ?? getLocalPyodideIndexUrl(),
@@ -97,13 +108,31 @@ port.on("message", async (message: PyodideWorkerInboundMessage) => {
       await pyodide.loadPackagesFromImports(message.input.code);
     }
 
-    globals = message.input.context
-      ? pyodide.toPy(message.input.context)
-      : undefined;
+    const execution_context = message.input.context ?? {};
+    const context = {
+      ...execution_context,
+      execution_context,
+    };
 
-    const result = await pyodide.runPythonAsync(message.input.code, {
+    globals = pyodide.toPy(context);
+
+    const script_result = await pyodide.runPythonAsync(message.input.code, {
       ...(globals ? { globals } : {}),
     });
+    const has_main = Boolean(
+      await pyodide.runPythonAsync('callable(globals().get("main"))', {
+        ...(globals ? { globals } : {}),
+      }),
+    );
+    const result = has_main
+      ? await pyodide.runPythonAsync("main(execution_context)", {
+          ...(globals ? { globals } : {}),
+        })
+      : script_result;
+
+    if (has_main) {
+      destroyPyProxy(script_result);
+    }
 
     send({
       type: "result",

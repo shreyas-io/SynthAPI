@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 
 import { JsonInput } from "../../../components/atoms/JsonInput";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
@@ -24,6 +24,9 @@ type MockApiResponseEditorProps = {
   submitLabel: string;
   isPending: boolean;
   errorMessage?: string | undefined;
+  isDeleting?: boolean;
+  deleteErrorMessage?: string | undefined;
+  onDelete?: () => void;
   onSubmit: (input: Omit<MockApiResponseInput, "mock_api_id">) => void;
 };
 
@@ -279,6 +282,9 @@ export function MockApiResponseEditor({
   submitLabel,
   isPending,
   errorMessage,
+  isDeleting = false,
+  deleteErrorMessage,
+  onDelete,
   onSubmit,
 }: MockApiResponseEditorProps) {
   const initialBody = initialResponse?.response.body ?? {
@@ -403,6 +409,17 @@ export function MockApiResponseEditor({
             </button>
           </div>
           <div className="toolbar-actions">
+             {onDelete && (
+               <button
+                 type="button"
+                 className="button danger-btn compact-action"
+                 disabled={isPending || isDeleting}
+                 onClick={onDelete}
+               >
+                 <Trash2 size={14} />
+                 {isDeleting ? "Deleting..." : "Delete"}
+               </button>
+             )}
              <button
                className="compact-action icon-only-action"
                disabled={isPending || !mockApiId}
@@ -540,8 +557,10 @@ export function MockApiResponseEditor({
           )}
         </div>
 
-        {(formError || errorMessage) && (
-          <p className="error">{formError ?? errorMessage}</p>
+        {(formError || errorMessage || deleteErrorMessage) && (
+          <p className="error">
+            {formError ?? errorMessage ?? deleteErrorMessage}
+          </p>
         )}
       </section>
     </form>

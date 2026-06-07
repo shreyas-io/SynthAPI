@@ -7,6 +7,7 @@ import {
 } from "../../../exceptions/exception";
 import type { ExecutionContextEt } from "../../../entities/execution_context";
 import type { PostResponseActionsEt } from "../../../entities/mock_api_response/post_response_actions";
+import { postResponseActionsSchema } from "../../../entities/mock_api_response/post_response_actions_schema";
 import {
   GLOBAL_VARIABLE_TTL_SECONDS,
   getGlobalVarKey,
@@ -123,28 +124,42 @@ export const executePostResponseActions = async (
 
     if (input.allow_scripts === false) {
       throw new MockApiException({
-        public_message: "Nested script post-response actions are not supported.",
+        public_message:
+          "Nested script post-response actions are not supported.",
         status_code: HttpStatusCode.BAD_REQUEST,
       });
     }
 
-    const { result } = await ctx.pyodide.execute({
+    if (!action.code) {
+      throw new MockApiException({
+        public_message:
+          "Script post-response action is missing the 'code' field.",
+        status_code: HttpStatusCode.BAD_REQUEST,
+      });
+    }
+
+    const resp = await ctx.pyodide.execute({
       code: action.code,
       timeout_ms: 5000,
       context: input.execution_context,
     });
+    const parsedResult = postResponseActionsSchema.safeParse(resp.result);
 
-    if (!Array.isArray(result)) {
+    if (!parsedResult.success) {
       throw new MockApiException({
-        public_message:
-          "Script post-response action must return an array of actions.",
+        public_message: `Script post-response action must return an array of valid actions: ${parsedResult.error.issues
+          .map((issue) => {
+            const path = issue.path.length ? issue.path.join(".") : "result";
+            return `${path}: ${issue.message}`;
+          })
+          .join("; ")}`,
         status_code: HttpStatusCode.BAD_REQUEST,
       });
     }
 
     await executePostResponseActions(ctx, {
       ...input,
-      actions: result as PostResponseActionsEt,
+      actions: parsedResult.data as PostResponseActionsEt,
       allow_scripts: false,
     });
   }

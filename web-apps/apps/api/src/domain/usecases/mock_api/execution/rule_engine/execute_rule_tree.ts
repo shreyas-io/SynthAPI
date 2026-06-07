@@ -10,6 +10,7 @@ export async function executeRuleTree(
 ): Promise<{ result: boolean }> {
   if (tree.type === "and") {
     for (const predicate of tree.predicates) {
+      // TODO: run in parallel
       if (!(await executePredicate(app, predicate, execution_context))) {
         return { result: false };
       }
@@ -26,6 +27,7 @@ export async function executeRuleTree(
     return { result: true };
   }
 
+  // TODO: Use Promise.race
   for (const predicate of tree.predicates) {
     if (await executePredicate(app, predicate, execution_context)) {
       return { result: true };

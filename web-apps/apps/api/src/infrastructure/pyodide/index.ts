@@ -140,7 +140,7 @@ export class PyodideWorkerPool {
       return Promise.reject(new Error("Pyodide worker pool is closed"));
     }
 
-    if (!input.code.trim()) {
+    if (!input.code || !input.code.trim()) {
       return Promise.reject(new Error("Python code cannot be empty"));
     }
 

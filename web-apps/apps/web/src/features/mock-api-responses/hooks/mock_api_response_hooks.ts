@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../../lib/query/query_keys";
 import {
   createMockApiResponse,
+  deleteMockApiResponse,
   getMockApiResponse,
   listMockApiResponses,
   updateMockApiResponse,
@@ -67,6 +68,27 @@ export const useUpdateMockApiResponse = (
       });
       await queryClient.invalidateQueries({
         queryKey: queryKeys.mockApiResponses(mockApiId),
+      });
+    },
+  });
+};
+
+export const useDeleteMockApiResponse = (
+  mockApiId: string | undefined,
+  responseId: string | undefined,
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => deleteMockApiResponse(mockApiId!, responseId!),
+    async onSuccess() {
+      if (!mockApiId || !responseId) return;
+
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.mockApiResponses(mockApiId),
+      });
+      queryClient.removeQueries({
+        queryKey: queryKeys.mockApiResponse(mockApiId, responseId),
       });
     },
   });

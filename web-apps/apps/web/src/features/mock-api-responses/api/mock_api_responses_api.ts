@@ -37,3 +37,12 @@ export const updateMockApiResponse = (
     body: input,
   });
 };
+
+export const deleteMockApiResponse = (
+  mockApiId: string,
+  responseId: string,
+): Promise<void> => {
+  return apiRequest(`/api/v1/mock-apis/${mockApiId}/responses/${responseId}`, {
+    method: "DELETE",
+  });
+};
