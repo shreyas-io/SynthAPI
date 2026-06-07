@@ -16,6 +16,7 @@ export type Project = {
 export type ProjectInput = {
   name: string;
   description: string;
+  organization_id?: string;
   globals?: Variable[];
   constants?: Variable[];
 };

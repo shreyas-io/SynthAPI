@@ -1,9 +1,11 @@
 import { Link } from "react-router";
 
+import { useSelectedOrganization } from "../../../app/context/OrganizationContext";
 import { useProjects } from "../hooks/project_hooks";
 
 export function ProjectsPage() {
-  const projects = useProjects();
+  const { selectedOrganizationId } = useSelectedOrganization();
+  const projects = useProjects(selectedOrganizationId ?? "");
 
   return (
     <main className="page">

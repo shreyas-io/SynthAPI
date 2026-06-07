@@ -1,20 +1,24 @@
 import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { useSelectedOrganization } from "../../../app/context/OrganizationContext";
 import { useCreateProject } from "../hooks/project_hooks";
 
 export function NewProjectPage() {
   const navigate = useNavigate();
+  const { selectedOrganizationId } = useSelectedOrganization();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const mutation = useCreateProject();
+  const mutation = useCreateProject(selectedOrganizationId ?? "");
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (!selectedOrganizationId) return;
     mutation.mutate(
       {
         name,
         description,
+        organization_id: selectedOrganizationId,
         globals: [],
         constants: [],
       },
@@ -43,7 +47,9 @@ export function NewProjectPage() {
           />
         </label>
         {mutation.isError && <p className="error">{mutation.error.message}</p>}
-        <button disabled={mutation.isPending}>Create project</button>
+        <button disabled={mutation.isPending || !selectedOrganizationId}>
+          Create project
+        </button>
       </form>
     </main>
   );

@@ -4,5 +4,6 @@ packages:
 allowBuilds:
   argon2: true
   esbuild: true
+  msgpackr-extract: false
   sharp: true
   workerd: true

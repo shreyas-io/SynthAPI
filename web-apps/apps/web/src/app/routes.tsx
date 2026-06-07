@@ -7,6 +7,7 @@ import { MockApiResponseDetailPage } from "../features/mock-api-responses/pages/
 import { NewMockApiResponsePage } from "../features/mock-api-responses/pages/NewMockApiResponsePage";
 import { MockApiDetailPage } from "../features/mock-apis/pages/MockApiDetailPage";
 import { NewMockApiPage } from "../features/mock-apis/pages/NewMockApiPage";
+import { ProfilePage } from "../features/profile/pages/ProfilePage";
 import { NewProjectPage } from "../features/projects/pages/NewProjectPage";
 import { ProjectDetailPage } from "../features/projects/pages/ProjectDetailPage";
 import { ProjectsPage } from "../features/projects/pages/ProjectsPage";
@@ -20,6 +21,7 @@ export function AppRoutes() {
       <Route path="/signup" element={<SignupPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
+          <Route path="/profile" element={<ProfilePage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<NewProjectPage />} />
           

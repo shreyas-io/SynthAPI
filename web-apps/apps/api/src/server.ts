@@ -17,6 +17,7 @@ import { addRoutes } from "./presentation";
 import { addProjectSlugRouter } from "./presentation/public_mock_apis";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import { createDatabaseClient } from "./infrastructure/kysely";
+import { startDomainJobs } from "./domain/jobs";
 import type { IKeyValueStore } from "./domain/interfaces/kv_store";
 import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bus";
 import { asyncRoute } from "./middleware/async_route";
@@ -53,7 +54,6 @@ export const createApiApp = async (): Promise<ApiApp> => {
   });
 
   const agentEventBus = InMemoryEventBus();
-
   const appContext: AppContext = {
     db: dbClient.db,
     kvStore: keyValueStore,
@@ -61,6 +61,10 @@ export const createApiApp = async (): Promise<ApiApp> => {
     env: secrets,
     eventBus: agentEventBus,
   };
+  const domainJobs = await startDomainJobs({
+    ctx: appContext,
+    secrets,
+  });
 
   /**
    * TODO: create different DB users for both
@@ -101,6 +105,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   return {
     app,
     async destroy() {
+      await domainJobs.destroy();
       await dbClient.destroy();
       await keyValueStore.destroy();
       await pyodide.destroy();

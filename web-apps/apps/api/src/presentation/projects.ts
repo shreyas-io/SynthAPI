@@ -60,6 +60,7 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
           slug: getProjectSlug(input.name),
           name: input.name,
           description: input.description,
+          organization_id: input.organization_id,
           globals: input.globals ?? null,
           constants: input.constants ?? null,
         },
@@ -73,10 +74,19 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
     asyncRoute(async (req, res) => {
       const filters: {
         ids?: string[];
+        organization_id?: string;
         slug?: string;
         name?: string;
         description?: string;
       } = {};
+      const organization_id = getString(req.query.organization_id);
+      if (!organization_id) {
+        res.json([]);
+        return;
+      }
+
+      filters.organization_id = organization_id;
+
       const ids = getStringArray(req.query.id);
       const slug = getString(req.query.slug);
       const name = getString(req.query.name);
