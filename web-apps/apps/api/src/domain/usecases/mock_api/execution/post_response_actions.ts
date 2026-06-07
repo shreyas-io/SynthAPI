@@ -15,6 +15,7 @@ import {
   LOCAL_VARIABLE_TTL_SECONDS,
 } from "./context";
 import { recursivelyMapTemplateParams } from "../utils/template_params";
+import { z } from "zod";
 
 type PostResponseAction = PostResponseActionsEt[number];
 
@@ -147,12 +148,7 @@ export const executePostResponseActions = async (
 
     if (!parsedResult.success) {
       throw new MockApiException({
-        public_message: `Script post-response action must return an array of valid actions: ${parsedResult.error.issues
-          .map((issue) => {
-            const path = issue.path.length ? issue.path.join(".") : "result";
-            return `${path}: ${issue.message}`;
-          })
-          .join("; ")}`,
+        public_message: `Script post-response action must return an array of valid actions: ${JSON.stringify(z.treeifyError(parsedResult.error))})`,
         status_code: HttpStatusCode.BAD_REQUEST,
       });
     }
