@@ -16,7 +16,7 @@ export async function executeRuleTree(
       }
     }
 
-    for (const child of tree.children) {
+    for (const child of tree.children ?? []) {
       const { result } = await executeRuleTree(app, child, execution_context);
 
       if (!result) {
@@ -34,7 +34,7 @@ export async function executeRuleTree(
     }
   }
 
-  for (const child of tree.children) {
+  for (const child of tree.children ?? []) {
     const { result } = await executeRuleTree(app, child, execution_context);
 
     if (result) {

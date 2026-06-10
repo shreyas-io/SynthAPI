@@ -4,6 +4,10 @@ export const queryKeys = {
   profile: ["profile"] as const,
   organizationCredits: (organizationId: string) =>
     ["organizations", organizationId, "credits"] as const,
+  organizationMembers: (organizationId: string) =>
+    ["organizations", organizationId, "members"] as const,
+  organizationInvites: (organizationId: string) =>
+    ["organizations", organizationId, "invites"] as const,
   projectListRoot: (organizationId: string) => ["projects", organizationId] as const,
   projects: (
     organizationId: string,

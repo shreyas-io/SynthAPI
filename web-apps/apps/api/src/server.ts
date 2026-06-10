@@ -20,6 +20,8 @@ import { createDatabaseClient } from "./infrastructure/kysely";
 import { startDomainJobs } from "./domain/jobs";
 import type { IKeyValueStore } from "./domain/interfaces/kv_store";
 import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bus";
+import type { EmailService } from "./domain/interfaces/email_service";
+import { MailgunEmailService } from "./infrastructure/email/mailgun_email_service";
 import { asyncRoute } from "./middleware/async_route";
 
 type ApiApp = {
@@ -33,6 +35,7 @@ export type AppContext = {
   pyodide: PyodideWorkerPool;
   env: Awaited<ReturnType<typeof getSecrets>>;
   eventBus: IEventBus;
+  emailService: EmailService;
 };
 
 export const createApiApp = async (): Promise<ApiApp> => {
@@ -54,12 +57,14 @@ export const createApiApp = async (): Promise<ApiApp> => {
   });
 
   const agentEventBus = InMemoryEventBus();
+  const emailService = createEmailService(secrets);
   const appContext: AppContext = {
     db: dbClient.db,
     kvStore: keyValueStore,
     pyodide: pyodide,
     env: secrets,
     eventBus: agentEventBus,
+    emailService,
   };
   const domainJobs = await startDomainJobs({
     ctx: appContext,
@@ -112,6 +117,20 @@ export const createApiApp = async (): Promise<ApiApp> => {
     },
   };
 };
+
+function createEmailService(
+  secrets: Awaited<ReturnType<typeof getSecrets>>,
+): EmailService {
+  return new MailgunEmailService({
+    apiKey: secrets.MAILGUN_API_KEY,
+    domain: secrets.MAILGUN_DOMAIN,
+    ...(secrets.MAILGUN_BASE_URL
+      ? { baseUrl: secrets.MAILGUN_BASE_URL }
+      : undefined),
+    from: secrets.EMAIL_FROM,
+    ...(secrets.EMAIL_REPLY_TO ? { replyTo: secrets.EMAIL_REPLY_TO } : undefined),
+  });
+}
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";

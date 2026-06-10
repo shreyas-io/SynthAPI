@@ -42,3 +42,23 @@ export type Profile = {
   user: ProfileUser;
   organizations: ProfileOrganization[];
 };
+
+export type OrganizationMember = {
+  id: string;
+  display_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  role: "owner" | "admin" | "member";
+  status: "active" | "stale";
+  joined_at: string;
+};
+
+export type OrganizationInvite = {
+  id: string;
+  email: string;
+  role: "owner" | "admin" | "member";
+  status: "pending" | "accepted" | "expired" | "revoked";
+  expires_at: string;
+  created_at: string;
+  invited_by_name: string | null;
+};

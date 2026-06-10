@@ -10,7 +10,6 @@ import { useState, type PointerEvent } from "react";
 
 import { ProjectAgentChatPanel } from "../../features/agent-chat/components/ProjectAgentChatPanel";
 
-const DEFAULT_CHAT_WIDTH = 380;
 const MIN_CHAT_WIDTH = 280;
 
 const clampChatWidth = (width: number) => {
@@ -24,7 +23,7 @@ export function ProjectWorkspaceLayout() {
   const [chatOpen, setChatOpen] = useState(() =>
     new URLSearchParams(location.search).has("chat_id"),
   );
-  const [chatWidth, setChatWidth] = useState(DEFAULT_CHAT_WIDTH);
+  const [chatWidth, setChatWidth] = useState(() => clampChatWidth(620));
 
   const startResize = (event: PointerEvent<HTMLDivElement>) => {
     event.preventDefault();

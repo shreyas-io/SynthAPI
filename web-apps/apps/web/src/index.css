@@ -185,8 +185,10 @@ button:disabled,
   color: var(--color-text);
 }
 
-button:hover,
-.button:hover {
+button:not([class]):hover,
+.button:not(.primary-btn):not(.secondary-btn):not(.danger-btn):not(
+    .purple-btn
+  ):not(.success-btn):hover {
   opacity: 0.95;
   background: var(--color-accent-hover);
 }
@@ -405,7 +407,7 @@ textarea {
 .brand-logo-icon {
   width: 1.15rem;
   height: 1.15rem;
-  color: #000000;
+  color: var(--color-primary);
 }
 
 .app-content-wrapper {
@@ -1028,6 +1030,21 @@ h3 {
   line-height: 1;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+
+.pill-owner {
+  background: rgba(253, 151, 31, 0.14);
+  color: #fd971f;
+}
+
+.pill-admin {
+  background: rgba(174, 129, 255, 0.14);
+  color: #ae81ff;
+}
+
+.pill-member {
+  background: rgba(102, 217, 239, 0.14);
+  color: #66d9ef;
 }
 
 .method-pill {
@@ -2234,16 +2251,17 @@ h3 {
 .terminal-chat-bar {
   width: 2.9rem;
   height: 100%;
-  border: 1px solid var(--color-border-strong);
-  background-color: #050505;
-  background-image: linear-gradient(
-    180deg,
-    rgba(102, 217, 239, 0.1) 0%,
-    rgba(102, 217, 239, 0.55) 32%,
-    rgba(174, 129, 255, 0.55) 62%,
-    rgba(174, 129, 255, 0.1) 100%
-  );
-  background-size: 100% 220%;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#050505, #050505) padding-box,
+    linear-gradient(
+        180deg,
+        rgba(102, 217, 239, 0.5) 0%,
+        rgba(102, 217, 239, 0.95) 32%,
+        rgba(174, 129, 255, 0.95) 62%,
+        rgba(174, 129, 255, 0.5) 100%
+      )
+      border-box;
   color: var(--color-text);
   display: flex;
   align-items: center;
@@ -2255,10 +2273,9 @@ h3 {
   font-size: 0.8rem;
   font-weight: 600;
   box-shadow:
-    1px 0 14px rgba(102, 217, 239, 0.14),
-    1px 0 22px rgba(174, 129, 255, 0.1);
+    1px 0 12px rgba(102, 217, 239, 0.08),
+    1px 0 18px rgba(174, 129, 255, 0.08);
   flex-shrink: 0;
-  animation: terminalBarGradient 8s ease-in-out infinite;
 }
 
 .terminal-chat-bar {
@@ -2267,29 +2284,19 @@ h3 {
 }
 
 .terminal-chat-bar:hover {
-  background-image: linear-gradient(
-    180deg,
-    rgba(102, 217, 239, 0.2) 0%,
-    rgba(102, 217, 239, 0.7) 32%,
-    rgba(174, 129, 255, 0.7) 62%,
-    rgba(174, 129, 255, 0.2) 100%
-  );
-  background-size: 100% 220%;
+  background:
+    linear-gradient(#080808, #080808) padding-box,
+    linear-gradient(
+        180deg,
+        rgba(102, 217, 239, 0.62) 0%,
+        rgba(102, 217, 239, 1) 32%,
+        rgba(174, 129, 255, 1) 62%,
+        rgba(174, 129, 255, 0.62) 100%
+      )
+      border-box;
   box-shadow:
-    1px 0 18px rgba(102, 217, 239, 0.22),
-    1px 0 28px rgba(174, 129, 255, 0.16);
-}
-
-@keyframes terminalBarGradient {
-  0% {
-    background-position: 50% 0%;
-  }
-  50% {
-    background-position: 50% 100%;
-  }
-  100% {
-    background-position: 50% 0%;
-  }
+    1px 0 16px rgba(102, 217, 239, 0.14),
+    1px 0 24px rgba(174, 129, 255, 0.12);
 }
 
 .terminal-chat-title,
@@ -2492,7 +2499,7 @@ h3 {
 .org-list {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
 }
 
 .org-card {
@@ -2533,6 +2540,101 @@ h3 {
   display: flex;
   justify-content: flex-end;
   margin-top: 0.25rem;
+}
+
+.org-access-panel {
+  margin-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.85rem;
+}
+
+.org-access-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.org-access-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.org-access-content {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.85rem;
+}
+
+.org-invite-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.org-access-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.org-access-section {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem;
+  background: var(--color-surface);
+}
+
+.org-access-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.org-access-heading h3 {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.org-access-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.org-access-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-subtle);
+}
+
+.org-access-row-copy {
+  display: grid;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.org-access-row-copy strong,
+.org-access-row-copy span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.org-access-row-copy strong {
+  color: var(--color-text);
+  font-size: 0.84rem;
+}
+
+.org-access-row-copy span {
+  color: var(--color-text-secondary);
+  font-size: 0.77rem;
 }
 
 .profile-create-org {
@@ -2604,6 +2706,15 @@ h3 {
   .key-value-row {
     grid-template-columns: 1fr;
   }
+
+  .org-invite-form {
+    grid-template-columns: 1fr;
+  }
+
+  .org-list {
+    grid-template-columns: 1fr;
+  }
+
   .mock-api-left-pane {
     position: static;
     border-right: none;

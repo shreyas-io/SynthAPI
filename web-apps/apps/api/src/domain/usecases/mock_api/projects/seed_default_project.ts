@@ -151,7 +151,7 @@ export async function seed_default_project(
       {
         type: "script",
         language: "python",
-        code: `[
+        code: `return [
   {"type": "set", "scope": "global", "key": "last_script_action", "value": "post_created_script", "order": 1}
 ]`,
         order: 4,

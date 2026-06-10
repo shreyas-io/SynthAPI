@@ -94,6 +94,10 @@ export const getActiveOrganizationPlan = async (
     .executeTakeFirst();
 };
 
+/**
+ * Checks if an organisation has an active plan and
+ * active members count is less than allowed threshold
+ */
 export const assertOrganizationCanAddMember = async (
   db: DatabaseExecutor,
   organization_id: string,

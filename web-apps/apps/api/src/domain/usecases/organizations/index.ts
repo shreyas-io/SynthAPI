@@ -1,10 +1,13 @@
+import { sql } from "kysely";
 import type { AppContext } from "../../../server";
 import type { AuthenticatedUser } from "../../entities/authenticated_user";
+import { OrganizationInviteEt } from "../../entities/organization";
 import { HttpStatusCode, MockApiException } from "../../exceptions/exception";
 import { seed_default_project } from "../mock_api/projects/seed_default_project";
 import {
   createOrganizationPlanSubscription,
   getOrganizationAiCreditBalance,
+  assertOrganizationCanAddMember,
 } from "./plans";
 
 const MAX_OWNED_ORGANIZATIONS = 3;
@@ -40,6 +43,27 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
     }
 
     return organization;
+  };
+
+  const getMembership = async (
+    user: AuthenticatedUser,
+    organization_id: string,
+  ) => {
+    const membership = await ctx.db
+      .selectFrom("organization_memberships")
+      .select(["role", "status", "created_at"])
+      .where("organization_id", "=", organization_id)
+      .where("user_id", "=", user.id)
+      .executeTakeFirst();
+
+    if (!membership || membership.status !== "active") {
+      throw new MockApiException({
+        public_message: "You are not an active member of this organization.",
+        status_code: HttpStatusCode.FORBIDDEN,
+      });
+    }
+
+    return membership;
   };
 
   const getDefaultOrganizationId = async (
@@ -229,6 +253,339 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
         .set({ deleted_at: null })
         .where("id", "=", organization_id)
         .execute();
+    },
+    addMember: async (
+      user: AuthenticatedUser,
+      organization_id: string,
+      target_user_email: string,
+      role: "admin" | "member",
+    ) => {
+      const membership = await getMembership(user, organization_id);
+
+      if (membership.role === "member") {
+        throw new MockApiException({
+          public_message: "Only owners and admins can invite members.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      if (membership.role !== "owner" && role !== "member") {
+        throw new MockApiException({
+          public_message: "Only owners can invite admins.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      const organization = await ctx.db
+        .selectFrom("organizations")
+        .select(["name", "is_default_for_owner"])
+        .where("id", "=", organization_id)
+        .executeTakeFirstOrThrow();
+
+      if (organization.is_default_for_owner) {
+        throw new MockApiException({
+          public_message:
+            "Members cannot be invited to a default organization.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      await assertOrganizationCanAddMember(ctx.db, organization_id);
+
+      // Check if user is already a member
+      const targetUser = await ctx.db
+        .selectFrom("users")
+        .select("id")
+        .where("email", "=", target_user_email)
+        .executeTakeFirst();
+
+      if (targetUser) {
+        const existingMembership = await ctx.db
+          .selectFrom("organization_memberships")
+          .select(sql<number>`count(*)::int`.as("count"))
+          .where("organization_id", "=", organization_id)
+          .where("user_id", "=", targetUser.id)
+          .executeTakeFirst();
+
+        if (existingMembership?.count && existingMembership?.count > 0) {
+          throw new MockApiException({
+            public_message: "User is already a member of this organization.",
+            status_code: HttpStatusCode.CONFLICT,
+          });
+        }
+      }
+
+      // Check for existing pending invite
+      const existingInvite = await ctx.db
+        .selectFrom("organization_invites")
+        .select("id")
+        .where("organization_id", "=", organization_id)
+        .where("email", "=", target_user_email)
+        .where("status", "=", "pending")
+        .executeTakeFirst();
+
+      if (existingInvite) {
+        throw new MockApiException({
+          public_message: "An invite is already pending for this email.",
+          status_code: HttpStatusCode.CONFLICT,
+        });
+      }
+
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      const invite = await ctx.db
+        .insertInto("organization_invites")
+        .values({
+          organization_id,
+          email: target_user_email,
+          invited_by_user_id: user.id,
+          role,
+          status: "pending",
+          expires_at: expiresAt,
+        })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+      await ctx.emailService.sendOrganizationInvite({
+        to: target_user_email,
+        organizationName: organization.name,
+        invitedBy: user.display_name ?? (user.email || "Someone"),
+        inviteUrl: `${ctx.env.WEB_APP_BASE_URL}/invites/${invite.id}`,
+      });
+
+      return invite;
+    },
+    acceptInvite: async (user: AuthenticatedUser, inviteId: string) => {
+      const invite = await ctx.db
+        .selectFrom("organization_invites")
+        .selectAll()
+        .where("id", "=", inviteId)
+        .executeTakeFirst();
+
+      if (!invite) {
+        throw new MockApiException({
+          public_message: "Invite not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      if (invite.status !== "pending" || invite.expires_at <= new Date()) {
+        throw new MockApiException({
+          public_message: "Invite is no longer valid.",
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
+      if (invite.email !== user.email) {
+        throw new MockApiException({
+          public_message: "This invite was not sent to your email address.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      await ctx.db.transaction().execute(async (trx) => {
+        await assertOrganizationCanAddMember(trx, invite.organization_id);
+
+        await trx
+          .insertInto("organization_memberships")
+          .values({
+            organization_id: invite.organization_id,
+            user_id: user.id,
+            role: invite.role,
+            status: "active",
+          })
+          .execute();
+
+        await trx
+          .updateTable("organization_invites")
+          .set({ status: "accepted" })
+          .where("id", "=", inviteId)
+          .execute();
+      });
+    },
+    revokeInvite: async (
+      user: AuthenticatedUser,
+      organization_id: string,
+      inviteId: string,
+    ) => {
+      const membership = await getMembership(user, organization_id);
+
+      if (membership.role !== "owner" && membership.role !== "admin") {
+        throw new MockApiException({
+          public_message: "Only owners and admins can revoke invites.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      const invite = await ctx.db
+        .selectFrom("organization_invites")
+        .select(["role"])
+        .where("id", "=", inviteId)
+        .where("organization_id", "=", organization_id)
+        .executeTakeFirst();
+
+      if (!invite) {
+        throw new MockApiException({
+          public_message: "Invite not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      if (membership.role === "admin" && invite.role !== "member") {
+        throw new MockApiException({
+          public_message: "Admins can only revoke member invites.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      await ctx.db
+        .updateTable("organization_invites")
+        .set({ status: "revoked" })
+        .where("id", "=", inviteId)
+        .execute();
+    },
+    removeMember: async (
+      user: AuthenticatedUser,
+      organization_id: string,
+      target_user_id: string,
+    ) => {
+      const membership = await getMembership(user, organization_id);
+
+      if (membership.role !== "owner" && membership.role !== "admin") {
+        throw new MockApiException({
+          public_message: "Only owners and admins can remove members.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      const targetMembership = await ctx.db
+        .selectFrom("organization_memberships")
+        .select(["role"])
+        .where("organization_id", "=", organization_id)
+        .where("user_id", "=", target_user_id)
+        .executeTakeFirst();
+
+      if (!targetMembership) {
+        throw new MockApiException({
+          public_message: "Member not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      if (membership.role === "admin") {
+        if (
+          targetMembership.role === "owner" ||
+          targetMembership.role === "admin"
+        ) {
+          throw new MockApiException({
+            public_message: "Admins can only remove members.",
+            status_code: HttpStatusCode.FORBIDDEN,
+          });
+        }
+      }
+
+      if (target_user_id === user.id && membership.role === "owner") {
+        throw new MockApiException({
+          public_message:
+            "Owner cannot remove themselves. Delete the organization instead.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      await ctx.db
+        .deleteFrom("organization_memberships")
+        .where("organization_id", "=", organization_id)
+        .where("user_id", "=", target_user_id)
+        .execute();
+    },
+    leaveOrganization: async (
+      user: AuthenticatedUser,
+      organization_id: string,
+    ) => {
+      const membership = await getMembership(user, organization_id);
+
+      if (membership.role === "owner") {
+        throw new MockApiException({
+          public_message:
+            "Owners cannot leave an organization they own. Delete it instead.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      await ctx.db
+        .deleteFrom("organization_memberships")
+        .where("organization_id", "=", organization_id)
+        .where("user_id", "=", user.id)
+        .execute();
+    },
+    getMembers: async (user: AuthenticatedUser, organization_id: string) => {
+      const membership = await getMembership(user, organization_id);
+      if (membership.role === "member") {
+        return [
+          {
+            avatar_url: user.avatar_url,
+            display_name: user.display_name,
+            email: user.email,
+            id: user.id,
+            joined_at: membership.created_at,
+            role: membership.role,
+            status: membership.status,
+          },
+        ];
+      }
+
+      const members = await ctx.db
+        .selectFrom("organization_memberships")
+        .innerJoin("users", "users.id", "organization_memberships.user_id")
+        .select([
+          "users.id as id",
+          "users.display_name as display_name",
+          "users.email as email",
+          "users.avatar_url as avatar_url",
+          "organization_memberships.role as role",
+          "organization_memberships.status as status",
+          "organization_memberships.created_at as joined_at",
+        ])
+        .where("organization_memberships.organization_id", "=", organization_id)
+        .where("organization_memberships.role", "in", ["admin", "owner"])
+        .execute();
+
+      return members;
+    },
+    getInvites: async (
+      user: AuthenticatedUser,
+      organization_id: string,
+      status: OrganizationInviteEt["status"],
+    ) => {
+      const membership = await getMembership(user, organization_id);
+      if (membership.role === "member") {
+        return [];
+      }
+
+      const invites = await ctx.db
+        .selectFrom("organization_invites")
+        .innerJoin(
+          "users",
+          "users.id",
+          "organization_invites.invited_by_user_id",
+        )
+        .select([
+          "organization_invites.id as id",
+          "organization_invites.email as email",
+          "organization_invites.role as role",
+          "organization_invites.status as status",
+          "organization_invites.expires_at as expires_at",
+          "organization_invites.created_at as created_at",
+          "users.display_name as invited_by_name",
+        ])
+        .where("organization_invites.organization_id", "=", organization_id)
+        .where("organization_invites.status", "=", "pending")
+        .where("organization_invites.expires_at", ">", new Date())
+        .where("organization_invites.status", "=", status)
+        .orderBy("organization_invites.created_at", "desc")
+        .execute();
+
+      return invites;
     },
   };
 };

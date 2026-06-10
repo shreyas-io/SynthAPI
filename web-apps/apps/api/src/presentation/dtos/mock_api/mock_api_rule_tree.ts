@@ -130,7 +130,7 @@ const mock_api_rule_node: z.ZodType<MockApiRuleNode> = z.lazy(() => {
     label: z.string(),
     type: z.enum(["and", "or"]),
     predicates: z.array(mock_api_predicate),
-    children: z.array(mock_api_rule_node),
+    children: z.array(mock_api_rule_node).optional(),
   });
 });
 

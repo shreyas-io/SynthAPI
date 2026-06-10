@@ -5,6 +5,7 @@ type ResourceCardProps = {
   to?: string;
   title: string;
   pill?: string;
+  pillClassName?: string;
   onDelete?: (() => void) | undefined;
   deleteLabel?: string | undefined;
   deleteDisabled?: boolean | undefined;
@@ -17,6 +18,7 @@ export function ResourceCard({
   to,
   title,
   pill,
+  pillClassName,
   onDelete,
   deleteLabel,
   deleteDisabled,
@@ -29,7 +31,7 @@ export function ResourceCard({
       <h2>{title}</h2>
       {pill && (
         <p>
-          <span className="pill">{pill}</span>
+          <span className={`pill ${pillClassName ?? ""}`.trim()}>{pill}</span>
         </p>
       )}
       {children}

@@ -8,7 +8,12 @@ import { getOrganizationAiCreditBalance } from "../domain/usecases/organizations
 import { OrganizationsUsecase } from "../domain/usecases/organizations";
 import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
-import { createOrganizationDto } from "./dtos/organizations";
+import {
+  createOrganizationDto,
+  addOrganizationMemberDto,
+  getInvitesQueryDto,
+} from "./dtos/organizations";
+import { z } from "zod";
 
 const getAuthenticatedUser = (user: Express.Request["user"]) => {
   if (!user) {
@@ -95,6 +100,123 @@ export const addOrganizationRoutes = (app: Express, ctx: AppContext) => {
       );
 
       res.json({});
+    }),
+  );
+
+  app.get(
+    "/api/v1/organizations/:organization_id/members",
+    asyncRoute(async (req, res) => {
+      const members = await organizations.getMembers(
+        getAuthenticatedUser(req.user),
+        req.params.organization_id as string,
+      );
+
+      res.json(members);
+    }),
+  );
+
+  app.get(
+    "/api/v1/organizations/:organization_id/invites",
+    asyncRoute(async (req, res) => {
+      const { success, error, data } = getInvitesQueryDto.safeParse(req.query);
+
+      if (!success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(z.treeifyError(error)),
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
+      const invites = await organizations.getInvites(
+        getAuthenticatedUser(req.user),
+        req.params.organization_id as string,
+        data.status,
+      );
+
+      res.json(invites);
+    }),
+  );
+
+  app.post(
+    "/api/v1/organizations/:organization_id/members",
+    asyncRoute(async (req, res) => {
+      const organization_id = req.params.organization_id as string;
+      const parsed = addOrganizationMemberDto.safeParse(req.body);
+
+      if (!parsed.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsed.error.issues),
+        });
+      }
+
+      await organizations.addMember(
+        getAuthenticatedUser(req.user),
+        organization_id,
+        parsed.data.email,
+        parsed.data.role,
+      );
+
+      res.status(201).json({});
+    }),
+  );
+
+  app.post(
+    "/api/v1/invites/:invite_id/accept",
+    asyncRoute(async (req, res) => {
+      const invite_id = req.params.invite_id as string;
+
+      await organizations.acceptInvite(
+        getAuthenticatedUser(req.user),
+        invite_id,
+      );
+
+      res.json({});
+    }),
+  );
+
+  app.delete(
+    "/api/v1/organizations/:organization_id/invites/:invite_id",
+    asyncRoute(async (req, res) => {
+      const organization_id = req.params.organization_id as string;
+      const invite_id = req.params.invite_id as string;
+
+      await organizations.revokeInvite(
+        getAuthenticatedUser(req.user),
+        organization_id,
+        invite_id,
+      );
+
+      res.status(204).send();
+    }),
+  );
+
+  app.delete(
+    "/api/v1/organizations/:organization_id/members/:user_id",
+    asyncRoute(async (req, res) => {
+      const organization_id = req.params.organization_id as string;
+      const user_id = req.params.user_id as string;
+
+      await organizations.removeMember(
+        getAuthenticatedUser(req.user),
+        organization_id,
+        user_id,
+      );
+
+      res.status(204).send();
+    }),
+  );
+
+  app.delete(
+    "/api/v1/organizations/:organization_id/membership",
+    asyncRoute(async (req, res) => {
+      const organization_id = req.params.organization_id as string;
+
+      await organizations.leaveOrganization(
+        getAuthenticatedUser(req.user),
+        organization_id,
+      );
+
+      res.status(204).send();
     }),
   );
 };

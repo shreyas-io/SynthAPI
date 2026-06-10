@@ -73,6 +73,17 @@ const destroyPyProxy = (value: unknown): void => {
   }
 };
 
+const INTERNAL_MAIN_FN = "__mock_stack_main__";
+
+const wrapScriptAsMain = (code: string): string => {
+  const indented_code = code
+    .split("\n")
+    .map((line) => `    ${line}`)
+    .join("\n");
+
+  return `def ${INTERNAL_MAIN_FN}(execution_context):\n${indented_code}\n`;
+};
+
 const boot = async (): Promise<void> => {
   pyodide = await loadPyodide({
     indexURL: data.pyodide_index_url ?? getLocalPyodideIndexUrl(),
@@ -116,23 +127,20 @@ port.on("message", async (message: PyodideWorkerInboundMessage) => {
 
     globals = pyodide.toPy(context);
 
-    const script_result = await pyodide.runPythonAsync(message.input.code, {
-      ...(globals ? { globals } : {}),
-    });
-    const has_main = Boolean(
-      await pyodide.runPythonAsync('callable(globals().get("main"))', {
+    const script_result = await pyodide.runPythonAsync(
+      wrapScriptAsMain(message.input.code),
+      {
         ...(globals ? { globals } : {}),
-      }),
+      },
     );
-    const result = has_main
-      ? await pyodide.runPythonAsync("main(execution_context)", {
-          ...(globals ? { globals } : {}),
-        })
-      : script_result;
+    const result = await pyodide.runPythonAsync(
+      `${INTERNAL_MAIN_FN}(execution_context)`,
+      {
+        ...(globals ? { globals } : {}),
+      },
+    );
 
-    if (has_main) {
-      destroyPyProxy(script_result);
-    }
+    destroyPyProxy(script_result);
 
     send({
       type: "result",

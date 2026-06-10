@@ -10,6 +10,7 @@ import type { MockApisTable } from "./mock_apis";
 import type {
   OrganizationCreditGrantsTable,
   OrganizationCreditUsagesTable,
+  OrganizationInvitesTable,
   OrganizationMembershipsTable,
   OrganizationPlanSubscriptionsTable,
   OrganizationsTable,
@@ -54,6 +55,7 @@ export type Database = {
   authorized_sessions: AuthorizedSessionsTable;
   organizations: OrganizationsTable;
   organization_memberships: OrganizationMembershipsTable;
+  organization_invites: OrganizationInvitesTable;
   plan_types: PlanTypesTable;
   organization_plan_subscriptions: OrganizationPlanSubscriptionsTable;
   organization_credit_grants: OrganizationCreditGrantsTable;
