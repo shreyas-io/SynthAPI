@@ -282,14 +282,6 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
         .where("id", "=", organization_id)
         .executeTakeFirstOrThrow();
 
-      if (organization.is_default_for_owner) {
-        throw new MockApiException({
-          public_message:
-            "Members cannot be invited to a default organization.",
-          status_code: HttpStatusCode.FORBIDDEN,
-        });
-      }
-
       await assertOrganizationCanAddMember(ctx.db, organization_id);
 
       // Check if user is already a member
