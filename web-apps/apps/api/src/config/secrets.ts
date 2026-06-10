@@ -22,17 +22,13 @@ const secretsSchema = z.object({
   GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
   GOOGLE_OAUTH_REDIRECT_URI: z.string(),
   WEB_APP_BASE_URL: z.string(),
-  MAILGUN_API_KEY: z.string(),
-  MAILGUN_DOMAIN: z.string(),
-  MAILGUN_BASE_URL: z.preprocess(
+  MAILERSEND_API_KEY: z.string(),
+  MAILERSEND_BASE_URL: z.preprocess(
     emptyStringToUndefined,
     z.string().url().optional(),
   ),
-  EMAIL_FROM: z.string().email(),
-  EMAIL_REPLY_TO: z.preprocess(
-    emptyStringToUndefined,
-    z.string().email().optional(),
-  ),
+  EMAIL_FROM: z.email(),
+  EMAIL_REPLY_TO: z.preprocess(emptyStringToUndefined, z.email().optional()),
   CORS_WHITELISTED_DOMAINS: z.string().transform((v) => {
     try {
       return v.split(",");

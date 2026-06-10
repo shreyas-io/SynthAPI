@@ -1,4 +1,4 @@
-export interface EmailService {
+export interface IEmailService {
   sendOrganizationInvite(params: {
     to: string;
     organizationName: string;

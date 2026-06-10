@@ -20,8 +20,8 @@ import { createDatabaseClient } from "./infrastructure/kysely";
 import { startDomainJobs } from "./domain/jobs";
 import type { IKeyValueStore } from "./domain/interfaces/kv_store";
 import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bus";
-import type { EmailService } from "./domain/interfaces/email_service";
-import { MailgunEmailService } from "./infrastructure/email/mailgun_email_service";
+import type { IEmailService } from "./domain/interfaces/email_service";
+import { MailerSendEmailService } from "./infrastructure/email/mailersend_email_service";
 import { asyncRoute } from "./middleware/async_route";
 
 type ApiApp = {
@@ -35,7 +35,7 @@ export type AppContext = {
   pyodide: PyodideWorkerPool;
   env: Awaited<ReturnType<typeof getSecrets>>;
   eventBus: IEventBus;
-  emailService: EmailService;
+  emailService: IEmailService;
 };
 
 export const createApiApp = async (): Promise<ApiApp> => {
@@ -120,15 +120,16 @@ export const createApiApp = async (): Promise<ApiApp> => {
 
 function createEmailService(
   secrets: Awaited<ReturnType<typeof getSecrets>>,
-): EmailService {
-  return new MailgunEmailService({
-    apiKey: secrets.MAILGUN_API_KEY,
-    domain: secrets.MAILGUN_DOMAIN,
-    ...(secrets.MAILGUN_BASE_URL
-      ? { baseUrl: secrets.MAILGUN_BASE_URL }
+): IEmailService {
+  return new MailerSendEmailService({
+    apiKey: secrets.MAILERSEND_API_KEY,
+    ...(secrets.MAILERSEND_BASE_URL
+      ? { baseUrl: secrets.MAILERSEND_BASE_URL }
       : undefined),
     from: secrets.EMAIL_FROM,
-    ...(secrets.EMAIL_REPLY_TO ? { replyTo: secrets.EMAIL_REPLY_TO } : undefined),
+    ...(secrets.EMAIL_REPLY_TO
+      ? { replyTo: secrets.EMAIL_REPLY_TO }
+      : undefined),
   });
 }
 
