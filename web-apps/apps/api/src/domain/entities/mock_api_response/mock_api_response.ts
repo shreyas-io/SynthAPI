@@ -1,11 +1,11 @@
 import { PostResponseActionsEt } from "./post_response_actions";
-import type { ResponseBodyEt } from "../execution_context";
+import type { ConfiguredResponseBodyEt } from "../execution_context";
 import type { MockApiRuleTreeEt } from "./rule_tree";
 
 type ApiResponseEt = {
   status_code: number;
   headers: Record<string, any>;
-  body: ResponseBodyEt;
+  body: ConfiguredResponseBodyEt;
   cookies: Record<string, any>;
 };
 

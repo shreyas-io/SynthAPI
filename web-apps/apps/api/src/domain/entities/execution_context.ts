@@ -1,3 +1,5 @@
+import type { SseBodyEt } from "./mock_api_response/sse";
+
 type QueryParamValue = string | string[];
 
 export type QueryParams = Record<string, QueryParamValue>;
@@ -28,6 +30,7 @@ export type RequestBodyEt =
   | EmptyBody;
 
 export type ResponseBodyEt = JsonBody | TextBody | EmptyBody;
+export type ConfiguredResponseBodyEt = JsonBody | TextBody | EmptyBody | SseBodyEt;
 
 export type ExecutionContextEt = {
   request: {
@@ -42,7 +45,7 @@ export type ExecutionContextEt = {
   response: {
     status_code: number;
     headers: Record<string, any>;
-    body: ResponseBodyEt;
+    body: ConfiguredResponseBodyEt;
     cookies: Record<string, any>;
   };
   // globals and constants are part of the project

@@ -9,6 +9,7 @@ import type {
   PostResponseAction,
   ResponseBody,
   RuleTree,
+  SseStreamItem,
   VariableScope,
 } from "../types";
 
@@ -16,6 +17,16 @@ type KeyValueRow = {
   id: string;
   key: string;
   value: string;
+};
+
+type EditableSseStreamItem = {
+  id: string;
+  delayMs: string;
+  eventName: string;
+  eventId: string;
+  retryMs: string;
+  dataMode: "text" | "json";
+  dataText: string;
 };
 
 type MockApiResponseEditorProps = {
@@ -71,8 +82,64 @@ const recordFromRows = (rows: KeyValueRow[]): Record<string, unknown> =>
 const bodyTextFromResponse = (body: ResponseBody): string => {
   if (body.type === "empty") return "";
   if (body.type === "json") return JSON.stringify(body.value, null, 2);
+  if (body.type === "sse") {
+    return body.mode === "script" ? body.code : "";
+  }
   return body.value;
 };
+
+const createEditableSseStreamItem = (
+  item?: SseStreamItem,
+): EditableSseStreamItem => ({
+  id: createId(),
+  delayMs:
+    item?.delay_ms === undefined || item.delay_ms === null
+      ? ""
+      : String(item.delay_ms),
+  eventName: item?.sse.event ?? "",
+  eventId: item?.sse.id ?? "",
+  retryMs:
+    item?.sse.retry_ms === undefined || item.sse.retry_ms === null
+      ? ""
+      : String(item.sse.retry_ms),
+  dataMode: typeof item?.sse.data === "string" ? "text" : "json",
+  dataText:
+    item === undefined
+      ? ""
+      : typeof item.sse.data === "string"
+        ? item.sse.data
+        : JSON.stringify(item.sse.data, null, 2),
+});
+
+const editableSseItemsFromResponse = (body: ResponseBody): EditableSseStreamItem[] =>
+  body.type === "sse" && body.mode === "events"
+    ? body.events.map((item) => createEditableSseStreamItem(item))
+    : [];
+
+const sseItemsFromEditable = (
+  items: EditableSseStreamItem[],
+): SseStreamItem[] =>
+  items.map((item) => ({
+    ...(item.delayMs.trim()
+      ? { delay_ms: Number.parseInt(item.delayMs, 10) }
+      : {}),
+    sse: {
+      ...(item.eventName.trim() ? { event: item.eventName.trim() } : {}),
+      ...(item.eventId.trim() ? { id: item.eventId.trim() } : {}),
+      ...(item.retryMs.trim()
+        ? { retry_ms: Number.parseInt(item.retryMs, 10) }
+        : {}),
+      data:
+        item.dataMode === "json" ? JSON.parse(item.dataText) : item.dataText,
+    },
+  }));
+
+const hasSseContentType = (rows: KeyValueRow[]): boolean =>
+  rows.some(
+    (row) =>
+      row.key.trim().toLowerCase() === "content-type" &&
+      row.value.trim().toLowerCase().includes("text/event-stream"),
+  );
 
 const normalizeRuleTree = (ruleTree: RuleTree | null): RuleTree | null => {
   if (!ruleTree) return null;
@@ -290,6 +357,122 @@ function PostActionForm({
   );
 }
 
+function SseStreamItemForm({
+  item,
+  isFirst,
+  isLast,
+  onMoveUp,
+  onMoveDown,
+  onChange,
+  onRemove,
+}: {
+  item: EditableSseStreamItem;
+  isFirst: boolean;
+  isLast: boolean;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  onChange: (item: EditableSseStreamItem) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="post-action-card form">
+      <div className="section-heading">
+        <div className="toolbar-actions">
+          <button
+            type="button"
+            className="button secondary-btn compact-action"
+            disabled={isFirst}
+            onClick={onMoveUp}
+          >
+            ↑
+          </button>
+          <button
+            type="button"
+            className="button secondary-btn compact-action"
+            disabled={isLast}
+            onClick={onMoveDown}
+          >
+            ↓
+          </button>
+        </div>
+        <button type="button" className="icon-btn" onClick={onRemove}>
+          ×
+        </button>
+      </div>
+
+      <div className="form-grid">
+        <label>
+          Delay (ms)
+          <input
+            type="number"
+            min="0"
+            placeholder="5"
+            value={item.delayMs}
+            onChange={(e) => onChange({ ...item, delayMs: e.target.value })}
+          />
+        </label>
+        <label>
+          Event
+          <input
+            placeholder="message"
+            value={item.eventName}
+            onChange={(e) => onChange({ ...item, eventName: e.target.value })}
+          />
+        </label>
+        <label>
+          ID
+          <input
+            placeholder="evt-1"
+            value={item.eventId}
+            onChange={(e) => onChange({ ...item, eventId: e.target.value })}
+          />
+        </label>
+        <label>
+          Retry (ms)
+          <input
+            type="number"
+            min="0"
+            placeholder="1000"
+            value={item.retryMs}
+            onChange={(e) => onChange({ ...item, retryMs: e.target.value })}
+          />
+        </label>
+        <label>
+          Data type
+          <select
+            value={item.dataMode}
+            onChange={(e) =>
+              onChange({
+                ...item,
+                dataMode: e.target.value as EditableSseStreamItem["dataMode"],
+              })
+            }
+          >
+            <option value="text">text</option>
+            <option value="json">json</option>
+          </select>
+        </label>
+      </div>
+
+      {item.dataMode === "json" ? (
+        <JsonInput
+          label="Data"
+          value={item.dataText}
+          onChange={(value) => onChange({ ...item, dataText: value })}
+        />
+      ) : (
+        <label>
+          Data
+          <textarea
+            value={item.dataText}
+            onChange={(e) => onChange({ ...item, dataText: e.target.value })}
+          />
+        </label>
+      )}
+    </div>
+  );
+}
+
 export function MockApiResponseEditor({
   mockApiId,
   initialResponse,
@@ -320,6 +503,17 @@ export function MockApiResponseEditor({
     initialBody.type,
   );
   const [bodyText, setBodyText] = useState(bodyTextFromResponse(initialBody));
+  const [sseMode, setSseMode] = useState<"events" | "script">(
+    initialBody.type === "sse" ? initialBody.mode : "events",
+  );
+  const [sseItems, setSseItems] = useState<EditableSseStreamItem[]>(
+    editableSseItemsFromResponse(initialBody),
+  );
+  const [sseScript, setSseScript] = useState(
+    initialBody.type === "sse" && initialBody.mode === "script"
+      ? initialBody.code
+      : "return []",
+  );
   const [headers, setHeaders] = useState<KeyValueRow[]>(
     rowsFromRecord(
       initialResponse?.response.headers ?? {
@@ -350,6 +544,13 @@ export function MockApiResponseEditor({
     setStatusCode(initialResponse?.response.status_code ?? 200);
     setBodyType(nextBody.type);
     setBodyText(bodyTextFromResponse(nextBody));
+    setSseMode(nextBody.type === "sse" ? nextBody.mode : "events");
+    setSseItems(editableSseItemsFromResponse(nextBody));
+    setSseScript(
+      nextBody.type === "sse" && nextBody.mode === "script"
+        ? nextBody.code
+        : "return []",
+    );
     setHeaders(
       rowsFromRecord(
         initialResponse?.response.headers ?? {
@@ -382,13 +583,30 @@ export function MockApiResponseEditor({
           type: "text",
           value: bodyText,
         };
+      } else if (bodyType === "sse") {
+        body =
+          sseMode === "events"
+            ? {
+                type: "sse",
+                mode: "events",
+                events: sseItemsFromEditable(sseItems),
+              }
+            : {
+                type: "sse",
+                mode: "script",
+                code: sseScript,
+              };
       } else {
         body = {
           type: "empty",
         };
       }
     } catch {
-      setBodyJsonError("Invalid JSON.");
+      if (bodyType === "json") {
+        setBodyJsonError("Invalid JSON.");
+      } else {
+        setFormError("Invalid SSE JSON event data.");
+      }
       return;
     }
 
@@ -496,6 +714,7 @@ export function MockApiResponseEditor({
                   >
                     <option value="json">json</option>
                     <option value="text">text</option>
+                    <option value="sse">sse</option>
                     <option value="empty">empty</option>
                   </select>
                 </label>
@@ -511,6 +730,115 @@ export function MockApiResponseEditor({
                       setBodyJsonError(null);
                     }}
                   />
+                ) : bodyType === "sse" ? (
+                  <div className="form">
+                    <div className="field-grid">
+                      <label>
+                        SSE mode
+                        <select
+                          value={sseMode}
+                          onChange={(event) =>
+                            setSseMode(
+                              event.target.value as "events" | "script",
+                            )
+                          }
+                        >
+                          <option value="events">events</option>
+                          <option value="script">script</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    {!hasSseContentType(headers) && (
+                      <p className="muted-text">
+                        Recommended header:{" "}
+                        <code>content-type: text/event-stream</code>
+                      </p>
+                    )}
+
+                    {sseMode === "events" ? (
+                      <section className="post-actions-panel">
+                        <div className="section-heading">
+                          <div>
+                            <h3>SSE events</h3>
+                          </div>
+                          <button
+                            type="button"
+                            className="button secondary-btn compact-action"
+                            onClick={() =>
+                              setSseItems([
+                                ...sseItems,
+                                createEditableSseStreamItem(),
+                              ])
+                            }
+                          >
+                            + Add
+                          </button>
+                        </div>
+                        {!sseItems.length && (
+                          <p className="muted-text">
+                            No SSE events configured.
+                          </p>
+                        )}
+                        {sseItems.map((item, index) => (
+                          <SseStreamItemForm
+                            key={item.id}
+                            item={item}
+                            isFirst={index === 0}
+                            isLast={index === sseItems.length - 1}
+                            onMoveUp={() =>
+                              setSseItems((current) => {
+                                if (index === 0) return current;
+
+                                const next = [...current];
+                                [next[index - 1], next[index]] = [
+                                  next[index],
+                                  next[index - 1],
+                                ];
+                                return next;
+                              })
+                            }
+                            onMoveDown={() =>
+                              setSseItems((current) => {
+                                if (index === current.length - 1) {
+                                  return current;
+                                }
+
+                                const next = [...current];
+                                [next[index], next[index + 1]] = [
+                                  next[index + 1],
+                                  next[index],
+                                ];
+                                return next;
+                              })
+                            }
+                            onChange={(nextItem) =>
+                              setSseItems((current) =>
+                                current.map((currentItem) =>
+                                  currentItem.id === item.id
+                                    ? nextItem
+                                    : currentItem,
+                                ),
+                              )
+                            }
+                            onRemove={() =>
+                              setSseItems((current) =>
+                                current.filter(
+                                  (currentItem) => currentItem.id !== item.id,
+                                ),
+                              )
+                            }
+                          />
+                        ))}
+                      </section>
+                    ) : (
+                      <JsonInput
+                        label="Python script"
+                        value={sseScript}
+                        onChange={setSseScript}
+                      />
+                    )}
+                  </div>
                 ) : (
                   <label>
                     Response body

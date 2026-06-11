@@ -1,6 +1,8 @@
+import { setTimeout as delay } from "node:timers/promises";
 import type { Express, NextFunction, Request, Response } from "express";
 
 import type { RequestBodyEt } from "../domain/entities/execution_context";
+import type { SseStreamItemEt } from "../domain/entities/mock_api_response/sse";
 import { executePublicMockApi } from "../domain/usecases/mock_api/execution";
 import type { AppContext } from "../server";
 
@@ -11,7 +13,8 @@ type MockApiExecutionResponse = {
   body:
     | { type: "json"; value: any }
     | { type: "text"; value: string }
-    | { type: "empty" };
+    | { type: "empty" }
+    | { type: "sse"; stream: AsyncIterable<SseStreamItemEt> };
 };
 
 const parseCookies = (header: string | undefined): Record<string, string> => {
@@ -59,7 +62,36 @@ const getForwardedHeaders = (req: Request): Record<string, any> => {
   return headers;
 };
 
-const sendMockApiResponse = (
+const writeSseItem = async (
+  res: Response,
+  item: SseStreamItemEt,
+) => {
+  await delay(item.delay_ms ?? 5);
+
+  if (item.sse.id) {
+    res.write(`id: ${item.sse.id}\n`);
+  }
+
+  if (item.sse.event) {
+    res.write(`event: ${item.sse.event}\n`);
+  }
+
+  if (item.sse.retry_ms !== undefined) {
+    res.write(`retry: ${item.sse.retry_ms}\n`);
+  }
+
+  if (typeof item.sse.data === "string") {
+    for (const line of item.sse.data.split(/\r?\n/)) {
+      res.write(`data: ${line}\n`);
+    }
+  } else {
+    res.write(`data: ${JSON.stringify(item.sse.data)}\n`);
+  }
+
+  res.write("\n");
+};
+
+const sendMockApiResponse = async (
   res: Response,
   result: MockApiExecutionResponse,
 ) => {
@@ -80,6 +112,26 @@ const sendMockApiResponse = (
 
   if (result.body.type === "text") {
     res.type("text/plain").send(result.body.value);
+    return;
+  }
+
+  if (result.body.type === "sse") {
+    const iterator = result.body.stream[Symbol.asyncIterator]();
+    let next = await iterator.next();
+
+    if (next.done) {
+      res.end();
+      return;
+    }
+
+    res.flushHeaders?.();
+
+    while (!next.done) {
+      await writeSseItem(res, next.value);
+      next = await iterator.next();
+    }
+
+    res.end();
     return;
   }
 
