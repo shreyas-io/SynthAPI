@@ -1,0 +1,67 @@
+name: Deploy Web
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-web.yml"
+      - "web-apps/package.json"
+      - "web-apps/pnpm-lock.yaml"
+      - "web-apps/pnpm-workspace.yaml"
+      - "web-apps/apps/web/**"
+
+jobs:
+  deploy:
+    name: Deploy to Cloudflare Pages
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      deployments: write
+
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+          cache: pnpm
+          cache-dependency-path: web-apps/pnpm-lock.yaml
+
+      - name: Validate deploy config
+        run: |
+          test -n "$CLOUDFLARE_API_TOKEN"
+          test -n "$CLOUDFLARE_ACCOUNT_ID"
+          test -n "$CLOUDFLARE_PAGES_PROJECT_NAME"
+          test -n "$VITE_API_BASE_URL"
+
+      - name: Install dependencies
+        working-directory: web-apps
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck web app
+        working-directory: web-apps
+        run: pnpm --filter @synthapi/web run typecheck
+
+      - name: Build web app
+        working-directory: web-apps
+        run: pnpm --filter @synthapi/web run build
+
+      - name: Deploy to Pages
+        working-directory: web-apps
+        run: pnpm --filter @synthapi/web run deploy:pages

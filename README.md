@@ -72,3 +72,22 @@ pnpm build
 ```
 
 Docker Compose runs migrations and starts API/frontend watchers automatically.
+
+## Cloudflare Pages
+
+The frontend deploys to Cloudflare Pages by direct upload with Wrangler.
+
+Required GitHub repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Required GitHub repository variables:
+
+- `CLOUDFLARE_PAGES_PROJECT_NAME`
+- `VITE_API_BASE_URL`
+
+`VITE_API_BASE_URL` should point at the deployed API host, for example
+`https://api.<domain>`.
+
+The workflow is [deploy-web.yml](/home/shreyas/Projects/mock-stack/.github/workflows/deploy-web.yml) and publishes the built `dist/` directory to the configured Pages project.
