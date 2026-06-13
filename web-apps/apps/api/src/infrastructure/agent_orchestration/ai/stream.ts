@@ -6,6 +6,7 @@ import { AgentOrchestrationException } from "../../../domain/exceptions/exceptio
 import { streamTextViaGoogle } from "./vendors/google_stream";
 import { streamTextViaMeta } from "./vendors/meta_stream";
 import { streamTextViaNvidia } from "./vendors/nvidia_stream";
+import { streamTextViaOpenAI } from "./vendors/openai_stream";
 
 export function streamText(ctx: AppContext) {
   return {
@@ -19,6 +20,8 @@ export function streamText(ctx: AppContext) {
           return streamTextViaGoogle(ctx).streamText(request);
         case "meta":
           return streamTextViaMeta(ctx).streamText(request);
+        case "openai":
+          return streamTextViaOpenAI(ctx).streamText(request);
         default:
           throw new AgentOrchestrationException({
             public_message: `Model provider '${request.config.model_provider}' is not supported.`,

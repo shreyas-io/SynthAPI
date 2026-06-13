@@ -12,6 +12,7 @@
     "migrate:down": "tsx src/infrastructure/kysely/migrator.ts down"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^2.0.0",
     "@ai-sdk/openai-compatible": "^2.0.0",
     "@infisical/sdk": "^5.0.2",
     "@openrouter/ai-sdk-provider": "^2.9.0",
