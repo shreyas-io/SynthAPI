@@ -3,6 +3,8 @@ import type { Express } from "express";
 import { MockApisUsecase } from "../domain/usecases/mock_api/apis";
 import { executePublicMockApi } from "../domain/usecases/mock_api/execution";
 import { ApiGatewayException } from "../domain/exceptions/exception";
+import { HttpStatusCode } from "../domain/exceptions/exception";
+import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
 import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
 import {
@@ -14,8 +16,41 @@ import {
 } from "./dtos/mock_api";
 import { getNumber, getString, getStringArray } from "./utils";
 
+const getAuthenticatedUser = (user: Express.Request["user"]) => {
+  if (!user) {
+    throw new ApiGatewayException({
+      public_message: "Unauthorized",
+      status_code: HttpStatusCode.UNAUTHORIZED,
+    });
+  }
+
+  return user;
+};
+
+const buildMockApiCurlCommand = (input: {
+  method: string;
+  path: string;
+  projectSlug: string;
+  mockApiBaseUrlTemplate: string;
+}) => {
+  const path = input.path.startsWith("/") ? input.path : `/${input.path}`;
+  const baseUrl = input.mockApiBaseUrlTemplate.replace(
+    "{projectSlug}",
+    input.projectSlug,
+  );
+  const url = `${baseUrl.replace(/\/$/, "")}${path}`;
+  const method = input.method.toUpperCase();
+
+  if (["POST", "PUT", "PATCH"].includes(method)) {
+    return `curl -X ${method} -H "Content-Type: application/json" -d '{}' ${url}`;
+  }
+
+  return `curl -X ${method} ${url}`;
+};
+
 export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
   const mock_apis = MockApisUsecase(ctx);
+  const projects = ProjectsUsecase(ctx);
 
   app.post(
     "/api/v1/mock-apis",
@@ -107,7 +142,21 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
   app.get(
     "/api/v1/mock-apis/:id",
     asyncRoute(async (req, res) => {
-      res.json(await mock_apis.getMockApi(req.params.id as string));
+      const mockApi = await mock_apis.getMockApi(req.params.id as string);
+      const project = await projects.getProject(
+        getAuthenticatedUser(req.user),
+        mockApi.project_id,
+      );
+
+      res.json({
+        ...mockApi,
+        curl_command: buildMockApiCurlCommand({
+          method: mockApi.method,
+          path: mockApi.path,
+          projectSlug: project.slug,
+          mockApiBaseUrlTemplate: ctx.env.MOCK_API_BASE_URL_TEMPLATE,
+        }),
+      });
     }),
   );
 

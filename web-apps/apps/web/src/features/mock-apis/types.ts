@@ -17,6 +17,7 @@ export type MockApi = {
   name: string;
   description: string | null;
   variables?: Variable[] | null;
+  curl_command?: string;
   deleted_at: string | null;
   created_at: string;
 };

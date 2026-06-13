@@ -5,7 +5,7 @@ import App from "./App";
 
 afterEach(() => {
   vi.restoreAllMocks();
-  window.history.pushState({}, "", "/");
+  window.history.pushState({}, "", "/platform/");
 });
 
 describe("App", () => {
@@ -18,7 +18,7 @@ describe("App", () => {
         }),
       ),
     );
-    window.history.pushState({}, "", "/signin");
+    window.history.pushState({}, "", "/platform/signin");
 
     render(<App />);
 
@@ -27,7 +27,7 @@ describe("App", () => {
       await screen.findByRole("link", { name: "Continue with Google" }),
     ).toHaveAttribute(
       "href",
-      "http://localhost:8787/mock-stack/api/v1/auth/google/start?return_to=%2Fprojects",
+      "http://localhost:8787/api/v1/auth/google/start?return_to=%2Fprojects",
     );
   });
 
@@ -41,7 +41,7 @@ describe("App", () => {
       ),
     );
 
-    window.history.pushState({}, "", "/signin?error=google");
+    window.history.pushState({}, "", "/platform/signin?error=google");
     render(<App />);
 
     expect(
@@ -115,7 +115,7 @@ describe("App", () => {
       throw new Error(`Unexpected request: ${url}`);
     });
 
-    window.history.pushState({}, "", "/projects");
+    window.history.pushState({}, "", "/platform/projects");
     render(<App />);
 
     await waitFor(() => {
@@ -205,6 +205,7 @@ describe("App", () => {
           name: "Orders API",
           description: "Order routes",
           variables: [],
+          curl_command: "curl -X GET http://demo-project.mock.localhost:8787/orders",
         });
       }
 
@@ -225,7 +226,7 @@ describe("App", () => {
       throw new Error(`Unexpected request: ${url}`);
     });
 
-    window.history.pushState({}, "", "/projects/project-1/mock-apis/api-1");
+    window.history.pushState({}, "", "/platform/projects/project-1/mock-apis/api-1");
     render(<App />);
 
     await waitFor(() => {
@@ -320,6 +321,8 @@ describe("App", () => {
           name: "Create blog post",
           description: "Create posts",
           variables: [],
+          curl_command:
+            "curl -X POST -H \"Content-Type: application/json\" -d '{}' http://demo-project.mock.localhost:8787/posts",
         });
       }
 
@@ -377,7 +380,7 @@ describe("App", () => {
     window.history.pushState(
       {},
       "",
-      "/projects/project-1/mock-apis/api-1/responses/response-1",
+      "/platform/projects/project-1/mock-apis/api-1/responses/response-1",
     );
     render(<App />);
 

@@ -73,7 +73,7 @@ const destroyPyProxy = (value: unknown): void => {
   }
 };
 
-const INTERNAL_MAIN_FN = "__mock_stack_main__";
+const INTERNAL_MAIN_FN = "__synthapi_main__";
 
 const wrapScriptAsMain = (code: string): string => {
   const indented_code = code

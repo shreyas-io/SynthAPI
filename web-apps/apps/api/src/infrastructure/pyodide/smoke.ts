@@ -27,7 +27,7 @@ try {
     pool.execute({
       code: "name.upper()",
       context: {
-        name: "mock stack",
+        name: "SynthAPI",
       },
       timeout_ms: 30_000,
     }),
