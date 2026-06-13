@@ -49,6 +49,7 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
         path?: string;
         name?: string;
         description?: string;
+        fetch_deleted?: boolean;
       } = {};
       const ids = getStringArray(req.query.id);
       const project_ids = getStringArray(req.query.project_id);
@@ -56,6 +57,7 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
       const path = getString(req.query.path);
       const name = getString(req.query.name);
       const description = getString(req.query.description);
+      const fetch_deleted = req.query.fetch_deleted === "true";
 
       if (ids?.length) filters.ids = ids;
       if (project_ids?.length) filters.project_ids = project_ids;
@@ -63,6 +65,7 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
       if (path) filters.path = path;
       if (name) filters.name = name;
       if (description) filters.description = description;
+      filters.fetch_deleted = fetch_deleted;
 
       const parsedFilters = listMockApisFilterDto.safeParse(filters);
       if (!parsedFilters.success) {
@@ -135,6 +138,14 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
     asyncRoute(async (req, res) => {
       await mock_apis.deleteMockApi(req.params.id as string);
       res.status(204).send();
+    }),
+  );
+
+  app.post(
+    "/api/v1/mock-apis/:id/restore",
+    asyncRoute(async (req, res) => {
+      await mock_apis.restoreMockApi(req.params.id as string);
+      res.json({});
     }),
   );
 };

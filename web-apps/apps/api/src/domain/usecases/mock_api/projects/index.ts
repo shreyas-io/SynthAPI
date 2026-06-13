@@ -13,6 +13,8 @@ type ProjectFilters = {
   slug?: string | undefined;
   name?: string | undefined;
   description?: string | undefined;
+  search?: string | undefined;
+  fetch_deleted?: boolean | undefined;
 };
 
 type ProjectPagination = {
@@ -91,6 +93,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         .insertInto("projects")
         .values({
           organization_id: validated_org_id,
+          created_by_user_id: user.id,
           slug: input.slug,
           name: input.name,
           description: input.description,
@@ -118,6 +121,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         .selectFrom("projects")
         .selectAll()
         .where("id", "=", id)
+        .where("deleted_at", "is", null)
         .executeTakeFirst();
 
       if (!project) {
@@ -141,8 +145,26 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       records: Array<
         Pick<
           ProjectEt,
-          "id" | "organization_id" | "slug" | "name" | "description"
+          | "id"
+          | "organization_id"
+          | "created_by_user_id"
+          | "slug"
+          | "name"
+          | "description"
+          | "deleted_at"
+          | "deleted_by_user_id"
+          | "created_at"
         >
+        & {
+          created_by: {
+            display_name: string | null;
+            avatar_url: string | null;
+          };
+          deleted_by: {
+            display_name: string | null;
+            avatar_url: string | null;
+          } | null;
+        }
       >;
     }> => {
       let organization_id = filters.organization_id;
@@ -167,11 +189,27 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         .select(sql<number>`count(*)::int`.as("count"));
       let recordsQuery = ctx.db
         .selectFrom("projects")
-        .select(["id", "organization_id", "slug", "name", "description"]);
+        .innerJoin("users", "users.id", "projects.created_by_user_id")
+        .leftJoin("users as deleted_by_user", "deleted_by_user.id", "projects.deleted_by_user_id")
+        .select([
+          "projects.id as id",
+          "projects.organization_id as organization_id",
+          "projects.created_by_user_id as created_by_user_id",
+          "projects.slug as slug",
+          "projects.name as name",
+          "projects.description as description",
+          "projects.deleted_at as deleted_at",
+          "projects.deleted_by_user_id as deleted_by_user_id",
+          "projects.created_at as created_at",
+          "users.display_name as created_by_display_name",
+          "users.avatar_url as created_by_avatar_url",
+          "deleted_by_user.display_name as deleted_by_display_name",
+          "deleted_by_user.avatar_url as deleted_by_avatar_url",
+        ]);
 
       if (scopedFilters.ids?.length) {
         countQuery = countQuery.where("id", "in", scopedFilters.ids);
-        recordsQuery = recordsQuery.where("id", "in", scopedFilters.ids);
+        recordsQuery = recordsQuery.where("projects.id", "in", scopedFilters.ids);
       }
 
       if (scopedFilters.organization_ids?.length) {
@@ -181,7 +219,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
           scopedFilters.organization_ids,
         );
         recordsQuery = recordsQuery.where(
-          "organization_id",
+          "projects.organization_id",
           "in",
           scopedFilters.organization_ids,
         );
@@ -189,7 +227,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
 
       if (scopedFilters.slug) {
         countQuery = countQuery.where("slug", "=", scopedFilters.slug);
-        recordsQuery = recordsQuery.where("slug", "=", scopedFilters.slug);
+        recordsQuery = recordsQuery.where("projects.slug", "=", scopedFilters.slug);
       }
 
       if (scopedFilters.name) {
@@ -199,7 +237,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
           `%${scopedFilters.name}%`,
         );
         recordsQuery = recordsQuery.where(
-          "name",
+          "projects.name",
           "ilike",
           `%${scopedFilters.name}%`,
         );
@@ -212,14 +250,37 @@ export const ProjectsUsecase = (ctx: AppContext) => {
           `%${scopedFilters.description}%`,
         );
         recordsQuery = recordsQuery.where(
-          "description",
+          "projects.description",
           "ilike",
           `%${scopedFilters.description}%`,
         );
       }
 
+      if (scopedFilters.search) {
+        countQuery = countQuery.where((eb) =>
+          eb.or([
+            eb("name", "ilike", `%${scopedFilters.search}%`),
+            eb("description", "ilike", `%${scopedFilters.search}%`),
+          ])
+        );
+        recordsQuery = recordsQuery.where((eb) =>
+          eb.or([
+            eb("projects.name", "ilike", `%${scopedFilters.search}%`),
+            eb("projects.description", "ilike", `%${scopedFilters.search}%`),
+          ])
+        );
+      }
+
+      if (scopedFilters.fetch_deleted) {
+        countQuery = countQuery.where("deleted_at", "is not", null);
+        recordsQuery = recordsQuery.where("projects.deleted_at", "is not", null);
+      } else {
+        countQuery = countQuery.where("deleted_at", "is", null);
+        recordsQuery = recordsQuery.where("projects.deleted_at", "is", null);
+      }
+
       recordsQuery = recordsQuery
-        .orderBy(sort.by, sort.order)
+        .orderBy(`projects.${sort.by}`, sort.order)
         .limit(pagination.limit)
         .offset(pagination.offset);
 
@@ -230,7 +291,27 @@ export const ProjectsUsecase = (ctx: AppContext) => {
 
       return {
         total,
-        records,
+        records: records.map((record) => ({
+          id: record.id,
+          organization_id: record.organization_id,
+          created_by_user_id: record.created_by_user_id,
+          slug: record.slug,
+          name: record.name,
+          description: record.description,
+          deleted_at: record.deleted_at,
+          deleted_by_user_id: record.deleted_by_user_id,
+          created_at: record.created_at,
+          created_by: {
+            display_name: record.created_by_display_name,
+            avatar_url: record.created_by_avatar_url,
+          },
+          deleted_by: record.deleted_by_user_id
+            ? {
+                display_name: record.deleted_by_display_name,
+                avatar_url: record.deleted_by_avatar_url,
+              }
+            : null,
+        })),
       };
     },
     updateProject: async (
@@ -242,6 +323,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         .selectFrom("projects")
         .select(["id", "organization_id"])
         .where("id", "=", id)
+        .where("deleted_at", "is", null)
         .executeTakeFirst();
 
       if (!project) {
@@ -272,6 +354,35 @@ export const ProjectsUsecase = (ctx: AppContext) => {
     ): Promise<void> => {
       const project = await ctx.db
         .selectFrom("projects")
+        .select(["id", "organization_id", "deleted_at"])
+        .where("id", "=", id)
+        .executeTakeFirst();
+
+      if (!project) {
+        throw new MockApiException({
+          public_message: "Project not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      await assertOrganizationAccess(user, project.organization_id);
+
+      if (project.deleted_at) {
+        return;
+      }
+
+      await ctx.db
+        .updateTable("projects")
+        .set({ deleted_at: new Date(), deleted_by_user_id: user.id })
+        .where("id", "=", id)
+        .execute();
+    },
+    restoreProject: async (
+      user: AuthenticatedUser,
+      id: string,
+    ): Promise<void> => {
+      const project = await ctx.db
+        .selectFrom("projects")
         .select(["id", "organization_id"])
         .where("id", "=", id)
         .executeTakeFirst();
@@ -285,7 +396,11 @@ export const ProjectsUsecase = (ctx: AppContext) => {
 
       await assertOrganizationAccess(user, project.organization_id);
 
-      await ctx.db.deleteFrom("projects").where("id", "=", id).execute();
+      await ctx.db
+        .updateTable("projects")
+        .set({ deleted_at: null, deleted_by_user_id: null })
+        .where("id", "=", id)
+        .execute();
     },
   };
 };

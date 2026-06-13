@@ -3,16 +3,34 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../../lib/query/query_keys";
 import {
   createProject,
+  deleteProject,
   getProject,
   listProjects,
+  restoreProject,
   updateProject,
+  type ListProjectsParams,
 } from "../api/projects_api";
 import type { ProjectInput } from "../types";
 
-export const useProjects = (organizationId: string) => {
+export const useProjects = (
+  organizationId: string,
+  params: ListProjectsParams,
+) => {
   return useQuery({
-    queryKey: queryKeys.projects(organizationId),
-    queryFn: () => listProjects(organizationId),
+    queryKey: queryKeys.projects(organizationId, params),
+    queryFn: () => listProjects(organizationId, params),
+    enabled: Boolean(organizationId),
+  });
+};
+
+export const useDeletedProjects = (
+  organizationId: string,
+  params: Omit<ListProjectsParams, "fetch_deleted">,
+) => {
+  return useQuery({
+    queryKey: queryKeys.projects(organizationId, { ...params, fetch_deleted: true }),
+    queryFn: () => listProjects(organizationId, { ...params, fetch_deleted: true }),
+    enabled: Boolean(organizationId),
   });
 };
 
@@ -31,7 +49,7 @@ export const useCreateProject = (organizationId: string) => {
     mutationFn: createProject,
     async onSuccess() {
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.projects(organizationId),
+        queryKey: queryKeys.projectListRoot(organizationId),
       });
     },
   });
@@ -47,6 +65,36 @@ export const useUpdateProject = (projectId: string | undefined) => {
 
       await queryClient.invalidateQueries({
         queryKey: queryKeys.project(projectId),
+      });
+    },
+  });
+};
+
+export const useDeleteProject = (organizationId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deleteProject,
+    async onSuccess() {
+      if (!organizationId) return;
+
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.projectListRoot(organizationId),
+      });
+    },
+  });
+};
+
+export const useRestoreProject = (organizationId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: restoreProject,
+    async onSuccess() {
+      if (!organizationId) return;
+
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.projectListRoot(organizationId),
       });
     },
   });

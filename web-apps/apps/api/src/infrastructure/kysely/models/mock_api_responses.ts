@@ -19,6 +19,7 @@ export type MockApiResponsesTable = {
     JsonObject | string | undefined,
     JsonObject | string
   >;
+  deleted_at: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
   created_at: Timestamp;
   updated_at: Timestamp;
 };

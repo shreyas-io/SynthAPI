@@ -20,6 +20,7 @@ type MockApiResponseFilters = {
   ids?: string[] | undefined;
   mock_api_ids?: string[] | undefined;
   name?: string | undefined;
+  fetch_deleted?: boolean | undefined;
 };
 
 type MockApiResponsePagination = {
@@ -45,6 +46,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
               .updateTable("mock_api_responses")
               .set({ is_default: false })
               .where("mock_api_id", "=", input.mock_api_id)
+              .where("deleted_at", "is", null)
               .execute();
           }
 
@@ -81,8 +83,13 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
     getMockApiResponse: async (id: string): Promise<MockApiResponseEt> => {
       const mock_api_response = await ctx.db
         .selectFrom("mock_api_responses")
-        .selectAll()
-        .where("id", "=", id)
+        .innerJoin("mock_apis", "mock_apis.id", "mock_api_responses.mock_api_id")
+        .innerJoin("projects", "projects.id", "mock_apis.project_id")
+        .selectAll("mock_api_responses")
+        .where("mock_api_responses.id", "=", id)
+        .where("mock_api_responses.deleted_at", "is", null)
+        .where("mock_apis.deleted_at", "is", null)
+        .where("projects.deleted_at", "is", null)
         .executeTakeFirst();
 
       if (!mock_api_response) {
@@ -115,7 +122,14 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         .select(sql<number>`count(*)::int`.as("count"));
       let recordsQuery = ctx.db
         .selectFrom("mock_api_responses")
-        .select(["id", "mock_api_id", "name", "is_default", "created_at"]);
+        .select([
+          "id",
+          "mock_api_id",
+          "name",
+          "is_default",
+          "deleted_at",
+          "created_at",
+        ]);
 
       if (filters.ids?.length) {
         countQuery = countQuery.where("id", "in", filters.ids);
@@ -138,6 +152,14 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       if (filters.name) {
         countQuery = countQuery.where("name", "ilike", `%${filters.name}%`);
         recordsQuery = recordsQuery.where("name", "ilike", `%${filters.name}%`);
+      }
+
+      if (filters.fetch_deleted) {
+        countQuery = countQuery.where("deleted_at", "is not", null);
+        recordsQuery = recordsQuery.where("deleted_at", "is not", null);
+      } else {
+        countQuery = countQuery.where("deleted_at", "is", null);
+        recordsQuery = recordsQuery.where("deleted_at", "is", null);
       }
 
       recordsQuery = recordsQuery
@@ -165,6 +187,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
             .set({ is_default: false })
             .where("mock_api_id", "=", input.mock_api_id)
             .where("id", "!=", id)
+            .where("deleted_at", "is", null)
             .execute();
         }
 
@@ -187,14 +210,73 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
               : {}),
           })
           .where("id", "=", id)
+          .where("deleted_at", "is", null)
           .execute();
       });
     },
     async deleteMockApiResponse(id: string): Promise<void> {
+      const mock_api_response = await ctx.db
+        .selectFrom("mock_api_responses")
+        .select(["id", "deleted_at"])
+        .where("id", "=", id)
+        .executeTakeFirst();
+
+      if (!mock_api_response) {
+        throw new MockApiException({
+          public_message: "Mock API response not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      if (mock_api_response.deleted_at) {
+        return;
+      }
+
       await ctx.db
-        .deleteFrom("mock_api_responses")
+        .updateTable("mock_api_responses")
+        .set({ deleted_at: new Date() })
         .where("id", "=", id)
         .execute();
+    },
+    async restoreMockApiResponse(id: string): Promise<void> {
+      await ctx.db.transaction().execute(async (trx) => {
+        const mock_api_response = await trx
+          .selectFrom("mock_api_responses")
+          .innerJoin("mock_apis", "mock_apis.id", "mock_api_responses.mock_api_id")
+          .innerJoin("projects", "projects.id", "mock_apis.project_id")
+          .select([
+            "mock_api_responses.id",
+            "mock_api_responses.mock_api_id",
+            "mock_api_responses.is_default",
+          ])
+          .where("mock_api_responses.id", "=", id)
+          .where("mock_apis.deleted_at", "is", null)
+          .where("projects.deleted_at", "is", null)
+          .executeTakeFirst();
+
+        if (!mock_api_response) {
+          throw new MockApiException({
+            public_message: "Mock API response not found.",
+            status_code: HttpStatusCode.NOT_FOUND,
+          });
+        }
+
+        if (mock_api_response.is_default) {
+          await trx
+            .updateTable("mock_api_responses")
+            .set({ is_default: false })
+            .where("mock_api_id", "=", mock_api_response.mock_api_id)
+            .where("id", "!=", id)
+            .where("deleted_at", "is", null)
+            .execute();
+        }
+
+        await trx
+          .updateTable("mock_api_responses")
+          .set({ deleted_at: null })
+          .where("id", "=", id)
+          .execute();
+      });
     },
   };
 };

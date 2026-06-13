@@ -62,6 +62,28 @@ const toSerializableValue = (value: unknown): unknown => {
   return value;
 };
 
+const destroyPyProxy = (value: unknown): void => {
+  if (
+    value &&
+    typeof value === "object" &&
+    "destroy" in value &&
+    typeof value.destroy === "function"
+  ) {
+    value.destroy();
+  }
+};
+
+const INTERNAL_MAIN_FN = "__mock_stack_main__";
+
+const wrapScriptAsMain = (code: string): string => {
+  const indented_code = code
+    .split("\n")
+    .map((line) => `    ${line}`)
+    .join("\n");
+
+  return `def ${INTERNAL_MAIN_FN}(execution_context):\n${indented_code}\n`;
+};
+
 const boot = async (): Promise<void> => {
   pyodide = await loadPyodide({
     indexURL: data.pyodide_index_url ?? getLocalPyodideIndexUrl(),
@@ -97,13 +119,28 @@ port.on("message", async (message: PyodideWorkerInboundMessage) => {
       await pyodide.loadPackagesFromImports(message.input.code);
     }
 
-    globals = message.input.context
-      ? pyodide.toPy(message.input.context)
-      : undefined;
+    const execution_context = message.input.context ?? {};
+    const context = {
+      ...execution_context,
+      execution_context,
+    };
 
-    const result = await pyodide.runPythonAsync(message.input.code, {
-      ...(globals ? { globals } : {}),
-    });
+    globals = pyodide.toPy(context);
+
+    const script_result = await pyodide.runPythonAsync(
+      wrapScriptAsMain(message.input.code),
+      {
+        ...(globals ? { globals } : {}),
+      },
+    );
+    const result = await pyodide.runPythonAsync(
+      `${INTERNAL_MAIN_FN}(execution_context)`,
+      {
+        ...(globals ? { globals } : {}),
+      },
+    );
+
+    destroyPyProxy(script_result);
 
     send({
       type: "result",

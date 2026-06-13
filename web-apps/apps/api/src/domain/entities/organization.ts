@@ -4,6 +4,8 @@ export type OrganizationMembershipStatus = "active" | "stale";
 
 export type PlanSubscriptionStatus = "active" | "cancelled" | "expired";
 
+type OrganizationInviteStatus = "pending" | "accepted" | "expired" | "revoked";
+
 export type OrganizationCreditGrantType = "ai_credits";
 
 export type Organization = {
@@ -23,6 +25,18 @@ export type OrganizationMembership = {
   status: OrganizationMembershipStatus;
   stale_reason: string | null;
   staled_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+};
+
+export type OrganizationInviteEt = {
+  id: string;
+  organization_id: string;
+  email: string;
+  invited_by_user_id: string;
+  role: OrganizationMemberRole;
+  status: OrganizationInviteStatus;
+  expires_at: Date;
   created_at: Date;
   updated_at: Date;
 };

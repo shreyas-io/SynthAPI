@@ -15,6 +15,8 @@ export const listProjectsFilterDto = z.object({
   slug: z.string().optional(),
   name: z.string().optional(),
   description: z.string().optional(),
+  search: z.string().optional(),
+  fetch_deleted: z.boolean().optional(),
 });
 
 export const listProjectsPaginationDto = z.object({

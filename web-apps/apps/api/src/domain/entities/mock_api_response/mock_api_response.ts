@@ -17,6 +17,7 @@ export type MockApiResponseEt = {
   response: ApiResponseEt;
   rule_tree: MockApiRuleTreeEt | null;
   post_response_actions: PostResponseActionsEt | null;
+  deleted_at: Date | null;
   created_at: Date;
   updated_at: Date;
 };

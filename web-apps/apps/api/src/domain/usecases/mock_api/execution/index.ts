@@ -188,6 +188,7 @@ export async function executePublicMockApi(
     .innerJoin("organizations", "organizations.id", "projects.organization_id")
     .select(["projects.id", "projects.globals", "projects.constants"])
     .where("projects.slug", "=", request_data.project_slug)
+    .where("projects.deleted_at", "is", null)
     .where("organizations.deleted_at", "is", null)
     .executeTakeFirst();
 
@@ -203,6 +204,7 @@ export async function executePublicMockApi(
     .select(["id", "path", "created_at", "variables"])
     .where("project_id", "=", project.id)
     .where("method", "=", request_data.method)
+    .where("deleted_at", "is", null)
     .execute();
   const match = getBestMatch(candidates, request_data.url);
 
@@ -240,6 +242,7 @@ export async function executePublicMockApi(
     .selectFrom("mock_api_responses")
     .selectAll()
     .where("mock_api_id", "=", mock_api.id)
+    .where("deleted_at", "is", null)
     .orderBy("created_at", "desc")
     .execute()) as unknown as MockApiResponseEt[];
 
@@ -248,13 +251,14 @@ export async function executePublicMockApi(
     | (typeof mock_api_responses)[number]
     | undefined;
 
+  // TODO: run in parallel
   for (const response of mock_api_responses) {
     if (response.is_default) {
       default_mock_api_response ??= response;
       continue;
     }
 
-    if (!response.rule_tree) {
+    if (!response.rule_tree?.predicates) {
       continue;
     }
 

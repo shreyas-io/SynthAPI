@@ -12,6 +12,7 @@ export function GoogleAuthEntry({ alternateAction }: GoogleAuthEntryProps) {
   const [searchParams] = useSearchParams();
   const hasGoogleError = searchParams.get("error") === "google";
   const googleEnabled = providers.data?.google.enabled ?? false;
+  const returnTo = searchParams.get("return_to") ?? "/projects";
 
   return (
     <>
@@ -27,7 +28,7 @@ export function GoogleAuthEntry({ alternateAction }: GoogleAuthEntryProps) {
       )}
       <a
         className="button"
-        href={getGoogleAuthStartUrl("/projects")}
+        href={getGoogleAuthStartUrl(returnTo)}
         aria-disabled={!googleEnabled}
         onClick={(event) => {
           if (!googleEnabled) {

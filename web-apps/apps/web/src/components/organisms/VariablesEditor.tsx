@@ -1,3 +1,4 @@
+import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { Variable } from "../../features/projects/types";
@@ -17,7 +18,9 @@ const stringifyValue = (value: unknown): string => {
   return JSON.stringify(value, null, 2);
 };
 
-const rowsFromVariables = (variables: Variable[] | null | undefined): VariableRow[] =>
+const rowsFromVariables = (
+  variables: Variable[] | null | undefined,
+): VariableRow[] =>
   (variables ?? []).map((variable) => ({
     ...variable,
     id: createId(),
@@ -88,6 +91,7 @@ export function VariablesEditor({
       <div className="section-heading">
         <h3>{title}</h3>
         <button
+          className="button purple-btn"
           type="button"
           onClick={() =>
             emit([
@@ -102,6 +106,7 @@ export function VariablesEditor({
             ])
           }
         >
+          <Plus size={14} />
           Add
         </button>
       </div>
@@ -209,9 +214,11 @@ export function VariablesEditor({
             </label>
           )}
           <button
+            className="button danger-btn"
             type="button"
             onClick={() => emit(rows.filter((item) => item.id !== row.id))}
           >
+            <Trash2 size={14} />
             Remove
           </button>
         </article>

@@ -36,6 +36,7 @@ export const listMockApiResponsesFilterDto = z.object({
   ids: z.uuidv7().array().optional(),
   mock_api_ids: z.uuidv7().array().optional(),
   name: z.string().optional(),
+  fetch_deleted: z.boolean().optional(),
 });
 
 export const listMockApiResponsesPaginationDto = z.object({

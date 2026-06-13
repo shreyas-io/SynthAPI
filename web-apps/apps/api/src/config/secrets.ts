@@ -1,6 +1,9 @@
 import { InfisicalSDK } from "@infisical/sdk";
 import * as z from "zod";
 
+const emptyStringToUndefined = (value: unknown): unknown =>
+  value === "" ? undefined : value;
+
 const secretsSchema = z.object({
   DB_USER: z.string(),
   DB_PASS: z.string(),
@@ -19,6 +22,13 @@ const secretsSchema = z.object({
   GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
   GOOGLE_OAUTH_REDIRECT_URI: z.string(),
   WEB_APP_BASE_URL: z.string(),
+  MAILERSEND_API_KEY: z.string(),
+  MAILERSEND_BASE_URL: z.preprocess(
+    emptyStringToUndefined,
+    z.string().url().optional(),
+  ),
+  EMAIL_FROM: z.email(),
+  EMAIL_REPLY_TO: z.preprocess(emptyStringToUndefined, z.email().optional()),
   CORS_WHITELISTED_DOMAINS: z.string().transform((v) => {
     try {
       return v.split(",");

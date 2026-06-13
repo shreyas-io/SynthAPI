@@ -1,21 +1,258 @@
 import { useState } from "react";
-import { useNavigate } from "react-router";
-import { AlertTriangle, RotateCcw, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  LogOut,
+  RotateCcw,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
+import { Avatar } from "../../../components/atoms/Avatar";
+import { ResourceCard } from "../../../components/molecules/ResourceCard";
+import { ApiError } from "../../../lib/api/client";
 import {
   useCreateOrganization,
   useDeleteOrganization,
+  useInviteOrganizationMember,
+  useLeaveOrganization,
+  useOrganizationInvites,
+  useOrganizationMembers,
   useProfile,
+  useRevokeOrganizationInvite,
   useRestoreOrganization,
 } from "../hooks/profile_hooks";
+import type { ProfileOrganization } from "../types";
 
 type OrgTab = "active" | "deleted";
 
+const canDeleteOrganization = (role: string) =>
+  role === "owner" || role === "admin";
+const canLeaveOrganization = (role: string) =>
+  role === "admin" || role === "member";
+const canInviteMember = (role: string) =>
+  role === "owner" || role === "admin" || role === "member";
+const canRevokeInvite = (role: string) => role === "owner" || role === "admin";
+const getRolePillClass = (role: "owner" | "admin" | "member") =>
+  `pill-${role}`;
+
+const getErrorMessage = (
+  error: unknown,
+  fallback: string,
+): string => {
+  if (error instanceof ApiError) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
+type OrganizationAccessPanelProps = {
+  organization: ProfileOrganization;
+};
+
+function OrganizationAccessPanel({
+  organization,
+}: OrganizationAccessPanelProps) {
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [showMembersPanel, setShowMembersPanel] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const membersQuery = useOrganizationMembers(organization.id, showMembersPanel);
+  const invitesQuery = useOrganizationInvites(organization.id, showMembersPanel);
+  const inviteMutation = useInviteOrganizationMember();
+  const revokeInviteMutation = useRevokeOrganizationInvite();
+  const inviteAllowed = canInviteMember(organization.membership.role);
+  const revokeAllowed = canRevokeInvite(organization.membership.role);
+
+  const handleInvite = (e: React.FormEvent) => {
+    e.preventDefault();
+    const email = inviteEmail.trim();
+
+    if (!email) {
+      return;
+    }
+
+    inviteMutation.mutate(
+      {
+        organizationId: organization.id,
+        email,
+        role: "member",
+      },
+      {
+        onSuccess() {
+          setInviteEmail("");
+        },
+      },
+    );
+  };
+
+  return (
+    <div className="org-access-panel">
+      <div className="org-access-actions">
+        {inviteAllowed && (
+          <button
+            type="button"
+            className="button secondary-btn compact-action org-access-toggle"
+            onClick={() => setShowInviteForm((open) => !open)}
+          >
+            <UserPlus size={14} />
+            {showInviteForm ? "Hide invite form" : "Invite member"}
+          </button>
+        )}
+
+        <button
+          type="button"
+          className="button secondary-btn compact-action org-access-toggle"
+          onClick={() => setShowMembersPanel((open) => !open)}
+        >
+          <Users size={14} />
+          {showMembersPanel ? "Hide members" : "View members"}
+          {showMembersPanel ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+      </div>
+
+      {showInviteForm && inviteAllowed && (
+        <section className="org-access-content org-access-section">
+          <div className="org-access-heading">
+            <h3>Invite member</h3>
+          </div>
+
+          <form className="org-invite-form" onSubmit={handleInvite}>
+            <input
+              type="email"
+              placeholder="Invite by email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              disabled={inviteMutation.isPending}
+            />
+            <button
+              type="submit"
+              className="button primary-btn compact-action"
+              disabled={inviteMutation.isPending || !inviteEmail.trim()}
+            >
+              Invite member
+            </button>
+          </form>
+
+          {inviteMutation.isError && (
+            <p className="error">
+              {getErrorMessage(
+                inviteMutation.error,
+                "Failed to invite member.",
+              )}
+            </p>
+          )}
+        </section>
+      )}
+
+      {showMembersPanel && (
+        <div className="org-access-content org-access-grid">
+          <section className="org-access-section">
+            <div className="org-access-heading">
+              <h3>Members</h3>
+              {membersQuery.isSuccess && (
+                <span className="muted-text">{membersQuery.data.length}</span>
+              )}
+            </div>
+
+            {membersQuery.isPending ? (
+              <p className="muted-text">Loading members...</p>
+            ) : membersQuery.isError ? (
+              <p className="error">
+                {getErrorMessage(membersQuery.error, "Failed to load members.")}
+              </p>
+            ) : (
+              <div className="org-access-list">
+                {membersQuery.data.map((member) => (
+                  <div className="org-access-row" key={member.id}>
+                    <div className="org-access-row-copy">
+                      <strong>{member.display_name ?? member.email ?? "Member"}</strong>
+                      <span>{member.email ?? "No email address"}</span>
+                    </div>
+                    <span className={`pill ${getRolePillClass(member.role)}`}>
+                      {member.role}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="org-access-section">
+            <div className="org-access-heading">
+              <h3>Pending invites</h3>
+              {invitesQuery.isSuccess && (
+                <span className="muted-text">{invitesQuery.data.length}</span>
+              )}
+            </div>
+
+            {invitesQuery.isPending ? (
+              <p className="muted-text">Loading invites...</p>
+            ) : invitesQuery.isError ? (
+              <p className="error">
+                {getErrorMessage(invitesQuery.error, "Failed to load invites.")}
+              </p>
+            ) : invitesQuery.data.length === 0 ? (
+              <p className="muted-text">No pending invites.</p>
+            ) : (
+              <div className="org-access-list">
+                {invitesQuery.data.map((invite) => (
+                  <div className="org-access-row" key={invite.id}>
+                    <div className="org-access-row-copy">
+                      <strong>{invite.email}</strong>
+                      <span>
+                        Member invite
+                        {invite.invited_by_name
+                          ? ` by ${invite.invited_by_name}`
+                          : ""}
+                      </span>
+                      <span>
+                        Expires {new Date(invite.expires_at).toLocaleDateString()}
+                      </span>
+                    </div>
+                    {revokeAllowed && (
+                      <button
+                        type="button"
+                        className="button secondary-btn compact-action"
+                        onClick={() => {
+                          if (confirm(`Revoke invite for "${invite.email}"?`)) {
+                            revokeInviteMutation.mutate({
+                              organizationId: organization.id,
+                              inviteId: invite.id,
+                            });
+                          }
+                        }}
+                        disabled={revokeInviteMutation.isPending}
+                      >
+                        Revoke
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {revokeInviteMutation.isError && (
+              <p className="error">
+                {getErrorMessage(
+                  revokeInviteMutation.error,
+                  "Failed to revoke invite.",
+                )}
+              </p>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ProfilePage() {
-  const navigate = useNavigate();
   const profile = useProfile();
   const createOrgMutation = useCreateOrganization();
   const deleteOrgMutation = useDeleteOrganization();
+  const leaveOrgMutation = useLeaveOrganization();
   const restoreOrgMutation = useRestoreOrganization();
   const [newOrgName, setNewOrgName] = useState("");
   const [orgTab, setOrgTab] = useState<OrgTab>("active");
@@ -48,37 +285,25 @@ export function ProfilePage() {
 
   const { user, organizations } = profile.data;
 
-  const activeOrgs = organizations.filter((org) => org.deleted_at === null);
-  const deletedOrgs = organizations.filter((org) => org.deleted_at !== null);
-
-  const canDelete = (role: string) => role === "owner" || role === "admin";
+  const activeOrgs = organizations.filter((org) => org.deleted_at == null);
+  const deletedOrgs = organizations.filter((org) => org.deleted_at != null);
 
   return (
     <main className="page profile-page">
       <div className="page-header">
         <h1>Profile</h1>
-        <button
-          className="button secondary-btn compact-action"
-          onClick={() => navigate("/projects")}
-        >
-          Back to projects
-        </button>
       </div>
 
       <section className="profile-section card">
         <h2>User Details</h2>
         <div className="profile-info">
-          {user.avatar_url ? (
-            <img
-              src={user.avatar_url}
-              alt={user.display_name ?? "User avatar"}
-              className="profile-avatar"
-            />
-          ) : (
-            <div className="profile-avatar profile-avatar-placeholder">
-              {(user.display_name ?? user.email ?? "?").charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar
+            src={user.avatar_url}
+            label={user.display_name ?? user.email ?? "User"}
+            alt={user.display_name ?? "User avatar"}
+            className="profile-avatar"
+            fallbackClassName="profile-avatar-placeholder"
+          />
           <div className="profile-details">
             <p>
               <strong>Name:</strong> {user.display_name ?? "—"}
@@ -138,47 +363,63 @@ export function ProfilePage() {
             ) : (
               <div className="org-list">
                 {activeOrgs.map((org) => (
-                  <div key={org.id} className="org-card card">
-                    <div className="org-card-header">
-                      <h3>{org.name}</h3>
-                      <span className="pill">{org.membership.role}</span>
-                    </div>
-                    <div className="org-card-meta">
+                  <ResourceCard
+                    key={org.id}
+                    title={org.name}
+                    pill={org.membership.role}
+                    pillClassName={getRolePillClass(org.membership.role)}
+                    onDelete={
+                      canDeleteOrganization(org.membership.role) &&
+                      org.id !== user.default_organization_id
+                        ? () => {
+                            if (
+                              confirm(
+                                `Are you sure you want to delete "${org.name}"?`,
+                              )
+                            ) {
+                              deleteOrgMutation.mutate(org.id);
+                            }
+                          }
+                        : undefined
+                    }
+                    deleteDisabled={deleteOrgMutation.isPending}
+                    deleteLabel={`Delete ${org.name}`}
+                    secondaryAction={
+                      canLeaveOrganization(org.membership.role) ? (
+                        <button
+                          type="button"
+                          className="button secondary-btn compact-action"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Leave organisation "${org.name}"?`,
+                              )
+                            ) {
+                              leaveOrgMutation.mutate(org.id);
+                            }
+                          }}
+                          disabled={leaveOrgMutation.isPending}
+                        >
+                          <LogOut size={14} />
+                          Leave
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    <p>
+                      <strong>Status:</strong> {org.membership.status}
+                    </p>
+                    {org.plan && (
                       <p>
-                        <strong>Status:</strong> {org.membership.status}
+                        <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
                       </p>
-                      {org.plan && (
-                        <p>
-                          <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
-                        </p>
-                      )}
-                      <p>
-                        <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
-                        {org.ai_credits.granted} remaining
-                      </p>
-                    </div>
-                    {canDelete(org.membership.role) &&
-                      org.id !== user.default_organization_id && (
-                        <div className="org-card-actions">
-                          <button
-                            className="button danger-btn compact-action"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Are you sure you want to delete "${org.name}"?`,
-                                )
-                              ) {
-                                deleteOrgMutation.mutate(org.id);
-                              }
-                            }}
-                            disabled={deleteOrgMutation.isPending}
-                          >
-                            <Trash2 size={14} />
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                  </div>
+                    )}
+                    <p>
+                      <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
+                      {org.ai_credits.granted} remaining
+                    </p>
+                    <OrganizationAccessPanel organization={org} />
+                  </ResourceCard>
                 ))}
               </div>
             )}
@@ -195,50 +436,50 @@ export function ProfilePage() {
             {deletedOrgs.length === 0 ? (
               <p className="muted-text">No deleted organisations.</p>
             ) : (
-              <div className="org-list">
+              <div className="org-list deleted-grid">
                 {deletedOrgs.map((org) => (
-                  <div key={org.id} className="org-card card org-deleted">
-                    <div className="org-card-header">
-                      <h3>{org.name}</h3>
-                      <span className="pill">{org.membership.role}</span>
-                    </div>
-                    <div className="org-card-meta">
+                  <ResourceCard
+                    key={org.id}
+                    title={org.name}
+                    pill={org.membership.role}
+                    pillClassName={getRolePillClass(org.membership.role)}
+                    className="org-deleted"
+                    secondaryAction={
+                      canDeleteOrganization(org.membership.role) &&
+                      org.id !== user.default_organization_id ? (
+                        <button
+                          className="button secondary-btn compact-action"
+                          onClick={() => {
+                            if (
+                              confirm(
+                                `Restore organisation "${org.name}"?`,
+                              )
+                            ) {
+                              restoreOrgMutation.mutate(org.id);
+                            }
+                          }}
+                          disabled={restoreOrgMutation.isPending}
+                        >
+                          <RotateCcw size={14} />
+                          Restore
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    <p>
+                      <strong>Deleted:</strong>{" "}
+                      {new Date(org.deleted_at!).toLocaleString()}
+                    </p>
+                    {org.plan && (
                       <p>
-                        <strong>Deleted:</strong>{" "}
-                        {new Date(org.deleted_at!).toLocaleString()}
+                        <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
                       </p>
-                      {org.plan && (
-                        <p>
-                          <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
-                        </p>
-                      )}
-                      <p>
-                        <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
-                        {org.ai_credits.granted} remaining
-                      </p>
-                    </div>
-                    {canDelete(org.membership.role) &&
-                      org.id !== user.default_organization_id && (
-                        <div className="org-card-actions">
-                          <button
-                            className="button secondary-btn compact-action"
-                            onClick={() => {
-                              if (
-                                confirm(
-                                  `Restore organisation "${org.name}"?`,
-                                )
-                              ) {
-                                restoreOrgMutation.mutate(org.id);
-                              }
-                            }}
-                            disabled={restoreOrgMutation.isPending}
-                          >
-                            <RotateCcw size={14} />
-                            Restore
-                          </button>
-                        </div>
-                      )}
-                  </div>
+                    )}
+                    <p>
+                      <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}
+                      {org.ai_credits.granted} remaining
+                    </p>
+                  </ResourceCard>
                 ))}
               </div>
             )}
@@ -250,6 +491,9 @@ export function ProfilePage() {
         )}
         {restoreOrgMutation.isError && (
           <p className="error">Failed to restore organisation.</p>
+        )}
+        {leaveOrgMutation.isError && (
+          <p className="error">Failed to leave organisation.</p>
         )}
       </section>
     </main>

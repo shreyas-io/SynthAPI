@@ -4,9 +4,24 @@ import type { MockApiResponse, MockApiResponseInput } from "../types";
 
 export const listMockApiResponses = (
   mockApiId: string,
-): Promise<ListResponse<Pick<MockApiResponse, "id" | "mock_api_id" | "name" | "is_default">>> => {
+  fetchDeleted?: boolean,
+): Promise<
+  ListResponse<
+    Pick<
+      MockApiResponse,
+      "id" | "mock_api_id" | "name" | "is_default" | "deleted_at"
+    >
+  >
+> => {
+  const query = new URLSearchParams({
+    limit: "50",
+    offset: "0",
+  });
+  if (fetchDeleted) {
+    query.set("fetch_deleted", "true");
+  }
   return apiRequest(
-    `/api/v1/mock-apis/${mockApiId}/responses?limit=50&offset=0`,
+    `/api/v1/mock-apis/${mockApiId}/responses?${query.toString()}`,
   );
 };
 
@@ -36,4 +51,25 @@ export const updateMockApiResponse = (
     method: "PUT",
     body: input,
   });
+};
+
+export const deleteMockApiResponse = (
+  mockApiId: string,
+  responseId: string,
+): Promise<void> => {
+  return apiRequest(`/api/v1/mock-apis/${mockApiId}/responses/${responseId}`, {
+    method: "DELETE",
+  });
+};
+
+export const restoreMockApiResponse = (
+  mockApiId: string,
+  responseId: string,
+): Promise<void> => {
+  return apiRequest(
+    `/api/v1/mock-apis/${mockApiId}/responses/${responseId}/restore`,
+    {
+      method: "POST",
+    },
+  );
 };

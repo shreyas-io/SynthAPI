@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 
 import { JsonInput } from "../../../components/atoms/JsonInput";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
@@ -24,6 +24,9 @@ type MockApiResponseEditorProps = {
   submitLabel: string;
   isPending: boolean;
   errorMessage?: string | undefined;
+  isDeleting?: boolean;
+  deleteErrorMessage?: string | undefined;
+  onDelete?: () => void;
   onSubmit: (input: Omit<MockApiResponseInput, "mock_api_id">) => void;
 };
 
@@ -149,7 +152,9 @@ function KeyValueRows({
         <button
           type="button"
           className="button secondary-btn compact-action"
-          onClick={() => onChange([...rows, { id: createId(), key: "", value: "" }])}
+          onClick={() =>
+            onChange([...rows, { id: createId(), key: "", value: "" }])
+          }
         >
           Add
         </button>
@@ -161,7 +166,9 @@ function KeyValueRows({
             value={row.key}
             onChange={(e) =>
               onChange(
-                rows.map((r) => (r.id === row.id ? { ...r, key: e.target.value } : r)),
+                rows.map((r) =>
+                  r.id === row.id ? { ...r, key: e.target.value } : r,
+                ),
               )
             }
           />
@@ -205,7 +212,10 @@ function PostActionForm({
           value={action.type}
           onChange={(e) =>
             onChange(
-              createAction(e.target.value as PostResponseAction["type"], action.order),
+              createAction(
+                e.target.value as PostResponseAction["type"],
+                action.order,
+              ),
             )
           }
         >
@@ -254,7 +264,9 @@ function PostActionForm({
               <input
                 type="number"
                 value={action.amount}
-                onChange={(e) => onChange({ ...action, amount: Number(e.target.value) })}
+                onChange={(e) =>
+                  onChange({ ...action, amount: Number(e.target.value) })
+                }
               />
             </label>
           ) : action.type === "unset" ? null : (
@@ -263,7 +275,12 @@ function PostActionForm({
               <input
                 placeholder="e.g. {{request.body.id}}"
                 value={String((action as any).value ?? "")}
-                onChange={(e) => onChange({ ...action, value: e.target.value } as PostResponseAction)}
+                onChange={(e) =>
+                  onChange({
+                    ...action,
+                    value: e.target.value,
+                  } as PostResponseAction)
+                }
               />
             </label>
           )}
@@ -279,6 +296,9 @@ export function MockApiResponseEditor({
   submitLabel,
   isPending,
   errorMessage,
+  isDeleting = false,
+  deleteErrorMessage,
+  onDelete,
   onSubmit,
 }: MockApiResponseEditorProps) {
   const initialBody = initialResponse?.response.body ?? {
@@ -287,15 +307,25 @@ export function MockApiResponseEditor({
   };
 
   const [name, setName] = useState(initialResponse?.name ?? "");
-  const [activeTab, setActiveTab] = useState<"response" | "actions" | "rules">("response");
-  const [isDefault, setIsDefault] = useState(initialResponse?.is_default ?? false);
+  const [activeTab, setActiveTab] = useState<"response" | "actions" | "rules">(
+    "response",
+  );
+  const [isDefault, setIsDefault] = useState(
+    initialResponse?.is_default ?? false,
+  );
   const [statusCode, setStatusCode] = useState(
     initialResponse?.response.status_code ?? 200,
   );
-  const [bodyType, setBodyType] = useState<ResponseBody["type"]>(initialBody.type);
+  const [bodyType, setBodyType] = useState<ResponseBody["type"]>(
+    initialBody.type,
+  );
   const [bodyText, setBodyText] = useState(bodyTextFromResponse(initialBody));
   const [headers, setHeaders] = useState<KeyValueRow[]>(
-    rowsFromRecord(initialResponse?.response.headers ?? { "content-type": "application/json" }),
+    rowsFromRecord(
+      initialResponse?.response.headers ?? {
+        "content-type": "application/json",
+      },
+    ),
   );
   const [cookies, setCookies] = useState<KeyValueRow[]>(
     rowsFromRecord(initialResponse?.response.cookies ?? {}),
@@ -322,7 +352,9 @@ export function MockApiResponseEditor({
     setBodyText(bodyTextFromResponse(nextBody));
     setHeaders(
       rowsFromRecord(
-        initialResponse?.response.headers ?? { "content-type": "application/json" },
+        initialResponse?.response.headers ?? {
+          "content-type": "application/json",
+        },
       ),
     );
     setCookies(rowsFromRecord(initialResponse?.response.cookies ?? {}));
@@ -403,60 +435,73 @@ export function MockApiResponseEditor({
             </button>
           </div>
           <div className="toolbar-actions">
-             <button
-               className="compact-action icon-only-action"
-               disabled={isPending || !mockApiId}
-               aria-label={submitLabel}
-               title={submitLabel}
-             >
-               <Save size={14} />
-             </button>
+            <button
+              type="submit"
+              className="button primary-btn compact-action"
+              disabled={isPending || !mockApiId}
+            >
+              <Save size={14} />
+              {submitLabel}
+            </button>
+            {onDelete && (
+              <button
+                type="button"
+                className="button danger-btn compact-action"
+                disabled={isPending || isDeleting}
+                onClick={onDelete}
+              >
+                <Trash2 size={14} />
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       <section className="response-editor-main">
         <div className="response-editor-stack">
-
           {activeTab === "response" && (
             <div className="editor-tab-panel form flat-panel">
               <div className="field-grid">
-              <label>
-                Name
-                <input value={name} onChange={(e) => setName(e.target.value)} />
-              </label>
-              <label>
-                Status code
-                <input
-                  type="number"
-                  value={statusCode}
-                  onChange={(e) => setStatusCode(Number(e.target.value))}
-                />
-              </label>
-              <label>
-                Set as Default Response
-                <input
-                  type="checkbox"
-                  checked={isDefault}
-                  onChange={(e) => setIsDefault(e.target.checked)}
-                />
-              </label>
-              <label>
-                Body type
-                <select
-                  value={bodyType}
-                  onChange={(event) =>
-                    setBodyType(event.target.value as ResponseBody["type"])
-                  }
-                >
-                  <option value="json">json</option>
-                  <option value="text">text</option>
-                  <option value="empty">empty</option>
-                </select>
-              </label>
+                <label>
+                  Name
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Status code
+                  <input
+                    type="number"
+                    value={statusCode}
+                    onChange={(e) => setStatusCode(Number(e.target.value))}
+                  />
+                </label>
+                <label>
+                  Set as Default Response
+                  <input
+                    type="checkbox"
+                    checked={isDefault}
+                    onChange={(e) => setIsDefault(e.target.checked)}
+                  />
+                </label>
+                <label>
+                  Body type
+                  <select
+                    value={bodyType}
+                    onChange={(event) =>
+                      setBodyType(event.target.value as ResponseBody["type"])
+                    }
+                  >
+                    <option value="json">json</option>
+                    <option value="text">text</option>
+                    <option value="empty">empty</option>
+                  </select>
+                </label>
               </div>
-              {bodyType !== "empty" && (
-                bodyType === "json" ? (
+              {bodyType !== "empty" &&
+                (bodyType === "json" ? (
                   <JsonInput
                     label="Response body"
                     value={bodyText}
@@ -474,10 +519,17 @@ export function MockApiResponseEditor({
                       onChange={(e) => setBodyText(e.target.value)}
                     />
                   </label>
-                )
-              )}
-              <KeyValueRows label="Headers" rows={headers} onChange={setHeaders} />
-              <KeyValueRows label="Cookies" rows={cookies} onChange={setCookies} />
+                ))}
+              <KeyValueRows
+                label="Headers"
+                rows={headers}
+                onChange={setHeaders}
+              />
+              <KeyValueRows
+                label="Cookies"
+                rows={cookies}
+                onChange={setCookies}
+              />
             </div>
           )}
 
@@ -500,7 +552,11 @@ export function MockApiResponseEditor({
                   + Add
                 </button>
               </div>
-              {!postActions.length && <p className="muted-text">No post response actions configured.</p>}
+              {!postActions.length && (
+                <p className="muted-text">
+                  No post response actions configured.
+                </p>
+              )}
               {postActions.map((action, index) => (
                 <PostActionForm
                   action={action}
@@ -514,7 +570,9 @@ export function MockApiResponseEditor({
                   }
                   onRemove={() =>
                     setPostActions(
-                      postActions.filter((_item, itemIndex) => itemIndex !== index),
+                      postActions.filter(
+                        (_item, itemIndex) => itemIndex !== index,
+                      ),
                     )
                   }
                 />
@@ -524,24 +582,26 @@ export function MockApiResponseEditor({
 
           {activeTab === "rules" && (
             <div className="editor-tab-panel rule-editor-panel flat-panel">
-              <div className="section-heading">
-                <h3>Rule tree</h3>
-              </div>
               {isDefault && !ruleTree ? (
                 <div className="empty-state">
                   Default responses do not use rule trees.
                 </div>
               ) : (
                 <div className="rule-editor-frame">
-                  <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
+                  <RuleTreeEditor
+                    initialTree={ruleTree}
+                    onChange={setRuleTree}
+                  />
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {(formError || errorMessage) && (
-          <p className="error">{formError ?? errorMessage}</p>
+        {(formError || errorMessage || deleteErrorMessage) && (
+          <p className="error">
+            {formError ?? errorMessage ?? deleteErrorMessage}
+          </p>
         )}
       </section>
     </form>

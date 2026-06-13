@@ -45,6 +45,7 @@ export const listMockApisFilterDto = z.object({
   path: z.string().optional(),
   name: z.string().optional(),
   description: z.string().optional(),
+  fetch_deleted: z.boolean().optional(),
 });
 
 export const listMockApisPaginationDto = z.object({

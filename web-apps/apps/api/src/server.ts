@@ -20,6 +20,8 @@ import { createDatabaseClient } from "./infrastructure/kysely";
 import { startDomainJobs } from "./domain/jobs";
 import type { IKeyValueStore } from "./domain/interfaces/kv_store";
 import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bus";
+import type { IEmailService } from "./domain/interfaces/email_service";
+import { MailerSendEmailService } from "./infrastructure/email/mailersend_email_service";
 import { asyncRoute } from "./middleware/async_route";
 
 type ApiApp = {
@@ -33,6 +35,7 @@ export type AppContext = {
   pyodide: PyodideWorkerPool;
   env: Awaited<ReturnType<typeof getSecrets>>;
   eventBus: IEventBus;
+  emailService: IEmailService;
 };
 
 export const createApiApp = async (): Promise<ApiApp> => {
@@ -54,12 +57,14 @@ export const createApiApp = async (): Promise<ApiApp> => {
   });
 
   const agentEventBus = InMemoryEventBus();
+  const emailService = createEmailService(secrets);
   const appContext: AppContext = {
     db: dbClient.db,
     kvStore: keyValueStore,
     pyodide: pyodide,
     env: secrets,
     eventBus: agentEventBus,
+    emailService,
   };
   const domainJobs = await startDomainJobs({
     ctx: appContext,
@@ -112,6 +117,21 @@ export const createApiApp = async (): Promise<ApiApp> => {
     },
   };
 };
+
+function createEmailService(
+  secrets: Awaited<ReturnType<typeof getSecrets>>,
+): IEmailService {
+  return new MailerSendEmailService({
+    apiKey: secrets.MAILERSEND_API_KEY,
+    ...(secrets.MAILERSEND_BASE_URL
+      ? { baseUrl: secrets.MAILERSEND_BASE_URL }
+      : undefined),
+    from: secrets.EMAIL_FROM,
+    ...(secrets.EMAIL_REPLY_TO
+      ? { replyTo: secrets.EMAIL_REPLY_TO }
+      : undefined),
+  });
+}
 
 const port = Number(process.env.PORT ?? 3001);
 const host = process.env.HOST ?? "0.0.0.0";

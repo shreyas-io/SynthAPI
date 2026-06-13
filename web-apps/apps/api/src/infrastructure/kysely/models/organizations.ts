@@ -32,6 +32,22 @@ export type OrganizationMembershipsTable = {
   updated_at: Timestamp;
 };
 
+export type OrganizationInvitesTable = {
+  id: GeneratedUuid;
+  organization_id: string;
+  email: string;
+  invited_by_user_id: string;
+  role: OrganizationMemberRole;
+  status: ColumnType<
+    "pending" | "accepted" | "expired" | "revoked",
+    "pending" | "accepted" | "expired" | "revoked" | undefined,
+    "pending" | "accepted" | "expired" | "revoked"
+  >;
+  expires_at: ColumnType<Date, Date | string, Date | string>;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+};
+
 export type PlanTypesTable = {
   id: GeneratedUuid;
   key: string;

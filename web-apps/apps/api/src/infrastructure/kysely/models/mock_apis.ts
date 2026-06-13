@@ -15,6 +15,7 @@ export type MockApisTable = {
     VariableEt[] | string
   > | null;
   description: string | null;
+  deleted_at: ColumnType<Date | null, Date | string | null | undefined, Date | string | null>;
   created_at: Timestamp;
   updated_at: Timestamp;
 };

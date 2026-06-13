@@ -20,7 +20,11 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 
 import { JsonInput } from "../../../components/atoms/JsonInput";
-import type { PredicateValue, RulePredicate, RuleTree } from "../../mock-api-responses/types";
+import type {
+  PredicateValue,
+  RulePredicate,
+  RuleTree,
+} from "../../mock-api-responses/types";
 
 const operatorsWithoutExpected = [
   "null",
@@ -47,7 +51,10 @@ const operatorsWithExpected = [
   "string_not_includes",
 ] as const;
 
-const operators = [...operatorsWithoutExpected, ...operatorsWithExpected] as const;
+const operators = [
+  ...operatorsWithoutExpected,
+  ...operatorsWithExpected,
+] as const;
 
 const operatorAliases: Record<string, string> = {
   null: "Is Null",
@@ -80,7 +87,11 @@ const createId = () => crypto.randomUUID();
 const nodeWidth = 320;
 const nodeHeight = 180; // Avg height
 
-const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "TB") => {
+const getLayoutedElements = (
+  nodes: Node[],
+  edges: Edge[],
+  direction = "TB",
+) => {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
   dagreGraph.setGraph({ rankdir: direction });
@@ -125,7 +136,11 @@ function LogicNode({ data }: { data: LogicNodeData }) {
       <div className="rf-node-header">
         <span className="eyebrow">{data.isRoot ? "ROOT" : "GROUP"}</span>
         {!data.isRoot && (
-          <button className="rf-node-remove" onClick={data.onRemove} title="Remove Group">
+          <button
+            className="rf-node-remove"
+            onClick={data.onRemove}
+            title="Remove Group"
+          >
             ×
           </button>
         )}
@@ -162,7 +177,11 @@ function PredicateNode({ data }: { data: PredicateNodeData }) {
       <Handle type="target" position={Position.Top} />
       <div className="rf-node-header">
         <span className="eyebrow">CONDITION</span>
-        <button className="rf-node-remove" onClick={data.onRemove} title="Remove Condition">
+        <button
+          className="rf-node-remove"
+          onClick={data.onRemove}
+          title="Remove Condition"
+        >
           ×
         </button>
       </div>
@@ -337,7 +356,12 @@ export function RuleTreeEditor({
   initialTree?: RuleTree | null;
   onChange: (tree: RuleTree) => void;
 }) {
-  const defaultTree: RuleTree = { type: "and", label: "ALL Conditions", predicates: [], children: [] };
+  const defaultTree: RuleTree = {
+    type: "and",
+    label: "ALL Conditions",
+    predicates: [],
+    children: [],
+  };
   const initialFlow = useMemo(() => treeToFlow(initialTree || defaultTree), []);
 
   const [nodes, setNodes] = useNodesState(initialFlow.nodes);
@@ -350,27 +374,32 @@ export function RuleTreeEditor({
   }, [nodes, edges, onChange]);
 
   const onNodesChangeHandler = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds)),
-    [setNodes]
+    (changes: NodeChange[]) =>
+      setNodes((nds) => applyNodeChanges(changes, nds)),
+    [setNodes],
   );
   const onEdgesChangeHandler = useCallback(
-    (changes: EdgeChange[]) => setEdges((eds) => applyEdgeChanges(changes, eds)),
-    [setEdges]
+    (changes: EdgeChange[]) =>
+      setEdges((eds) => applyEdgeChanges(changes, eds)),
+    [setEdges],
   );
 
   const onConnect = useCallback(
     (params: Connection) => {
-      const targetNode = nodes.find(n => n.id === params.target);
-      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find((n) => n.id === params.target);
+      const sourceNode = nodes.find((n) => n.id === params.source);
       // Basic rule: only logic can be source
       if (sourceNode?.type !== "logic") return;
       setEdges((eds) => addEdge(params, eds));
     },
-    [setEdges, nodes]
+    [setEdges, nodes],
   );
 
   const handleLayout = useCallback(() => {
-    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
+      nodes,
+      edges,
+    );
     setNodes([...layoutedNodes]);
     setEdges([...layoutedEdges]);
   }, [nodes, edges, setNodes, setEdges]);
@@ -416,12 +445,16 @@ export function RuleTreeEditor({
             ...node.data,
             onChange: (type: "and" | "or") => {
               setNodes((nds) =>
-                nds.map((n) => (n.id === node.id ? { ...n, data: { ...n.data, type } } : n))
+                nds.map((n) =>
+                  n.id === node.id ? { ...n, data: { ...n.data, type } } : n,
+                ),
               );
             },
             onRemove: () => {
               setNodes((nds) => nds.filter((n) => n.id !== node.id));
-              setEdges((eds) => eds.filter((e) => e.source !== node.id && e.target !== node.id));
+              setEdges((eds) =>
+                eds.filter((e) => e.source !== node.id && e.target !== node.id),
+              );
             },
           },
         };
@@ -434,8 +467,10 @@ export function RuleTreeEditor({
             onChange: (updates: Partial<PredicateNodeData>) => {
               setNodes((nds) =>
                 nds.map((n) =>
-                  n.id === node.id ? { ...n, data: { ...n.data, ...updates } } : n
-                )
+                  n.id === node.id
+                    ? { ...n, data: { ...n.data, ...updates } }
+                    : n,
+                ),
               );
             },
             onRemove: () => {
@@ -454,7 +489,6 @@ export function RuleTreeEditor({
       <header className="editor-toolbar rule-editor-toolbar">
         <div className="rule-editor-title">
           <p className="eyebrow">Rule tree</p>
-          <h2>React Flow Builder</h2>
         </div>
         <div className="rf-toolbar-actions">
           <button type="button" onClick={addPredicateNode} className="rf-btn">
@@ -463,7 +497,11 @@ export function RuleTreeEditor({
           <button type="button" onClick={addLogicNode} className="rf-btn">
             + Logic Group
           </button>
-          <button type="button" onClick={handleLayout} className="rf-btn rf-btn-secondary">
+          <button
+            type="button"
+            onClick={handleLayout}
+            className="rf-btn rf-btn-secondary"
+          >
             Auto Layout
           </button>
         </div>
@@ -481,7 +519,7 @@ export function RuleTreeEditor({
           minZoom={0.2}
           colorMode="light"
         >
-          <Background color="#333" gap={16} />
+          <Background color="#272822" gap={16} />
           <Controls />
         </ReactFlow>
       </div>
