@@ -3,16 +3,23 @@ import {
   HttpStatusCode,
   MockApiException,
 } from "../../../exceptions/exception";
+import {
+  sseStreamItemSchema,
+  sseStreamItemsSchema,
+  type SseStreamItemEt,
+} from "../../../entities/mock_api_response/sse";
 import { getMockApiExecutionContext, upsertMockApiVariables } from "./context";
 import { executePostResponseActions } from "./post_response_actions";
 import { executeRuleTree } from "./rule_engine/execute_rule_tree";
 import { recursivelyMapTemplateParams } from "../utils/template_params";
 import type {
+  ExecutionContextEt,
   QueryParams,
   RequestBodyEt,
 } from "../../../entities/execution_context";
 import type { MockApiEt } from "../../../entities/mock_api";
 import type { MockApiResponseEt } from "../../../entities/mock_api_response/mock_api_response";
+import { z } from "zod";
 
 type PublicMockApiRequest = {
   project_slug: string;
@@ -37,6 +44,62 @@ type Match = {
   path_length: number;
   query_key_count: number;
 };
+
+type MaterializedResponseBody =
+  | { type: "json"; value: any }
+  | { type: "text"; value: string }
+  | { type: "empty" }
+  | { type: "sse"; stream: AsyncIterable<SseStreamItemEt> };
+
+const createStaticSseStream = (
+  events: MockApiResponseEt["response"]["body"] & { type: "sse"; mode: "events" },
+  execution_context: ExecutionContextEt,
+): AsyncIterable<SseStreamItemEt> => ({
+  async *[Symbol.asyncIterator]() {
+    for (const event of events.events) {
+      const templatedEvent = recursivelyMapTemplateParams(
+        event,
+        execution_context,
+      );
+      const parsedEvent = sseStreamItemSchema.safeParse(templatedEvent);
+
+      if (!parsedEvent.success) {
+        throw new MockApiException({
+          public_message: `SSE event configuration is invalid: ${JSON.stringify(z.treeifyError(parsedEvent.error))}`,
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
+      yield parsedEvent.data;
+    }
+  },
+});
+
+const createScriptSseStream = (
+  ctx: AppContext,
+  code: string,
+  execution_context: ExecutionContextEt,
+): AsyncIterable<SseStreamItemEt> => ({
+  async *[Symbol.asyncIterator]() {
+    const resp = await ctx.pyodide.execute({
+      code,
+      timeout_ms: 5000,
+      context: execution_context,
+    });
+    const parsedEvents = sseStreamItemsSchema.safeParse(resp.result);
+
+    if (!parsedEvents.success) {
+      throw new MockApiException({
+        public_message: `SSE script must return an array of valid stream items: ${JSON.stringify(z.treeifyError(parsedEvents.error))}`,
+        status_code: HttpStatusCode.BAD_REQUEST,
+      });
+    }
+
+    for (const event of parsedEvents.data) {
+      yield event;
+    }
+  },
+});
 
 const normalizePath = (path: string): string => {
   if (path.length > 1 && path.endsWith("/")) {
@@ -179,6 +242,31 @@ const getBestMatch = (
   };
 };
 
+const materializeResponseBody = async (
+  ctx: AppContext,
+  body: MockApiResponseEt["response"]["body"],
+  execution_context: ExecutionContextEt,
+): Promise<MaterializedResponseBody> => {
+  if (body.type !== "sse") {
+    return recursivelyMapTemplateParams(
+      body,
+      execution_context,
+    ) as MaterializedResponseBody;
+  }
+
+  if (body.mode === "events") {
+    return {
+      type: "sse",
+      stream: createStaticSseStream(body, execution_context),
+    };
+  }
+
+  return {
+    type: "sse",
+    stream: createScriptSseStream(ctx, body.code, execution_context),
+  };
+};
+
 export async function executePublicMockApi(
   ctx: AppContext,
   request_data: PublicMockApiRequest,
@@ -303,7 +391,8 @@ export async function executePublicMockApi(
       mock_api_response.response.cookies,
       execution_context,
     ),
-    body: recursivelyMapTemplateParams(
+    body: await materializeResponseBody(
+      ctx,
       mock_api_response.response.body,
       execution_context,
     ),

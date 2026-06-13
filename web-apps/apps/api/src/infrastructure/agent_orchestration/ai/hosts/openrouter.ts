@@ -20,6 +20,13 @@ export async function generateTextViaOpenRouter(
   input: OpenRouterInput,
 ): Promise<Awaited<ReturnType<typeof generateText>>> {
   try {
+    if (!ctx.env.OPENROUTER_API_KEY) {
+      throw new AgentOrchestrationException({
+        public_message: "OpenRouter is not configured.",
+        message: "OPENROUTER_API_KEY is required for OpenRouter-hosted models.",
+      });
+    }
+
     const openrouter = createOpenRouter({
       apiKey: ctx.env.OPENROUTER_API_KEY,
     });

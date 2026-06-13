@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { mockApiPostResponseActionDto } from "./mock_api_post_response_actions";
 import { createMockApiRuleTreeDto } from "./mock_api_rule_tree";
+import { sseBodySchema } from "../../../domain/entities/mock_api_response/sse";
 
 const responseBodyDto = z.discriminatedUnion("type", [
   z.object({
@@ -14,6 +15,7 @@ const responseBodyDto = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("empty"),
   }),
+  sseBodySchema,
 ]);
 
 const responseDto = z.object({

@@ -1,11 +1,15 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { createAiGateway } from "ai-gateway-provider";
-import { streamText, type ModelMessage, type StreamTextResult, type ToolSet } from "ai";
+import { createOpenAI } from "@ai-sdk/openai";
+import {
+  streamText,
+  type ModelMessage,
+  type StreamTextResult,
+  type ToolSet,
+} from "ai";
 
 import type { AppContext } from "../../../../server";
 import { AgentOrchestrationException } from "../../../../domain/exceptions/exception";
 
-export type OpenRouterStreamInput = {
+export type PortkeyStreamInput = {
   model: string;
   system: string;
   messages: Array<ModelMessage>;
@@ -18,37 +22,24 @@ export type OpenRouterStreamInput = {
   };
 };
 
-export async function streamTextViaOpenRouter(
+export async function streamTextViaPortkey(
   ctx: AppContext,
-  input: OpenRouterStreamInput,
+  input: PortkeyStreamInput,
 ): Promise<StreamTextResult<any, any>> {
   try {
-    if (!ctx.env.OPENROUTER_API_KEY) {
+    if (input.model_gateway !== null) {
       throw new AgentOrchestrationException({
-        public_message: "OpenRouter is not configured.",
-        message: "OPENROUTER_API_KEY is required for OpenRouter-hosted models.",
+        public_message: `Gateway '${input.model_gateway}' is not supported for Portkey-hosted models.`,
       });
     }
 
-    const openrouter = createOpenRouter({
-      apiKey: ctx.env.OPENROUTER_API_KEY,
+    const openai = createOpenAI({
+      baseURL: "https://api.portkey.ai/v1",
+      apiKey: ctx.env.PORTKEY_API_KEY,
     });
 
-    let model;
-
-    if (input.model_gateway === "cloudflare_aig") {
-      const gateway = createAiGateway({
-        accountId: ctx.env.CLOUDFLARE_ACCOUNT_ID,
-        gateway: ctx.env.CLOUDFLARE_AI_GATEWAY_ID,
-        apiKey: ctx.env.CLOUDFLARE_AI_GATEWAY_TOKEN,
-      });
-      model = gateway(openrouter(input.model));
-    } else {
-      model = openrouter(input.model);
-    }
-
     return streamText({
-      model,
+      model: openai.chat(input.model),
       system: input.system,
       messages: input.messages,
       ...(input.tools === undefined ? {} : { tools: input.tools }),
@@ -62,10 +53,8 @@ export async function streamTextViaOpenRouter(
         ? {}
         : {
             providerOptions: {
-              openrouter: {
-                reasoning: {
-                  effort: input.thinking.effort,
-                },
+              openai: {
+                reasoningEffort: input.thinking.effort,
               },
             },
           }),
@@ -73,7 +62,7 @@ export async function streamTextViaOpenRouter(
   } catch (error) {
     throw new AgentOrchestrationException({
       public_message: "Text streaming failed.",
-      message: "OpenRouter text streaming request failed.",
+      message: "Portkey text streaming request failed.",
       cause: error,
     });
   }

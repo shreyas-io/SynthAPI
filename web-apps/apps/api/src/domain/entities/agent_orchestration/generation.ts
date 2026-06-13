@@ -20,8 +20,8 @@ export type TextMessageContent = {
 };
 
 export const llmConfigSchema = z.object({
-  model_host: z.enum(["openrouter", "ollama", "workers_ai"]),
-  model_provider: z.enum(["nvidia", "google", "meta"]),
+  model_host: z.enum(["openrouter", "portkey", "ollama", "workers_ai"]),
+  model_provider: z.enum(["nvidia", "google", "meta", "openai"]),
   model_gateway: z.enum(["cloudflare_aig"]).nullable(),
   model_id: z.string(),
   system_prompt: z.string(),
@@ -50,6 +50,11 @@ export const llmConfigSchema = z.object({
   custom_tools: z.array(toolDefinitionSchema),
   temperature: z.number(),
   max_tokens: z.number(),
+  thinking: z
+    .object({
+      effort: z.enum(["none", "minimal", "low", "medium", "high", "xhigh"]),
+    })
+    .optional(),
 });
 
 export type LLMConfig = z.infer<typeof llmConfigSchema>;

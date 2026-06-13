@@ -232,4 +232,68 @@ export async function seed_default_project(
       },
     ],
   });
+
+  const sseMockApi = await mockApisUsecase.createMockApi({
+    project_id: project.id,
+    method: "GET",
+    path: "/sse",
+    name: "SSE",
+    description: "Streams example server-sent events.",
+    variables: [],
+  });
+
+  await responsesUsecase.createMockApiResponse({
+    mock_api_id: sseMockApi.id,
+    name: "Event stream",
+    is_default: true,
+    response: {
+      status_code: 200,
+      headers: {
+        "content-type": "text/event-stream",
+        "cache-control": "no-cache",
+      },
+      cookies: {},
+      body: {
+        type: "sse",
+        mode: "events",
+        events: [
+          {
+            delay_ms: 5,
+            sse: {
+              event: "ready",
+              id: "evt-1",
+              retry_ms: 1000,
+              data: {
+                message: "SSE stream connected",
+                service: "{{constants.service_name}}",
+              },
+            },
+          },
+          {
+            delay_ms: 250,
+            sse: {
+              event: "stats",
+              id: "evt-2",
+              data: {
+                api_version: "{{constants.api_version}}",
+                posts_created: "{{globals.posts_created}}",
+              },
+            },
+          },
+          {
+            delay_ms: 500,
+            sse: {
+              event: "done",
+              id: "evt-3",
+              data: {
+                status: "complete",
+              },
+            },
+          },
+        ],
+      },
+    },
+    rule_tree: null,
+    post_response_actions: [],
+  });
 }

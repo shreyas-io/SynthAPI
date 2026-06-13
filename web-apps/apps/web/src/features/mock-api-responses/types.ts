@@ -21,10 +21,32 @@ export type RuleTree = {
   children: RuleTree[];
 };
 
+export type SseEvent = {
+  data: PredicateValue;
+  event?: string;
+  id?: string;
+  retry_ms?: number;
+};
+
+export type SseStreamItem = {
+  delay_ms?: number;
+  sse: SseEvent;
+};
+
 export type ResponseBody =
   | { type: "json"; value: unknown }
   | { type: "text"; value: string }
-  | { type: "empty" };
+  | { type: "empty" }
+  | {
+      type: "sse";
+      mode: "events";
+      events: SseStreamItem[];
+    }
+  | {
+      type: "sse";
+      mode: "script";
+      code: string;
+    };
 
 export type PostResponseActionValue =
   | string
