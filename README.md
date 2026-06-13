@@ -1,4 +1,4 @@
-# mock-stack
+# SynthAPI
 
 Docker-first local stack with:
 
@@ -17,7 +17,9 @@ The backend API port is internal-only. Use Nginx for backend traffic.
 
 Local defaults:
 
-- Nginx gateway: `http://localhost:8787`
+- App entry: `http://localhost:8787/platform/`
+- API: `http://localhost:8787/api/...`
+- Mock APIs: `http://<project-slug>.mock.localhost:8787/...`
 - Web: `http://localhost:5173`
 - Postgres: `localhost:5432`
 - Redis: `localhost:6379`
@@ -28,16 +30,15 @@ Local defaults:
 Control-plane APIs go through Nginx:
 
 ```bash
-curl http://localhost:8787/mock-stack/health
-curl http://localhost:8787/mock-stack/api/v1/projects
+curl http://localhost:8787/api/health
+curl http://localhost:8787/api/v1/projects
 ```
 
-Public mock APIs use project subdomains. Nginx extracts the slug from the host
-and forwards it to the backend as `x-project-slug`.
+Public mock APIs use the project slug subdomain locally. Nginx extracts the slug
+from the host and forwards it to the backend as `x-project-slug`.
 
 ```bash
-curl -H "Host: acme.mock-stack.localhost" \
-  "http://localhost:8787/users/123?fetch_account=true"
+curl http://acme.mock.localhost:8787/users/123?fetch_account=true
 ```
 
 The backend service itself does not know how slugs map to domains.
@@ -53,8 +54,11 @@ cp .env.example .env
 The frontend should use Nginx as its backend base URL:
 
 ```bash
-VITE_API_BASE_URL=http://localhost:8787/mock-stack
+VITE_API_BASE_URL=http://localhost:8787
 ```
+
+The API uses `MOCK_API_BASE_URL_TEMPLATE=http://{projectSlug}.mock.localhost:8787`
+to generate local mock URLs and curl examples from the backend.
 
 ## Workspace Commands
 

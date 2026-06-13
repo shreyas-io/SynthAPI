@@ -23,17 +23,6 @@ import type { Variable } from "../../projects/types";
 import { useProject, useUpdateProject } from "../../projects/hooks/project_hooks";
 import { useMockApi, useMockApis, useUpdateMockApi } from "../hooks/mock_api_hooks";
 
-function generateCurl(method: string, path: string, projectSlug?: string) {
-  const host = projectSlug ? `${projectSlug}.mock-stack.localhost` : "localhost";
-  const url = `http://${host}:8787${path}`;
-  const upper = method.toUpperCase();
-
-  if (["POST", "PUT", "PATCH"].includes(upper)) {
-    return `curl -X ${upper} -H "Content-Type: application/json" -d '{}' ${url}`;
-  }
-  return `curl -X ${upper} ${url}`;
-}
-
 type ResponseTab = "active" | "deleted";
 
 export function MockApiDetailPage() {
@@ -149,13 +138,10 @@ export function MockApiDetailPage() {
               <button
                 type="button"
                 className="button secondary-btn compact-action copy-curl-action"
+                disabled={!mockApi.data.curl_command}
                 onClick={() => {
-                  if (!mockApi.data) return;
-                  const curl = generateCurl(
-                    mockApi.data.method,
-                    mockApi.data.path,
-                    project.data?.slug,
-                  );
+                  const curl = mockApi.data?.curl_command;
+                  if (!curl) return;
                   void navigator.clipboard.writeText(curl);
                   setCopied(true);
                   setTimeout(() => setCopied(false), 2000);

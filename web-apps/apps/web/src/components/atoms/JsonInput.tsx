@@ -34,11 +34,11 @@ export function JsonInput({ label, value, onChange, error }: JsonInputProps) {
         <Editor
           height="100%"
           defaultLanguage="json"
-          theme="mock-stack-dark"
+          theme="synthapi-dark"
           value={value}
           onChange={(val) => onChange(val || "")}
           beforeMount={(monaco) => {
-            monaco.editor.defineTheme("mock-stack-dark", {
+            monaco.editor.defineTheme("synthapi-dark", {
               base: "vs-dark",
               inherit: true,
               rules: [

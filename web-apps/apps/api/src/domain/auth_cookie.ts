@@ -1,6 +1,8 @@
 import type { Request, Response } from "express";
 
-export const AUTH_COOKIE_NAME = "mock_stack_session";
+import { createCookieOptions } from "../config/cookies";
+
+export const AUTH_COOKIE_NAME = "synthapi_session";
 
 export const getAuthCookie = (req: Request): string | null => {
   const cookieHeader = req.header("cookie");
@@ -21,21 +23,16 @@ export const setAuthCookie = (
   res: Response,
   token: string,
   expiresAt: string,
+  secure: boolean,
 ) => {
   res.cookie(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
+    ...createCookieOptions(secure),
     expires: new Date(expiresAt),
   });
 };
 
-export const clearAuthCookie = (res: Response) => {
+export const clearAuthCookie = (res: Response, secure: boolean) => {
   res.clearCookie(AUTH_COOKIE_NAME, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
+    ...createCookieOptions(secure),
   });
 };

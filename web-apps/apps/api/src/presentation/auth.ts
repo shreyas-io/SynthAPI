@@ -1,6 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { Express, Request, Response } from "express";
 
+import { createCookieOptions } from "../config/cookies";
 import { AuthService } from "../domain/auth";
 import {
   ApiGatewayException,
@@ -13,8 +14,8 @@ import { bearerAuthMiddleware } from "../middleware/auth";
 import type { AppContext } from "../server";
 import { getString } from "./utils";
 
-const OAUTH_STATE_COOKIE_NAME = "mock_stack_oauth_state";
-const OAUTH_RETURN_COOKIE_NAME = "mock_stack_oauth_return_to";
+const OAUTH_STATE_COOKIE_NAME = "synthapi_oauth_state";
+const OAUTH_RETURN_COOKIE_NAME = "synthapi_oauth_return_to";
 const OAUTH_COOKIE_MAX_AGE_MS = 10 * 60 * 1000;
 
 const parseCookie = (req: Request, name: string): string | null => {
@@ -28,25 +29,6 @@ const parseCookie = (req: Request, name: string): string | null => {
   if (!cookie) return null;
 
   return decodeURIComponent(cookie.slice(name.length + 1));
-};
-
-const setTemporaryCookie = (res: Response, name: string, value: string) => {
-  res.cookie(name, value, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
-    maxAge: OAUTH_COOKIE_MAX_AGE_MS,
-  });
-};
-
-const clearTemporaryCookie = (res: Response, name: string) => {
-  res.clearCookie(name, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: false,
-    path: "/",
-  });
 };
 
 const safeEquals = (a: string, b: string): boolean => {
@@ -93,6 +75,18 @@ const getGoogleProvider = (secrets: AppContext["env"]) => {
 export const addAuthRoutes = (app: Express, ctx: AppContext) => {
   const auth = AuthService(ctx);
   const requireAuth = bearerAuthMiddleware(ctx);
+  const cookieOptions = createCookieOptions(ctx.env.COOKIE_SECURE);
+
+  const setTemporaryCookie = (res: Response, name: string, value: string) => {
+    res.cookie(name, value, {
+      ...cookieOptions,
+      maxAge: OAUTH_COOKIE_MAX_AGE_MS,
+    });
+  };
+
+  const clearTemporaryCookie = (res: Response, name: string) => {
+    res.clearCookie(name, cookieOptions);
+  };
 
   app.get(
     "/api/v1/auth/providers",
@@ -154,7 +148,7 @@ export const addAuthRoutes = (app: Express, ctx: AppContext) => {
       try {
         const identity = await google.exchangeCallback(code);
         const signin = await auth.signinWithProviderIdentity(identity);
-        setAuthCookie(res, signin.token, signin.expiresAt);
+        setAuthCookie(res, signin.token, signin.expiresAt, ctx.env.COOKIE_SECURE);
         res.redirect(`${getWebBaseUrl(ctx.env)}${returnTo}`);
       } catch {
         redirectToSigninError(res, ctx.env);
@@ -165,7 +159,7 @@ export const addAuthRoutes = (app: Express, ctx: AppContext) => {
   app.post(
     "/api/v1/auth/signout",
     asyncRoute(async (_req, res) => {
-      clearAuthCookie(res);
+      clearAuthCookie(res, ctx.env.COOKIE_SECURE);
       res.json({});
     }),
   );

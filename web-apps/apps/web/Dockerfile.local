@@ -8,8 +8,8 @@ COPY web-apps/package.json web-apps/pnpm-lock.yaml web-apps/pnpm-workspace.yaml 
 COPY web-apps/apps/api/package.json apps/api/package.json
 COPY web-apps/apps/web/package.json apps/web/package.json
 
-RUN pnpm install --frozen-lockfile --filter @mock-stack/web... --prod
+RUN pnpm install --frozen-lockfile --filter @synthapi/web... --prod
 
 EXPOSE 5173
 
-CMD ["pnpm", "--filter", "@mock-stack/web", "run", "dev"]
+CMD ["pnpm", "--filter", "@synthapi/web", "run", "dev"]

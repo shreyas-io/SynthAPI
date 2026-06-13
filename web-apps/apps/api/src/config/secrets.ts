@@ -23,6 +23,11 @@ const secretsSchema = z.object({
   GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
   GOOGLE_OAUTH_REDIRECT_URI: z.string(),
   WEB_APP_BASE_URL: z.string(),
+  MOCK_API_BASE_URL_TEMPLATE: z.string(),
+  COOKIE_SECURE: z
+    .string()
+    .optional()
+    .transform((value) => value === "true"),
   MAILERSEND_API_KEY: z.string(),
   MAILERSEND_BASE_URL: z.preprocess(
     emptyStringToUndefined,
