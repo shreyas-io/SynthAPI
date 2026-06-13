@@ -791,10 +791,15 @@ export function MockApiResponseEditor({
                                 if (index === 0) return current;
 
                                 const next = [...current];
-                                [next[index - 1], next[index]] = [
-                                  next[index],
-                                  next[index - 1],
-                                ];
+                                const previousItem = next[index - 1];
+                                const currentItem = next[index];
+
+                                if (!previousItem || !currentItem) {
+                                  return current;
+                                }
+
+                                next[index - 1] = currentItem;
+                                next[index] = previousItem;
                                 return next;
                               })
                             }
@@ -805,10 +810,15 @@ export function MockApiResponseEditor({
                                 }
 
                                 const next = [...current];
-                                [next[index], next[index + 1]] = [
-                                  next[index + 1],
-                                  next[index],
-                                ];
+                                const currentItem = next[index];
+                                const nextItem = next[index + 1];
+
+                                if (!currentItem || !nextItem) {
+                                  return current;
+                                }
+
+                                next[index] = nextItem;
+                                next[index + 1] = currentItem;
                                 return next;
                               })
                             }
