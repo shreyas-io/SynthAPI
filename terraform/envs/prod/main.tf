@@ -166,24 +166,24 @@ resource "aws_security_group" "rds" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier              = "${local.name_prefix}-postgres"
-  engine                  = "postgres"
-  engine_version          = "17"
-  instance_class          = var.DB_INSTANCE_CLASS
-  allocated_storage       = 20
-  storage_type            = "gp3"
-  db_name                 = var.DB_NAME
-  username                = var.DB_USERNAME
-  password                = var.DB_PASSWORD
-  db_subnet_group_name    = aws_db_subnet_group.main.name
-  vpc_security_group_ids  = [aws_security_group.rds.id]
-  backup_retention_period = 7
+  identifier               = "${local.name_prefix}-postgres"
+  engine                   = "postgres"
+  engine_version           = "17"
+  instance_class           = var.DB_INSTANCE_CLASS
+  allocated_storage        = 20
+  storage_type             = "gp3"
+  db_name                  = var.DB_NAME
+  username                 = var.DB_USERNAME
+  password                 = var.DB_PASSWORD
+  db_subnet_group_name     = aws_db_subnet_group.main.name
+  vpc_security_group_ids   = [aws_security_group.rds.id]
+  backup_retention_period  = 7
   delete_automated_backups = true
-  deletion_protection     = false
-  multi_az                = false
-  skip_final_snapshot     = true
-  publicly_accessible     = false
-  apply_immediately       = true
+  deletion_protection      = false
+  multi_az                 = false
+  skip_final_snapshot      = true
+  publicly_accessible      = false
+  apply_immediately        = true
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-postgres"
@@ -403,25 +403,25 @@ resource "aws_launch_template" "api" {
   }
 
   user_data = base64encode(templatefile("${path.module}/templates/user-data.sh.tftpl", {
-    region                   = var.AWS_REGION
-    api_domain               = local.api_domain
-    mock_domain              = local.mock_domain
-    acme_email               = var.ACME_EMAIL
-    bootstrap_secret_arn     = var.BOOTSTRAP_SECRET_ARN
-    bootstrap_secret_stage   = var.BOOTSTRAP_SECRET_VERSION_STAGE
-    ecr_registry             = local.ecr_registry
-    api_image                = local.api_image
-    eip_allocation_id        = aws_eip.api.allocation_id
-    nginx_config             = templatefile("${path.module}/templates/nginx.conf.tftpl", {
+    region                 = var.AWS_REGION
+    api_domain             = local.api_domain
+    mock_domain            = local.mock_domain
+    acme_email             = var.ACME_EMAIL
+    bootstrap_secret_arn   = var.BOOTSTRAP_SECRET_ARN
+    bootstrap_secret_stage = var.BOOTSTRAP_SECRET_VERSION_STAGE
+    ecr_registry           = local.ecr_registry
+    api_image              = local.api_image
+    eip_allocation_id      = aws_eip.api.allocation_id
+    nginx_config = templatefile("${path.module}/templates/nginx.conf.tftpl", {
       api_domain  = local.api_domain
       mock_domain = local.mock_domain
     })
-    api_service_unit         = templatefile("${path.module}/templates/synthapi-api.service.tftpl", {
+    api_service_unit = templatefile("${path.module}/templates/synthapi-api.service.tftpl", {
       api_image = local.api_image
     })
-    redis_service_unit       = templatefile("${path.module}/templates/synthapi-redis.service.tftpl", {})
-    cert_renew_service_unit  = templatefile("${path.module}/templates/synthapi-cert-renew.service.tftpl", {})
-    cert_renew_timer_unit    = templatefile("${path.module}/templates/synthapi-cert-renew.timer.tftpl", {})
+    redis_service_unit      = templatefile("${path.module}/templates/synthapi-redis.service.tftpl", {})
+    cert_renew_service_unit = templatefile("${path.module}/templates/synthapi-cert-renew.service.tftpl", {})
+    cert_renew_timer_unit   = templatefile("${path.module}/templates/synthapi-cert-renew.timer.tftpl", {})
   }))
 
   update_default_version = true
