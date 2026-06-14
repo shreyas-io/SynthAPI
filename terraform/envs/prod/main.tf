@@ -6,8 +6,29 @@ data "aws_caller_identity" "current" {}
 
 data "aws_partition" "current" {}
 
-data "aws_ssm_parameter" "al2023_arm64_ami" {
-  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64"
+data "aws_ami" "ubuntu_arm64" {
+  most_recent = true
+  owners      = ["099720109477"]
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-arm64-server-*"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["arm64"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
+  }
 }
 
 locals {
@@ -354,7 +375,7 @@ resource "aws_iam_instance_profile" "ec2" {
 
 resource "aws_launch_template" "api" {
   name_prefix   = "${local.name_prefix}-api-"
-  image_id      = data.aws_ssm_parameter.al2023_arm64_ami.value
+  image_id      = data.aws_ami.ubuntu_arm64.id
   instance_type = var.INSTANCE_TYPE
 
   iam_instance_profile {
