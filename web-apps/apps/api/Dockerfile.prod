@@ -24,9 +24,10 @@ RUN corepack enable && corepack prepare pnpm@11.1.1 --activate
 COPY web-apps/package.json web-apps/pnpm-lock.yaml web-apps/pnpm-workspace.yaml ./
 COPY web-apps/apps/api/package.json apps/api/package.json
 
-RUN pnpm install --frozen-lockfile --prod --filter @synthapi/api...
+RUN pnpm install --frozen-lockfile --filter @synthapi/api...
 
 COPY --from=builder /repo/web-apps/apps/api/dist apps/api/dist
+COPY --from=builder /repo/web-apps/apps/api/src apps/api/src
 COPY --from=builder /repo/web-apps/apps/api/migrations apps/api/migrations
 COPY --from=builder /repo/web-apps/apps/api/agent_config_migrations apps/api/agent_config_migrations
 
@@ -34,4 +35,4 @@ WORKDIR /app/web-apps/apps/api
 
 EXPOSE 3001
 
-CMD ["node", "--experimental-specifier-resolution=node", "dist/src/server.js"]
+CMD ["node", "--import", "tsx", "src/server.ts"]
