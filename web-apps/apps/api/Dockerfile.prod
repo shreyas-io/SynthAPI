@@ -34,4 +34,4 @@ WORKDIR /app/web-apps/apps/api
 
 EXPOSE 3001
 
-CMD ["node", "dist/src/server.js"]
+CMD ["node", "--experimental-specifier-resolution=node", "dist/src/server.js"]
