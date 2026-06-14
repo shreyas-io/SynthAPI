@@ -10,16 +10,14 @@ RestartSec=5
 TimeoutStartSec=0
 ExecStartPre=/opt/synthapi/bin/render-api-env.sh
 ExecStartPre=/opt/synthapi/bin/pull-api-image.sh
-ExecStartPre=-/usr/bin/podman rm -f synthapi-api
-ExecStart=/usr/bin/podman run \
+ExecStartPre=-/usr/bin/docker rm -f synthapi-api
+ExecStart=/usr/bin/docker run \
   --name synthapi-api \
-  --replace \
-  --pull=never \
   --env-file /opt/synthapi/api.env \
   -p 127.0.0.1:3001:3001 \
   ${api_image}
-ExecStop=/usr/bin/podman stop -t 15 synthapi-api
-ExecStopPost=-/usr/bin/podman rm -f synthapi-api
+ExecStop=/usr/bin/docker stop -t 15 synthapi-api
+ExecStopPost=-/usr/bin/docker rm -f synthapi-api
 
 [Install]
 WantedBy=multi-user.target
