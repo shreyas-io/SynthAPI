@@ -1,0 +1,24 @@
+[Unit]
+Description=SynthAPI Redis container
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+TimeoutStartSec=0
+ExecStartPre=/usr/bin/podman pull docker.io/library/redis:7.4-alpine
+ExecStartPre=-/usr/bin/podman rm -f synthapi-redis
+ExecStart=/usr/bin/podman run \
+  --name synthapi-redis \
+  --replace \
+  --pull=never \
+  -p 127.0.0.1:6379:6379 \
+  docker.io/library/redis:7.4-alpine \
+  redis-server --save 60 1 --appendonly yes
+ExecStop=/usr/bin/podman stop -t 10 synthapi-redis
+ExecStopPost=-/usr/bin/podman rm -f synthapi-redis
+
+[Install]
+WantedBy=multi-user.target

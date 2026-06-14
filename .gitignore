@@ -4,6 +4,11 @@ node_modules
 .wrangler-state
 dist
 coverage
+.terraform
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
 .DS_Store
 *.tsbuildinfo
 .env

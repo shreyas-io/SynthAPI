@@ -1,0 +1,134 @@
+name: Deploy API
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/deploy-api.yml"
+      - "web-apps/package.json"
+      - "web-apps/pnpm-lock.yaml"
+      - "web-apps/pnpm-workspace.yaml"
+      - "web-apps/apps/api/**"
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and Deploy API
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ vars.AWS_API_DEPLOY_ROLE_ARN }}
+      API_BASE_URL: ${{ vars.API_BASE_URL }}
+      API_ECR_REPOSITORY: ${{ vars.API_ECR_REPOSITORY }}
+      API_INSTANCE_SERVICE_TAG: ${{ vars.API_INSTANCE_SERVICE_TAG }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deploy config
+        run: |
+          test -n "$AWS_REGION"
+          test -n "$AWS_ROLE_ARN"
+          test -n "$API_BASE_URL"
+          test -n "$API_ECR_REPOSITORY"
+          test -n "$API_INSTANCE_SERVICE_TAG"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Setup QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: web-apps/apps/api/Dockerfile.prod
+          platforms: linux/arm64
+          push: true
+          provenance: false
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.API_ECR_REPOSITORY }}:test-latest
+            ${{ steps.ecr.outputs.registry }}/${{ env.API_ECR_REPOSITORY }}:sha-${{ github.sha }}
+
+      - name: Resolve live instance
+        id: instance
+        run: |
+          INSTANCE_ID="$(aws ec2 describe-instances \
+            --region "$AWS_REGION" \
+            --filters \
+              "Name=tag:Service,Values=$API_INSTANCE_SERVICE_TAG" \
+              "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)"
+
+          test "$INSTANCE_ID" != "None"
+          echo "instance_id=$INSTANCE_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Restart API service via SSM
+        id: restart
+        run: |
+          COMMAND_ID="$(aws ssm send-command \
+            --region "$AWS_REGION" \
+            --instance-ids "${{ steps.instance.outputs.instance_id }}" \
+            --document-name "AWS-RunShellScript" \
+            --comment "Deploy SynthAPI API" \
+            --parameters 'commands=["sudo systemctl restart synthapi-api","sudo systemctl is-active synthapi-api"]' \
+            --query 'Command.CommandId' \
+            --output text)"
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Wait for deploy command
+        run: |
+          for _ in $(seq 1 60); do
+            STATUS="$(aws ssm get-command-invocation \
+              --region "$AWS_REGION" \
+              --command-id "${{ steps.restart.outputs.command_id }}" \
+              --instance-id "${{ steps.instance.outputs.instance_id }}" \
+              --query 'Status' \
+              --output text)"
+
+            case "$STATUS" in
+              Success)
+                exit 0
+                ;;
+              Failed|Cancelled|TimedOut)
+                aws ssm get-command-invocation \
+                  --region "$AWS_REGION" \
+                  --command-id "${{ steps.restart.outputs.command_id }}" \
+                  --instance-id "${{ steps.instance.outputs.instance_id }}"
+                exit 1
+                ;;
+            esac
+
+            sleep 10
+          done
+
+          echo "Timed out waiting for the API restart command"
+          exit 1
+
+      - name: Health check
+        run: |
+          curl --fail --show-error --silent "$API_BASE_URL/health"

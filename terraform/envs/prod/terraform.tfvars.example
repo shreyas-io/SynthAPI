@@ -1,0 +1,5 @@
+DOMAIN_NAME                 = "example.com"
+PLATFORM_PAGES_CNAME_TARGET = "synthapi.pages.dev"
+ACME_EMAIL                  = "ops@example.com"
+DB_PASSWORD                 = "replace-me"
+BOOTSTRAP_SECRET_ARN        = "arn:aws:secretsmanager:us-east-1:123456789012:secret:synthapi-infisical-bootstrap"

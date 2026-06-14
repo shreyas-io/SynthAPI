@@ -1,0 +1,142 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf update -y
+dnf install -y awscli nginx podman python3 python3-pip
+
+if ! swapon --show | grep -q '/swapfile'; then
+  fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+fi
+
+if ! grep -q '^/swapfile ' /etc/fstab; then
+  echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
+fi
+
+python3 -m venv /opt/certbot
+/opt/certbot/bin/pip install --upgrade pip
+/opt/certbot/bin/pip install certbot certbot-dns-route53
+ln -sf /opt/certbot/bin/certbot /usr/local/bin/certbot
+
+mkdir -p /opt/synthapi/bin
+mkdir -p /etc/systemd/system
+
+cat >/etc/nginx/conf.d/synthapi.conf <<'NGINX'
+${nginx_config}
+NGINX
+
+cat >/etc/systemd/system/synthapi-api.service <<'APIUNIT'
+${api_service_unit}
+APIUNIT
+
+cat >/etc/systemd/system/synthapi-redis.service <<'REDISUNIT'
+${redis_service_unit}
+REDISUNIT
+
+cat >/etc/systemd/system/synthapi-cert-renew.service <<'CERTSERVICE'
+${cert_renew_service_unit}
+CERTSERVICE
+
+cat >/etc/systemd/system/synthapi-cert-renew.timer <<'CERTTIMER'
+${cert_renew_timer_unit}
+CERTTIMER
+
+cat >/opt/synthapi/bin/render-api-env.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+secret_json="$(aws secretsmanager get-secret-value \
+  --region ${region} \
+  --secret-id ${bootstrap_secret_arn} \
+  --version-stage ${bootstrap_secret_stage} \
+  --query SecretString \
+  --output text)"
+
+python3 - "$secret_json" <<'PY' >/opt/synthapi/api.env
+import json
+import sys
+
+allowed = [
+    "USE_VAULT_SECRETS",
+    "INFISICAL_SITE_URL",
+    "INFISICAL_ENVIRONMENT",
+    "INFISICAL_PROJECT_ID",
+    "INFISICAL_SECRET_PATH",
+    "INFISICAL_CLIENT_ID",
+    "INFISICAL_CLIENT_SECRET",
+]
+
+payload = json.loads(sys.argv[1])
+
+for key in allowed:
+    value = payload.get(key)
+    if value is None:
+        raise SystemExit(f"missing bootstrap secret key: {key}")
+    print(f"{key}={value}")
+PY
+
+cat >>/opt/synthapi/api.env <<'APPENV'
+HOST=0.0.0.0
+PORT=3001
+APPENV
+
+chmod 600 /opt/synthapi/api.env
+EOF
+
+cat >/opt/synthapi/bin/pull-api-image.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+aws ecr get-login-password --region ${region} | podman login --username AWS --password-stdin ${ecr_registry}
+podman pull ${api_image}
+EOF
+
+cat >/opt/synthapi/bin/associate-eip.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+token="$(curl -sX PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")"
+instance_id="$(curl -sH "X-aws-ec2-metadata-token: $${token}" http://169.254.169.254/latest/meta-data/instance-id)"
+
+aws ec2 associate-address \
+  --region ${region} \
+  --allocation-id ${eip_allocation_id} \
+  --instance-id "$${instance_id}" \
+  --allow-reassociation
+EOF
+
+cat >/opt/synthapi/bin/ensure-certs.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+if [[ -f /etc/letsencrypt/live/${api_domain}/fullchain.pem ]]; then
+  exit 0
+fi
+
+certbot certonly \
+  --non-interactive \
+  --agree-tos \
+  --email ${acme_email} \
+  --dns-route53 \
+  -d ${api_domain} \
+  -d "*.${mock_domain}"
+EOF
+
+chmod +x /opt/synthapi/bin/render-api-env.sh
+chmod +x /opt/synthapi/bin/pull-api-image.sh
+chmod +x /opt/synthapi/bin/associate-eip.sh
+chmod +x /opt/synthapi/bin/ensure-certs.sh
+
+/opt/synthapi/bin/associate-eip.sh
+/opt/synthapi/bin/pull-api-image.sh
+/opt/synthapi/bin/ensure-certs.sh
+
+nginx -t
+
+systemctl daemon-reload
+systemctl enable --now synthapi-redis.service
+systemctl enable --now synthapi-api.service
+systemctl enable --now nginx
+systemctl enable --now synthapi-cert-renew.timer
