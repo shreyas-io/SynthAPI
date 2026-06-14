@@ -41,8 +41,7 @@ Configure the S3 backend created by `terraform/bootstrap`:
 terraform -chdir=terraform/envs/prod init \
   -backend-config="bucket=<state bucket>" \
   -backend-config="key=prod/terraform.tfstate" \
-  -backend-config="region=us-east-1" \
-  -backend-config="dynamodb_table=<lock table>"
+  -backend-config="region=us-east-1"
 ```
 
 ## Apply

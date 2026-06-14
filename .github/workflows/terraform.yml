@@ -67,7 +67,6 @@ jobs:
       TF_VAR_AWS_REGION: ${{ vars.AWS_REGION }}
       TF_VAR_GITHUB_REPOSITORY: ${{ github.repository }}
       TF_VAR_TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
-      TF_VAR_TF_STATE_LOCK_TABLE: ${{ vars.TF_STATE_LOCK_TABLE }}
       TF_VAR_DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
       TF_VAR_PLATFORM_PAGES_CNAME_TARGET: ${{ vars.PLATFORM_PAGES_CNAME_TARGET }}
       TF_VAR_ACME_EMAIL: ${{ vars.ACME_EMAIL }}
@@ -102,13 +101,11 @@ jobs:
             test -n "$TF_VAR_BOOTSTRAP_SECRET_ARN"
             test -n "$TF_VAR_DB_PASSWORD"
             test -n "$TF_VAR_TF_STATE_BUCKET"
-            test -n "$TF_VAR_TF_STATE_LOCK_TABLE"
 
             terraform -chdir=terraform/envs/prod init \
               -backend-config="bucket=$TF_VAR_TF_STATE_BUCKET" \
               -backend-config="key=prod/terraform.tfstate" \
-              -backend-config="region=$AWS_REGION" \
-              -backend-config="dynamodb_table=$TF_VAR_TF_STATE_LOCK_TABLE"
+              -backend-config="region=$AWS_REGION"
           fi
 
       - name: Terraform plan/apply
