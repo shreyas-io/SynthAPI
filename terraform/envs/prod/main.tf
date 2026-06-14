@@ -11,16 +11,17 @@ data "aws_ssm_parameter" "al2023_arm64_ami" {
 }
 
 locals {
-  name_prefix        = "${var.PROJECT_NAME}-${var.ENVIRONMENT}"
-  api_domain         = "api.${var.DOMAIN_NAME}"
-  mock_domain        = "mock.${var.DOMAIN_NAME}"
-  platform_domain    = "platform.${var.DOMAIN_NAME}"
-  ecr_registry       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.AWS_REGION}.amazonaws.com"
-  api_image          = "${aws_ecr_repository.api.repository_url}:${var.API_IMAGE_TAG}"
-  public_subnet_cidr = "10.0.1.0/24"
-  private_subnet_az1 = "10.0.2.0/24"
-  private_subnet_az2 = "10.0.3.0/24"
-  platform_cname     = trimspace(var.PLATFORM_PAGES_CNAME_TARGET)
+  name_prefix             = "${var.PROJECT_NAME}-${var.ENVIRONMENT}"
+  api_domain              = "api.${var.DOMAIN_NAME}"
+  mock_domain             = "mock.${var.DOMAIN_NAME}"
+  platform_domain         = "platform.${var.DOMAIN_NAME}"
+  ecr_registry            = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.AWS_REGION}.amazonaws.com"
+  api_image               = "${aws_ecr_repository.api.repository_url}:${var.API_IMAGE_TAG}"
+  public_subnet_primary   = "10.0.1.0/24"
+  public_subnet_secondary = "10.0.4.0/24"
+  private_subnet_az1      = "10.0.2.0/24"
+  private_subnet_az2      = "10.0.3.0/24"
+  platform_cname          = trimspace(var.PLATFORM_PAGES_CNAME_TARGET)
   common_tags = {
     Project     = var.PROJECT_NAME
     Environment = var.ENVIRONMENT
@@ -48,12 +49,24 @@ resource "aws_internet_gateway" "main" {
 
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.main.id
-  cidr_block              = local.public_subnet_cidr
-  availability_zone       = data.aws_availability_zones.available.names[0]
+  cidr_block              = local.public_subnet_primary
+  availability_zone       = data.aws_availability_zones.available.names[1]
   map_public_ip_on_launch = true
 
   tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-public-a"
+    Name = "${local.name_prefix}-public-1"
+    Tier = "public"
+  })
+}
+
+resource "aws_subnet" "public_b" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = local.public_subnet_secondary
+  availability_zone       = data.aws_availability_zones.available.names[2]
+  map_public_ip_on_launch = true
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-public-2"
     Tier = "public"
   })
 }
@@ -95,6 +108,11 @@ resource "aws_route_table" "public" {
 
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table_association" "public_b" {
+  subnet_id      = aws_subnet.public_b.id
   route_table_id = aws_route_table.public.id
 }
 
@@ -435,7 +453,7 @@ resource "aws_autoscaling_group" "api" {
   max_size            = 1
   desired_capacity    = 1
   health_check_type   = "EC2"
-  vpc_zone_identifier = [aws_subnet.public.id]
+  vpc_zone_identifier = [aws_subnet.public.id, aws_subnet.public_b.id]
 
   launch_template {
     id      = aws_launch_template.api.id
