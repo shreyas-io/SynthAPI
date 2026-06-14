@@ -37,29 +37,23 @@ export function streamTextViaOpenAI(ctx: AppContext) {
 
       const inputMessages = toModelMessages(request);
       const toolSet = toToolSet(request.config.custom_tools);
+      const sharedInput = {
+        model: request.config.model_id,
+        system: request.config.system_prompt,
+        messages: [...getRawMessages(request), ...inputMessages],
+        temperature: request.config.temperature,
+        maxOutputTokens: request.config.max_tokens,
+        model_gateway: request.config.model_gateway,
+        ...(request.config.thinking === undefined
+          ? {}
+          : { thinking: request.config.thinking }),
+        ...(toolSet === undefined ? {} : { tools: toolSet }),
+      };
 
       const result =
         request.config.model_host === "portkey"
-          ? await streamTextViaPortkey(ctx, {
-              model: request.config.model_id,
-              system: request.config.system_prompt,
-              messages: [...getRawMessages(request), ...inputMessages],
-              temperature: request.config.temperature,
-              maxOutputTokens: request.config.max_tokens,
-              thinking: request.config.thinking,
-              model_gateway: request.config.model_gateway,
-              ...(toolSet === undefined ? {} : { tools: toolSet }),
-            })
-          : await streamTextViaOpenRouter(ctx, {
-              model: request.config.model_id,
-              system: request.config.system_prompt,
-              messages: [...getRawMessages(request), ...inputMessages],
-              temperature: request.config.temperature,
-              maxOutputTokens: request.config.max_tokens,
-              thinking: request.config.thinking,
-              model_gateway: request.config.model_gateway,
-              ...(toolSet === undefined ? {} : { tools: toolSet }),
-            });
+          ? await streamTextViaPortkey(ctx, sharedInput)
+          : await streamTextViaOpenRouter(ctx, sharedInput);
 
       return result;
     },

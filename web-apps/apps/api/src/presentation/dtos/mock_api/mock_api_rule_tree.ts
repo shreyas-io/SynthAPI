@@ -70,7 +70,7 @@ export type MockApiRuleNode = {
   label: string;
   type: "and" | "or";
   predicates: MockApiPredicate[];
-  children: MockApiRuleNode[];
+  children?: MockApiRuleNode[] | undefined;
 };
 
 const mock_api_rule_node: z.ZodType<MockApiRuleNode> = z.lazy(() => {

@@ -59,5 +59,5 @@ export type MockApiRuleTreeEt = {
   label: string;
   type: "and" | "or";
   predicates: MockApiPredicateEt[];
-  children?: MockApiRuleTreeEt[];
+  children?: MockApiRuleTreeEt[] | undefined;
 };
