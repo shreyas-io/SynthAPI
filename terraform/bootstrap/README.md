@@ -10,7 +10,6 @@ Apply this root once to create the shared Terraform backend and GitHub Actions I
 Optional overrides:
 
 - `GITHUB_BRANCH`
-- `TF_STATE_LOCK_TABLE`
 - `TERRAFORM_ROLE_NAME`
 - `API_DEPLOY_ROLE_NAME`
 - `ECR_REPOSITORY_NAME`
@@ -24,6 +23,6 @@ terraform -chdir=terraform/bootstrap apply
 
 Use the outputs to configure:
 
-- the S3/DynamoDB backend for `terraform/envs/prod`
+- the S3 backend for `terraform/envs/prod`
 - `AWS_TERRAFORM_ROLE_ARN` in GitHub
 - `AWS_API_DEPLOY_ROLE_ARN` in GitHub

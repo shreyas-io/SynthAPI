@@ -20,12 +20,6 @@ variable "TF_STATE_BUCKET" {
   type        = string
 }
 
-variable "TF_STATE_LOCK_TABLE" {
-  description = "DynamoDB table name for Terraform state locking."
-  type        = string
-  default     = "synthapi-terraform-locks"
-}
-
 variable "TERRAFORM_ROLE_NAME" {
   description = "IAM role name used by GitHub Actions for Terraform."
   type        = string

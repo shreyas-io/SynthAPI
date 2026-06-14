@@ -71,6 +71,8 @@ allowed = [
 ]
 
 payload = json.loads(sys.argv[1])
+if "VAULT_INIT" in payload:
+    payload = json.loads(payload["VAULT_INIT"])
 
 for key in allowed:
     value = payload.get(key)
