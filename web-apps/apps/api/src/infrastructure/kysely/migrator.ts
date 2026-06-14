@@ -22,6 +22,11 @@ const buildConnectionString = (
   return `postgres://${user}:${password}@${host}:${port}/${name}`;
 };
 
+const buildPoolSslConfig = (): pg.PoolConfig["ssl"] | undefined =>
+  process.env["USE_VAULT_SECRETS"] === "true"
+    ? { rejectUnauthorized: false }
+    : undefined;
+
 const run = async () => {
   const command = process.argv[2];
 
@@ -35,6 +40,7 @@ const run = async () => {
       pool: new Pool({
         connectionString: buildConnectionString(secrets),
         max: 1,
+        ssl: buildPoolSslConfig(),
       }),
     }),
   });

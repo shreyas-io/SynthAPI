@@ -26,12 +26,18 @@ const buildConnectionString = (secrets: Secrets): string => {
   return `postgres://${user}:${password}@${host}:${port}/${name}`;
 };
 
+const buildPoolSslConfig = (): pg.PoolConfig["ssl"] | undefined =>
+  process.env["USE_VAULT_SECRETS"] === "true"
+    ? { rejectUnauthorized: false }
+    : undefined;
+
 export const createDatabaseClient = (secrets: Secrets): ApiGatewayDatabase => {
   const db = new Kysely<Database>({
     dialect: new PostgresDialect({
       pool: new Pool({
         connectionString: buildConnectionString(secrets),
         max: 10,
+        ssl: buildPoolSslConfig(),
       }),
     }),
   });
