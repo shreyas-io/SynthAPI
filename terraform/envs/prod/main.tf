@@ -425,6 +425,7 @@ resource "aws_launch_template" "api" {
     api_domain             = local.api_domain
     mock_domain            = local.mock_domain
     acme_email             = var.ACME_EMAIL
+    acme_staging           = var.ACME_STAGING
     bootstrap_secret_arn   = var.BOOTSTRAP_SECRET_ARN
     bootstrap_secret_stage = var.BOOTSTRAP_SECRET_VERSION_STAGE
     ecr_registry           = local.ecr_registry

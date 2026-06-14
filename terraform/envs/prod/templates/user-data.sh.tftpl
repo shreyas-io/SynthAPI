@@ -123,6 +123,9 @@ certbot certonly \
   --non-interactive \
   --agree-tos \
   --email ${acme_email} \
+%{ if acme_staging ~}
+  --test-cert \
+%{ endif ~}
   --dns-route53 \
   -d ${api_domain} \
   -d "*.${mock_domain}"

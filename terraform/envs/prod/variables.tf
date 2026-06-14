@@ -32,6 +32,12 @@ variable "ACME_EMAIL" {
   type        = string
 }
 
+variable "ACME_STAGING" {
+  description = "Whether to use Let's Encrypt staging for certificate issuance."
+  type        = bool
+  default     = true
+}
+
 variable "INSTANCE_TYPE" {
   description = "EC2 instance type for the API host."
   type        = string

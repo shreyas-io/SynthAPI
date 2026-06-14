@@ -2,6 +2,8 @@
 
 This root creates the live AWS backend stack for SynthAPI.
 
+`ACME_STAGING` defaults to `true` right now so first-boot certificate issuance uses Let's Encrypt staging and avoids production rate limits during setup.
+
 ## Secrets Ownership
 
 - AWS Secrets Manager bootstrap secret JSON:
