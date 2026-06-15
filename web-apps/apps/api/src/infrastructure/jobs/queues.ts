@@ -5,13 +5,23 @@ import type { getSecrets } from "../../config/secrets";
 type Secrets = Awaited<ReturnType<typeof getSecrets>>;
 
 export const createBullMqConnection = (
-  secrets: Pick<Secrets, "REDIS_HOST" | "REDIS_PORT" | "REDIS_PASSWORD">,
-): ConnectionOptions => ({
-  host: secrets.REDIS_HOST,
-  port: secrets.REDIS_PORT,
-  password: secrets.REDIS_PASSWORD,
-  maxRetriesPerRequest: null,
-});
+  secrets: Pick<Secrets, "REDIS_URL">,
+): ConnectionOptions => {
+  const redisUrl = new URL(secrets.REDIS_URL);
+  const username = decodeURIComponent(redisUrl.username);
+  const password = decodeURIComponent(redisUrl.password);
+  const db = redisUrl.pathname.replace(/^\//, "");
+
+  return {
+    host: redisUrl.hostname,
+    port: Number(redisUrl.port || 6379),
+    ...(username ? { username } : undefined),
+    ...(password ? { password } : undefined),
+    ...(db ? { db: Number(db) } : undefined),
+    ...(redisUrl.protocol === "rediss:" ? { tls: {} } : undefined),
+    maxRetriesPerRequest: null,
+  };
+};
 
 export const createJobQueue = (
   name: string,

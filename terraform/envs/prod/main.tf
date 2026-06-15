@@ -438,7 +438,6 @@ resource "aws_launch_template" "api" {
     api_service_unit = templatefile("${path.module}/templates/synthapi-api.service.tftpl", {
       api_image = local.api_image
     })
-    redis_service_unit      = templatefile("${path.module}/templates/synthapi-redis.service.tftpl", {})
     cert_renew_service_unit = templatefile("${path.module}/templates/synthapi-cert-renew.service.tftpl", {})
     cert_renew_timer_unit   = templatefile("${path.module}/templates/synthapi-cert-renew.timer.tftpl", {})
   }))

@@ -1,7 +1,7 @@
 [Unit]
 Description=SynthAPI API container
-After=network-online.target synthapi-redis.service
-Wants=network-online.target synthapi-redis.service
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple

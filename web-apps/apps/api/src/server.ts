@@ -43,11 +43,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   const dbClient = createDatabaseClient(secrets);
   await runMigrations(dbClient.db);
 
-  const keyValueStore = RedisKeyValueStore({
-    redis_host: secrets.REDIS_HOST,
-    redis_pass: secrets.REDIS_PASSWORD,
-    redis_port: secrets.REDIS_PORT,
-  });
+  const keyValueStore = RedisKeyValueStore(secrets.REDIS_URL);
 
   const pyodide = createPyodideWorkerPool({
     size: 1,

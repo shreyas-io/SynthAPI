@@ -33,10 +33,6 @@ cat >/etc/systemd/system/synthapi-api.service <<'APIUNIT'
 ${api_service_unit}
 APIUNIT
 
-cat >/etc/systemd/system/synthapi-redis.service <<'REDISUNIT'
-${redis_service_unit}
-REDISUNIT
-
 cat >/etc/systemd/system/synthapi-cert-renew.service <<'CERTSERVICE'
 ${cert_renew_service_unit}
 CERTSERVICE
@@ -143,7 +139,6 @@ chmod +x /opt/synthapi/bin/ensure-certs.sh
 nginx -t
 
 systemctl daemon-reload
-systemctl enable --now synthapi-redis.service
 systemctl enable --now synthapi-api.service
 systemctl enable --now nginx
 systemctl enable --now synthapi-cert-renew.timer

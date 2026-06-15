@@ -2,7 +2,7 @@
 
 This root creates the live AWS backend stack for SynthAPI.
 
-`ACME_STAGING` defaults to `true` right now so first-boot certificate issuance uses Let's Encrypt staging and avoids production rate limits during setup.
+`ACME_STAGING` defaults to `false`, so first-boot certificate issuance uses the production Let's Encrypt CA. Set it to `true` only when testing certificate issuance or avoiding production rate limits during setup.
 
 ## Secrets Ownership
 
@@ -20,9 +20,7 @@ This root creates the live AWS backend stack for SynthAPI.
   - `DB_HOST`
   - `DB_PORT`
   - `DB_NAME`
-  - `REDIS_HOST`
-  - `REDIS_PORT`
-  - `REDIS_PASSWORD`
+  - `REDIS_URL`
   - `WEB_APP_BASE_URL`
   - `MOCK_API_BASE_URL_TEMPLATE`
   - `GOOGLE_OAUTH_CLIENT_ID`
@@ -33,7 +31,7 @@ This root creates the live AWS backend stack for SynthAPI.
   - MailerSend and AI-provider values
 
 Terraform outputs `rds_endpoint`; copy that into Infisical as `DB_HOST` after the first apply.
-Set `REDIS_HOST=127.0.0.1` and `REDIS_PORT=6379` in Infisical for the single-host runtime.
+Set `REDIS_URL` in Infisical from your Upstash Redis database details. Use the `rediss://...` URL for TLS.
 
 ## Backend Init
 

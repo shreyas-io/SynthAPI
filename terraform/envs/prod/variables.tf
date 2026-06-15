@@ -35,7 +35,7 @@ variable "ACME_EMAIL" {
 variable "ACME_STAGING" {
   description = "Whether to use Let's Encrypt staging for certificate issuance."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "INSTANCE_TYPE" {

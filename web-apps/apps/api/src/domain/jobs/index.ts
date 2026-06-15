@@ -28,7 +28,7 @@ type Secrets = Awaited<ReturnType<typeof getSecrets>>;
 
 type DomainJobsRuntimeInput = {
   ctx: AppContext;
-  secrets: Pick<Secrets, "REDIS_HOST" | "REDIS_PORT" | "REDIS_PASSWORD">;
+  secrets: Pick<Secrets, "REDIS_URL">;
 };
 
 export const startDomainJobs = async (input: DomainJobsRuntimeInput) => {

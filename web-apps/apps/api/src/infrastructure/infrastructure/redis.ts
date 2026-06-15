@@ -12,18 +12,9 @@ redis.call("SET", KEYS[1], ARGV[1], "EX", ARGV[2])
 return "created"
 `;
 
-export const RedisKeyValueStore = (creds: {
-  redis_host: string;
-  redis_port: number;
-  redis_pass: string;
-}): IKeyValueStore => {
-  const connUrl = new URL(`redis://${creds.redis_host}`);
-  connUrl.port = String(creds.redis_port);
-  connUrl.password = encodeURIComponent(creds.redis_pass);
-  const url = connUrl.toString();
-
+export const RedisKeyValueStore = (redisUrl: string): IKeyValueStore => {
   const client = createClient({
-    url,
+    url: redisUrl,
   });
   let connectPromise: Promise<unknown> | undefined;
 
