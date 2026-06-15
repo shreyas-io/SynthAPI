@@ -41,7 +41,7 @@ variable "ACME_STAGING" {
 variable "INSTANCE_TYPE" {
   description = "EC2 instance type for the API host."
   type        = string
-  default     = "t4g.micro"
+  default     = "t4g.nano"
 }
 
 variable "DB_INSTANCE_CLASS" {
