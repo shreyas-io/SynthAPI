@@ -61,7 +61,12 @@ export function SynthLogo({
   return (
     <span className={`synth-logo ${className}`.trim()}>
       <SynthLogoMark size={size} />
-      {showWordmark && <span className="synth-logo-wordmark">SynthAPI</span>}
+      {showWordmark && (
+        <>
+          <span className="synth-logo-wordmark">SynthAPI</span>
+          <span className="synth-logo-alpha">Alpha</span>
+        </>
+      )}
     </span>
   );
 }
