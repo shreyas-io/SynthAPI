@@ -331,7 +331,7 @@ textarea {
 }
 
 .app-top-bar .brand {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 700;
   text-decoration: none;
   color: var(--color-text);
@@ -2026,7 +2026,7 @@ h3 {
   min-height: 0;
   overflow-y: auto;
   padding: 0.75rem;
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   scrollbar-width: none;
 }
 
@@ -2039,7 +2039,7 @@ h3 {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   padding: 0.55rem 0.7rem;
-  line-height: 1.4;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
   background: var(--color-surface);
@@ -2070,6 +2070,68 @@ h3 {
   align-self: stretch;
   color: var(--color-text);
   background: var(--color-surface-subtle);
+}
+
+.agent-thinking-message {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  width: auto;
+  border: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.78rem;
+  white-space: normal;
+}
+
+.agent-thinking-spinner {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--color-primary);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 0 8px var(--color-primary);
+  animation: agentThinkingGlow 2.4s ease-in-out infinite;
+  flex: 0 0 auto;
+}
+
+@keyframes agentThinkingGlow {
+  0% {
+    background: var(--color-primary);
+    opacity: 0.55;
+    transform: scale(0.85);
+    box-shadow: 0 0 5px var(--color-primary);
+  }
+
+  25% {
+    background: var(--color-success);
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px var(--color-success);
+  }
+
+  50% {
+    background: var(--color-warning);
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px var(--color-warning);
+  }
+
+  75% {
+    background: #ae81ff;
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px #ae81ff;
+  }
+
+  100% {
+    background: var(--color-primary);
+    opacity: 0.55;
+    transform: scale(0.85);
+    box-shadow: 0 0 5px var(--color-primary);
+  }
 }
 
 .agent-message-label {
@@ -2241,8 +2303,8 @@ h3 {
   width: 100%;
   min-height: 5.5rem;
   max-height: 12rem;
-  font-size: 0.82rem;
-  line-height: 1.4;
+  font-size: 1rem;
+  line-height: 1.5;
   resize: none;
   overflow-y: auto;
   background: var(--color-surface);

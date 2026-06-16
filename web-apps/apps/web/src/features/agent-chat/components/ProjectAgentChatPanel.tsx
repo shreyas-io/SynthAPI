@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useSearchParams } from "react-router";
 
@@ -51,6 +45,122 @@ type ProjectAgentChatPanelProps = {
 };
 
 const EMPTY_FORM_PROMPTS: FormPrompt[] = [];
+
+const THINKING_MESSAGES = [
+  "Consulting the token committee",
+  "Pretending this was obvious all along",
+  "Assembling a sensible answer",
+  "Negotiating with autocomplete",
+  "Checking the vibes and the types",
+  "Turning caffeine into JSON",
+  "Reading the room, then the schema",
+  "Finding the least surprising answer",
+  "Warming up the context window",
+  "Convincing the prompt to cooperate",
+  "Sorting thoughts by confidence",
+  "Looking for the non-weird solution",
+  "Doing the tiny math",
+  "Polishing a response-shaped object",
+  "Untangling the obvious edge case",
+  "Waiting for the tokens to line up",
+  "Consulting several imaginary dashboards",
+  "Reducing chaos to bullet points",
+  "Finding the polite version",
+  "Poking the syntax with a stick",
+  "Turning maybe into probably",
+  "Gathering loose semicolons",
+  "Preparing a very normal answer",
+  "Running the internal shrug test",
+  "Checking if that actually makes sense",
+  "Folding the context neatly",
+  "Making a small plan look effortless",
+  "Asking the schema nicely",
+  "Removing unnecessary drama",
+  "Scanning for suspicious assumptions",
+  "Translating intent into action",
+  "Waiting for the good token",
+  "Doing a responsible amount of guessing",
+  "Making the answer less wobbly",
+  "Looking up from the token desk",
+  "Rehearsing the concise version",
+  "Trying not to overthink it",
+  "Compressing thoughts without loss",
+  "Checking the confidence meter",
+  "Stirring the context gently",
+  "Linting the idea before sending",
+  "Selecting the least chaotic path",
+  "Giving the answer a quick comb",
+  "Running a tiny sanity check",
+  "Putting the pieces in order",
+  "Reading the invisible footnotes",
+  "Making sure the nouns agree",
+  "Consulting the very serious checklist",
+  "Doing useful background noise",
+  "Rearranging the mental furniture",
+  "Finding a cleaner phrasing",
+  "Waiting for the model to blink",
+  "Checking if this is secretly simple",
+  "Giving the prompt some space",
+  "Solving the easy part first",
+  "Comparing three almost identical options",
+  "Looking busy, but productively",
+  "Turning ambiguity into a plan",
+  "Making sure this is not nonsense",
+  "Assembling the answer sandwich",
+  "Replacing hand-waving with specifics",
+  "Counting reasons on one hand",
+  "Looking for the missing comma",
+  "Letting the context settle",
+  "Consulting the imaginary runbook",
+  "Drafting the answer in pencil",
+  "Checking the boring but important part",
+  "Waiting for the obvious thing to appear",
+  "Rebalancing the token budget",
+  "Making the response less crunchy",
+  "Picking a lane",
+  "Reading between the stack traces",
+  "Turning the crank carefully",
+  "Looking for a simpler explanation",
+  "Making sure the button does button things",
+  "Checking the corners",
+  "Giving the answer a quick tap test",
+  "Moving bits into tidy piles",
+  "De-spaghettifying the thought process",
+  "Waiting for inspiration, but typing anyway",
+  "Choosing words with fewer surprises",
+  "Running on structured optimism",
+  "Filing the rough edges down",
+  "Checking whether that belongs here",
+  "Doing the part before the clever part",
+  "Converting hunches into sentences",
+  "Trying the direct route first",
+  "Making the invisible work visible",
+  "Looking for the shortest honest answer",
+  "Turning scattered context into one thing",
+  "Reviewing the plan for suspicious gaps",
+  "Keeping the answer under control",
+  "Making sure the data did not wander off",
+  "Waiting for the last token to arrive",
+  "Giving the response a final nudge",
+  "Checking the map before walking",
+  "Converting intent to pixels",
+  "Avoiding the dramatic solution",
+  "Making the state machine behave",
+  "Assembling the tiny gears",
+  "Checking the answer for loose screws",
+  "Doing the quiet part out loud",
+  "Turning input into progress",
+  "Trying the obvious fix first",
+  "Making the next step less mysterious",
+  "Looking for the boring correct answer",
+  "Holding the context steady",
+  "Giving the tokens a pep talk",
+  "Looking for a clean exit",
+  "Something to do with a zebra? 🦓",
+  "cet 🐱",
+  "deg 🐶",
+  "I am afraid I can't do this",
+];
 
 type UserInputPayload = Extract<ChatTurnEventPayload, { type: "user-input" }>;
 type AssistantMessagePayload = Extract<
@@ -251,16 +361,24 @@ const messagesFromEvents = (events: ChatTurnEvent[]): ChatMessage[] => {
   });
 };
 
-export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps) {
+export function ProjectAgentChatPanel({
+  projectId,
+}: ProjectAgentChatPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get("chat_id");
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(chatIdFromUrl);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(
+    chatIdFromUrl,
+  );
   const [isDraftChat, setIsDraftChat] = useState(() => !chatIdFromUrl);
   const [message, setMessage] = useState("");
-  const [promptAnswers, setPromptAnswers] = useState<Record<string, string>>({});
+  const [promptAnswers, setPromptAnswers] = useState<Record<string, string>>(
+    {},
+  );
   const [streamMessages, setStreamMessages] = useState<ChatMessage[]>([]);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
+  const [thinkingMessage, setThinkingMessage] = useState(THINKING_MESSAGES[0]);
+  const [thinkingDotCount, setThinkingDotCount] = useState(1);
   const [isChatListOpen, setIsChatListOpen] = useState(() => !chatIdFromUrl);
   const streamRef = useRef<EventSource | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
@@ -295,9 +413,9 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
 
   const createDraftChat = (firstMessage: string) =>
     createChatMutation.mutateAsync({
-        name: chatNameFromMessage(firstMessage),
-        description: null,
-      });
+      name: chatNameFromMessage(firstMessage),
+      description: null,
+    });
 
   const createTurnMutation = useCreateChatTurn(projectId);
 
@@ -305,12 +423,18 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     () => messagesFromEvents(events.data?.records ?? []),
     [events.data?.records],
   );
+  const hasCanonicalActiveTurnSettled = Boolean(
+    activeTurnId &&
+      events.data?.records.some(
+        (event) =>
+          event.chat_turn_id === activeTurnId &&
+          event.payload.type === "turn-settled",
+      ),
+  );
   const activePrompts = events.data?.prompts ?? EMPTY_FORM_PROMPTS;
   const promptSignature = useMemo(
     () =>
-      activePrompts
-        .map((prompt, index) => promptKey(prompt, index))
-        .join("|"),
+      activePrompts.map((prompt, index) => promptKey(prompt, index)).join("|"),
     [activePrompts],
   );
   const isPromptMode = activePrompts.length > 0 && !activeTurnId;
@@ -320,9 +444,13 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
       const answer = promptAnswers[promptKey(prompt, index)]?.trim();
       return Boolean(answer);
     });
-  const messages = activeTurnId || streamMessages.length > 0
-    ? [...canonicalMessages, ...streamMessages]
-    : canonicalMessages;
+  const messages =
+    activeTurnId || streamMessages.length > 0
+      ? [
+          ...canonicalMessages,
+          ...(hasCanonicalActiveTurnSettled ? [] : streamMessages),
+        ]
+      : canonicalMessages;
   const transcriptScrollKey = messages
     .map((message) => `${message.id}:${message.text.length}`)
     .join("|");
@@ -330,6 +458,15 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     createChatMutation.isPending ||
     createTurnMutation.isPending ||
     Boolean(activeTurnId);
+  const isWaitingForStream =
+    isSending &&
+    streamMessages.length > 0 &&
+    !streamMessages.some((message) => message.role !== "user");
+
+  const randomThinkingMessage = () => {
+    const index = Math.floor(Math.random() * THINKING_MESSAGES.length);
+    return THINKING_MESSAGES[index] ?? "Thinking";
+  };
 
   useLayoutEffect(() => {
     const transcript = transcriptRef.current;
@@ -373,7 +510,31 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   }, []);
 
   useEffect(() => {
+    if (!isWaitingForStream) {
+      return;
+    }
+
+    setThinkingMessage(randomThinkingMessage());
+    setThinkingDotCount(1);
+    const intervalId = window.setInterval(() => {
+      setThinkingMessage(randomThinkingMessage());
+    }, 5000);
+    const dotsIntervalId = window.setInterval(() => {
+      setThinkingDotCount((count) => (count === 3 ? 1 : count + 1));
+    }, 500);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.clearInterval(dotsIntervalId);
+    };
+  }, [isWaitingForStream]);
+
+  useEffect(() => {
     if (!chatIdFromUrl) {
+      if (activeTurnId || streamMessages.length > 0) {
+        return;
+      }
+
       if (!isDraftChat) {
         closeStream();
         setSelectedChatId(null);
@@ -391,9 +552,15 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     closeStream();
     setSelectedChatId(chatIdFromUrl);
     setIsDraftChat(false);
-    setStreamMessages([]);
+    setStreamMessages((current) => (current.length > 0 ? current : []));
     setStreamError(null);
-  }, [chatIdFromUrl, selectedChatId, isDraftChat]);
+  }, [
+    activeTurnId,
+    chatIdFromUrl,
+    selectedChatId,
+    isDraftChat,
+    streamMessages.length,
+  ]);
 
   const closeStream = () => {
     streamRef.current?.close();
@@ -418,9 +585,12 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     setActiveTurnId(turnId);
     setStreamError(null);
 
-    const stream = new EventSource(getChatTurnStreamUrl(projectId, chatId, turnId), {
-      withCredentials: true,
-    });
+    const stream = new EventSource(
+      getChatTurnStreamUrl(projectId, chatId, turnId),
+      {
+        withCredentials: true,
+      },
+    );
     streamRef.current = stream;
 
     stream.onmessage = (event) => {
@@ -661,7 +831,10 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   return (
     <>
       <div className="agent-sidebar-header">
-        <div className="agent-header-actions" style={{ width: "100%", justifyContent: "space-between" }}>
+        <div
+          className="agent-header-actions"
+          style={{ width: "100%", justifyContent: "space-between" }}
+        >
           <div className="agent-chat-selector">
             <button
               className="agent-chat-selector-toggle"
@@ -714,7 +887,9 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
           <p className="agent-muted">Loading transcript...</p>
         )}
         {events.isError && (
-          <p className="error">Could not load transcript: {events.error.message}</p>
+          <p className="error">
+            Could not load transcript: {events.error.message}
+          </p>
         )}
         {messages.map((message) => (
           <article
@@ -726,8 +901,8 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
             {message.eventType &&
               message.role !== "user" &&
               message.role !== "assistant" && (
-              <p className="agent-message-event-type">{message.eventType}</p>
-            )}
+                <p className="agent-message-event-type">{message.eventType}</p>
+              )}
             {message.role === "tool" || message.role === "system" ? (
               <>
                 <p className="agent-message-label">
@@ -735,12 +910,18 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
                     <span aria-hidden="true" className="agent-tool-spinner" />
                   )}
                   {!message.isLoading && message.status === "success" && (
-                    <span aria-hidden="true" className="agent-tool-status agent-tool-status-success">
+                    <span
+                      aria-hidden="true"
+                      className="agent-tool-status agent-tool-status-success"
+                    >
                       ✓
                     </span>
                   )}
                   {!message.isLoading && message.status === "failed" && (
-                    <span aria-hidden="true" className="agent-tool-status agent-tool-status-failed">
+                    <span
+                      aria-hidden="true"
+                      className="agent-tool-status agent-tool-status-failed"
+                    >
                       ×
                     </span>
                   )}
@@ -768,6 +949,15 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
             )}
           </article>
         ))}
+        {isWaitingForStream && (
+          <article className="agent-message agent-message-system agent-thinking-message">
+            <span aria-hidden="true" className="agent-thinking-spinner" />
+            <span>
+              {thinkingMessage}
+              {".".repeat(thinkingDotCount)}
+            </span>
+          </article>
+        )}
         {streamError && <p className="error">{streamError}</p>}
       </div>
 
@@ -864,7 +1054,9 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
           <button
             className="agent-send-button"
             type="submit"
-            disabled={isSending || !message.trim() || (!selectedChatId && !isDraftChat)}
+            disabled={
+              isSending || !message.trim() || (!selectedChatId && !isDraftChat)
+            }
           >
             {isSending && (
               <span aria-hidden="true" className="agent-send-spinner" />
