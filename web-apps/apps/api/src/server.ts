@@ -23,6 +23,8 @@ import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bu
 import type { IEmailService } from "./domain/interfaces/email_service";
 import { MailerSendEmailService } from "./infrastructure/email/mailersend_email_service";
 import { asyncRoute } from "./middleware/async_route";
+import { logger } from "./infrastructure/logger";
+import { requestLoggerMiddleware } from "./middleware/request_logger";
 
 type ApiApp = {
   app: Express;
@@ -75,6 +77,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
 
   const app = express();
 
+  app.use(requestLoggerMiddleware);
   app.use(
     cors({
       origin: secrets.CORS_WHITELISTED_DOMAINS.map((domain) =>
@@ -134,12 +137,13 @@ const host = process.env.HOST ?? "0.0.0.0";
 const { app, destroy } = await createApiApp();
 
 const server = app.listen(port, host, () => {
-  console.log(`API server listening on http://${host}:${port}`);
+  logger.info({ host, port }, "API server listening");
 });
 
 const shutdown = async () => {
   server.close(async () => {
     await destroy();
+    logger.info("API server shut down");
     process.exit(0);
   });
 };

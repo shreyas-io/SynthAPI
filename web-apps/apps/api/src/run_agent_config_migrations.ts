@@ -6,6 +6,7 @@ import {
   upsertAgentConfig,
   upsertAgentConfigInputSchema,
 } from "./domain/usecases/agent_orchestration/agent_configs";
+import { logger } from "./infrastructure/logger";
 import type { AppContext } from "./server";
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -27,24 +28,24 @@ export const runAgentConfigMigrations = async (
     const entries = JSON.parse(content);
 
     if (!Array.isArray(entries)) {
-      console.warn(
-        `[agent-config-migrations] ${file}: expected an array, skipping`,
-      );
+      logger.warn({ file }, "Agent config migration expected an array");
       continue;
     }
 
     for (let i = 0; i < entries.length; i++) {
       const parsed = upsertAgentConfigInputSchema.safeParse(entries[i]);
       if (!parsed.success) {
-        console.warn(
-          `[agent-config-migrations] ${file}[${i}]: validation failed — ${parsed.error.message}`,
+        logger.warn(
+          { err: parsed.error, file, index: i },
+          "Agent config migration validation failed",
         );
         continue;
       }
 
       await upsert(parsed.data);
-      console.log(
-        `[agent-config-migrations] ${file}[${i}]: upserted "${parsed.data.key}"`,
+      logger.info(
+        { file, index: i, key: parsed.data.key },
+        "Agent config migration upserted",
       );
     }
   }

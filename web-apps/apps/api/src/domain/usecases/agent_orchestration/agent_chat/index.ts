@@ -1,4 +1,5 @@
 import type { AppContext } from "../../../../server";
+import { logger } from "../../../../infrastructure/logger";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import type { LLMConfig } from "../../../entities/agent_orchestration/generation";
@@ -424,7 +425,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       runningTurns.add(turn_id);
       executeChatTurnInternal(chat_session_id, turn_id, workspace)
         .catch((error) => {
-          console.error("Chat turn execution failed:", error);
+          logger.error(
+            { err: error, chat_session_id, turn_id },
+            "Chat turn execution failed",
+          );
         })
         .finally(() => {
           runningTurns.delete(turn_id);

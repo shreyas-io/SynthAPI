@@ -5,6 +5,7 @@ import {
   createJobWorker,
 } from "../../infrastructure/jobs/queues";
 import type { AppContext } from "../../server";
+import { logger } from "../../infrastructure/logger";
 import { deleteExpiredDeletedOrganizationsJob } from "./delete_expired_deleted_organizations";
 import { downgradeExpiredPlusTrialsJob } from "./downgrade_expired_plus_trials";
 
@@ -75,11 +76,11 @@ export const startDomainJobs = async (input: DomainJobsRuntimeInput) => {
 
   for (const worker of workers) {
     worker.on("failed", (job, error) => {
-      console.error(`Job ${job?.name ?? "unknown"} failed`, error);
+      logger.error({ err: error, job_name: job?.name ?? "unknown" }, "Job failed");
     });
 
     worker.on("error", (error) => {
-      console.error("Domain job worker error", error);
+      logger.error({ err: error }, "Domain job worker error");
     });
   }
 

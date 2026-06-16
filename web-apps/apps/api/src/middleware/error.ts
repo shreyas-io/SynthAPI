@@ -2,12 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 
 export const errorMiddleware = (
   error: any,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction,
 ) => {
-  console.error(error);
-
   const body = {
     status: "error",
     error: {
@@ -26,6 +24,8 @@ export const errorMiddleware = (
   ) {
     status_code = error.status_code;
   }
+
+  req.log.error({ err: error, status_code }, "request failed");
 
   res.status(status_code).json(body);
 };

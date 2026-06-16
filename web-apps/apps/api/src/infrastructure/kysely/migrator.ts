@@ -4,6 +4,7 @@ import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 
 import { getSecrets } from "../../config/secrets";
+import { logger } from "../logger";
 import { rollbackMigrations, runMigrations } from "./run_migrations";
 
 const { Pool } = pg;
@@ -57,6 +58,6 @@ const run = async () => {
 };
 
 void run().catch((error: unknown) => {
-  console.error(error);
+  logger.error({ err: error }, "Database migration command failed");
   process.exit(1);
 });

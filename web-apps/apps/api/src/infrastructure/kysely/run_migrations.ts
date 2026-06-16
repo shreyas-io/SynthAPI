@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { FileMigrationProvider, Kysely, Migrator } from "kysely";
 
+import { logger } from "../logger";
+
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const migrationFolder = path.join(dirname, "../../../migrations");
 
@@ -12,9 +14,15 @@ const logResults = (
 ) => {
   results?.forEach((result) => {
     if (result.status === "Success") {
-      console.log(`migration "${result.migrationName}" succeeded`);
+      logger.info(
+        { migration_name: result.migrationName },
+        "Database migration succeeded",
+      );
     } else if (result.status === "Error") {
-      console.error(`migration "${result.migrationName}" failed`);
+      logger.error(
+        { migration_name: result.migrationName },
+        "Database migration failed",
+      );
     }
   });
 };

@@ -1,4 +1,5 @@
 import type { DomainCronJob } from ".";
+import { logger } from "../../infrastructure/logger";
 import { downgradeExpiredPlusTrials } from "../usecases/organizations/plans";
 
 export const downgradeExpiredPlusTrialsJob = {
@@ -9,6 +10,6 @@ export const downgradeExpiredPlusTrialsJob = {
   },
   async processor(ctx, _input) {
     const downgraded = await downgradeExpiredPlusTrials(ctx.db);
-    console.log(`Downgraded ${downgraded} expired Plus trial organizations.`);
+    logger.info({ downgraded }, "Downgraded expired Plus trial organizations");
   },
 } satisfies DomainCronJob;

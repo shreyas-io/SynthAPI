@@ -1,4 +1,5 @@
 import type { DomainCronJob } from ".";
+import { logger } from "../../infrastructure/logger";
 import { deleteExpiredDeletedOrganizations } from "../usecases/organizations";
 
 export const deleteExpiredDeletedOrganizationsJob = {
@@ -9,6 +10,6 @@ export const deleteExpiredDeletedOrganizationsJob = {
   },
   async processor(ctx, _input) {
     const deleted = await deleteExpiredDeletedOrganizations(ctx);
-    console.log(`Deleted ${deleted} expired deleted organizations.`);
+    logger.info({ deleted }, "Deleted expired deleted organizations");
   },
 } satisfies DomainCronJob;
