@@ -3,14 +3,6 @@ name: Terraform
 on:
   workflow_dispatch:
     inputs:
-      stack:
-        description: "Terraform stack to run"
-        required: true
-        default: "prod"
-        type: choice
-        options:
-          - bootstrap
-          - prod
       action:
         description: "Terraform action"
         required: true
@@ -21,7 +13,7 @@ on:
           - apply
           - destroy
       confirm_destroy:
-        description: "Required for destroy. Set true only after confirming the selected stack can be deleted."
+        description: "Required for destroy. Set true only after confirming prod can be deleted."
         required: false
         default: false
         type: boolean
@@ -47,18 +39,13 @@ jobs:
       - name: Terraform fmt
         run: terraform fmt -check -recursive terraform
 
-      - name: Validate bootstrap
-        run: |
-          terraform -chdir=terraform/bootstrap init -backend=false
-          terraform -chdir=terraform/bootstrap validate
-
       - name: Validate prod
         run: |
           terraform -chdir=terraform/envs/prod init -backend=false
           terraform -chdir=terraform/envs/prod validate
 
   run:
-    name: Terraform ${{ inputs.action }} (${{ inputs.stack }})
+    name: Terraform ${{ inputs.action }} (prod)
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     needs: validate
@@ -70,7 +57,6 @@ jobs:
     env:
       AWS_REGION: ${{ vars.AWS_REGION }}
       AWS_ROLE_ARN: ${{ vars.AWS_TERRAFORM_ROLE_ARN }}
-      BOOTSTRAP_STATE_BUCKET: ${{ vars.BOOTSTRAP_STATE_BUCKET }}
       TF_VAR_AWS_REGION: ${{ vars.AWS_REGION }}
       TF_VAR_GITHUB_REPOSITORY: ${{ github.repository }}
       TF_VAR_TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
@@ -89,9 +75,6 @@ jobs:
         run: |
           test -n "$AWS_REGION"
           test -n "$AWS_ROLE_ARN"
-          if [ "${{ inputs.stack }}" = "bootstrap" ]; then
-            test -n "$BOOTSTRAP_STATE_BUCKET"
-          fi
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -102,33 +85,22 @@ jobs:
           role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Init selected stack
+      - name: Init prod
         run: |
-          if [ "${{ inputs.stack }}" = "bootstrap" ]; then
-            terraform -chdir=terraform/bootstrap init \
-              -backend-config="bucket=$BOOTSTRAP_STATE_BUCKET" \
-              -backend-config="key=bootstrap/terraform.tfstate" \
-              -backend-config="region=$AWS_REGION"
-          else
-            test -n "$TF_VAR_DOMAIN_NAME"
-            test -n "$TF_VAR_ACME_EMAIL"
-            test -n "$TF_VAR_BOOTSTRAP_SECRET_ARN"
-            test -n "$TF_VAR_DB_PASSWORD"
-            test -n "$TF_VAR_TF_STATE_BUCKET"
+          test -n "$TF_VAR_DOMAIN_NAME"
+          test -n "$TF_VAR_ACME_EMAIL"
+          test -n "$TF_VAR_BOOTSTRAP_SECRET_ARN"
+          test -n "$TF_VAR_DB_PASSWORD"
+          test -n "$TF_VAR_TF_STATE_BUCKET"
 
-            terraform -chdir=terraform/envs/prod init \
-              -backend-config="bucket=$TF_VAR_TF_STATE_BUCKET" \
-              -backend-config="key=prod/terraform.tfstate" \
-              -backend-config="region=$AWS_REGION"
-          fi
+          terraform -chdir=terraform/envs/prod init \
+            -backend-config="bucket=$TF_VAR_TF_STATE_BUCKET" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="region=$AWS_REGION"
 
       - name: Terraform plan/apply/destroy
         run: |
-          if [ "${{ inputs.stack }}" = "bootstrap" ]; then
-            STACK_DIR="terraform/bootstrap"
-          else
-            STACK_DIR="terraform/envs/prod"
-          fi
+          STACK_DIR="terraform/envs/prod"
 
           if [ "${{ inputs.action }}" = "destroy" ]; then
             test "${{ inputs.confirm_destroy }}" = "true"
