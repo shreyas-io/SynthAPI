@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router";
-import { ChevronDown, LogOut, Sparkles, User, Hexagon, Folder } from "lucide-react";
+import { ChevronDown, LogOut, Sparkles, User, Folder } from "lucide-react";
 
 import {
   useCurrentUser,
@@ -11,6 +11,7 @@ import {
   useProfile,
 } from "../../features/profile/hooks/profile_hooks";
 import { Avatar } from "../../components/atoms/Avatar";
+import { SynthLogo } from "../../components/atoms/SynthLogo";
 import { useSelectedOrganization } from "../context/OrganizationContext";
 
 export function AppLayout() {
@@ -56,9 +57,8 @@ export function AppLayout() {
   return (
     <div className="app-shell">
       <header className="app-top-bar">
-        <Link className="brand" to="/projects">
-          <Hexagon className="brand-logo-icon" size={18} strokeWidth={3.5} />
-          <i>SynthAPI</i>
+        <Link className="brand" to="/projects" aria-label="SynthAPI projects">
+          <SynthLogo size={28} />
         </Link>
         <nav className="app-nav-links">
           <Link to="/projects">

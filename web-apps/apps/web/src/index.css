@@ -334,8 +334,8 @@ textarea {
   font-size: 0.95rem;
   font-weight: 700;
   text-decoration: none;
-  color: #000000;
-  letter-spacing: -0.02em;
+  color: var(--color-text);
+  letter-spacing: 0;
 }
 
 .app-nav-links {
@@ -381,32 +381,69 @@ textarea {
 }
 
 .brand {
-  font-size: 1rem;
+  font-size: 0.98rem;
   font-weight: 700;
   text-decoration: none;
-  color: #000000;
-  letter-spacing: -0.02em;
-  background: #f8f8f2;
-  padding: 0.25rem 1.25rem;
-  clip-path: polygon(8% 0, 100% 0, 92% 100%, 0% 100%);
+  color: var(--color-text);
+  letter-spacing: 0;
+  background: transparent;
+  padding: 0;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.5rem;
   line-height: 1.2;
   transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+    color 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .brand:hover {
   text-decoration: none;
-  transform: scale(1.02);
-  box-shadow: 0 0 0 3px rgba(102, 217, 239, 0.2);
+  color: var(--color-primary-hover);
+  opacity: 0.96;
 }
 
-.brand-logo-icon {
-  width: 1.15rem;
-  height: 1.15rem;
+.synth-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  color: var(--color-text);
+}
+
+.synth-logo-mark {
+  display: block;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.synth-logo-surface {
+  fill: #121619;
+  stroke: rgba(102, 217, 239, 0.13);
+  stroke-width: 1;
+}
+
+.synth-logo-frame {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.3;
+}
+
+.synth-logo-wordmark {
+  color: currentColor;
+  font-size: 0.98rem;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.brand .synth-logo-wordmark {
+  color: var(--color-text);
+}
+
+.brand:hover .synth-logo-wordmark {
   color: var(--color-primary);
 }
 
