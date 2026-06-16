@@ -5,7 +5,15 @@ import { BrowserRouter } from "react-router";
 import { createQueryClient } from "../lib/query/client";
 import { OrganizationProvider } from "./context/OrganizationContext";
 
-const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, "");
+const getRouterBasename = () => {
+  const configuredBase = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+  if (configuredBase && configuredBase !== "/") {
+    return configuredBase;
+  }
+
+  return window.location.pathname.startsWith("/platform") ? "/platform" : "";
+};
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [queryClient] = useState(createQueryClient);
@@ -13,7 +21,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <OrganizationProvider>
-        <BrowserRouter basename={routerBasename}>{children}</BrowserRouter>
+        <BrowserRouter basename={getRouterBasename()}>{children}</BrowserRouter>
       </OrganizationProvider>
     </QueryClientProvider>
   );

@@ -1,6 +1,8 @@
 import { Link } from "react-router";
 import { Trash2 } from "lucide-react";
 
+import { Button } from "../atoms/Button";
+
 type ResourceCardProps = {
   to?: string;
   title: string;
@@ -48,16 +50,17 @@ export function ResourceCard({
         <div className="project-card-link">{content}</div>
       )}
       {onDelete && (
-        <button
-          type="button"
-          className="button danger-btn icon-only-action project-card-delete"
+        <Button
+          variant="danger"
+          size="icon"
+          className="project-card-delete"
           onClick={onDelete}
           disabled={deleteDisabled}
           aria-label={deleteLabel}
           title={deleteLabel}
         >
           <Trash2 size={14} />
-        </button>
+        </Button>
       )}
       {secondaryAction}
     </div>

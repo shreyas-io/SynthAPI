@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { Avatar } from "../../../components/atoms/Avatar";
+import { Button } from "../../../components/atoms/Button";
 import { ResourceCard } from "../../../components/molecules/ResourceCard";
 import { ApiError } from "../../../lib/api/client";
 import {
@@ -91,25 +92,27 @@ function OrganizationAccessPanel({
     <div className="org-access-panel">
       <div className="org-access-actions">
         {inviteAllowed && (
-          <button
-            type="button"
-            className="button secondary-btn compact-action org-access-toggle"
+          <Button
+            variant="secondary"
+            size="compact"
+            className="org-access-toggle"
             onClick={() => setShowInviteForm((open) => !open)}
           >
             <UserPlus size={14} />
             {showInviteForm ? "Hide invite form" : "Invite member"}
-          </button>
+          </Button>
         )}
 
-        <button
-          type="button"
-          className="button secondary-btn compact-action org-access-toggle"
+        <Button
+          variant="secondary"
+          size="compact"
+          className="org-access-toggle"
           onClick={() => setShowMembersPanel((open) => !open)}
         >
           <Users size={14} />
           {showMembersPanel ? "Hide members" : "View members"}
           {showMembersPanel ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </button>
+        </Button>
       </div>
 
       {showInviteForm && inviteAllowed && (
@@ -126,13 +129,13 @@ function OrganizationAccessPanel({
               onChange={(e) => setInviteEmail(e.target.value)}
               disabled={inviteMutation.isPending}
             />
-            <button
+            <Button
               type="submit"
-              className="button primary-btn compact-action"
+              size="compact"
               disabled={inviteMutation.isPending || !inviteEmail.trim()}
             >
               Invite member
-            </button>
+            </Button>
           </form>
 
           {inviteMutation.isError && (
@@ -212,9 +215,9 @@ function OrganizationAccessPanel({
                       </span>
                     </div>
                     {revokeAllowed && (
-                      <button
-                        type="button"
-                        className="button secondary-btn compact-action"
+                      <Button
+                        variant="secondary"
+                        size="compact"
                         onClick={() => {
                           if (confirm(`Revoke invite for "${invite.email}"?`)) {
                             revokeInviteMutation.mutate({
@@ -226,7 +229,7 @@ function OrganizationAccessPanel({
                         disabled={revokeInviteMutation.isPending}
                       >
                         Revoke
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ))}
@@ -345,13 +348,13 @@ export function ProfilePage() {
                 onChange={(e) => setNewOrgName(e.target.value)}
                 disabled={createOrgMutation.isPending}
               />
-              <button
+              <Button
                 type="submit"
-                className="button primary-btn compact-action"
+                size="compact"
                 disabled={createOrgMutation.isPending || !newOrgName.trim()}
               >
                 Create
-              </button>
+              </Button>
             </form>
 
             {createOrgMutation.isError && (
@@ -386,9 +389,9 @@ export function ProfilePage() {
                     deleteLabel={`Delete ${org.name}`}
                     secondaryAction={
                       canLeaveOrganization(org.membership.role) ? (
-                        <button
-                          type="button"
-                          className="button secondary-btn compact-action"
+                        <Button
+                          variant="secondary"
+                          size="compact"
                           onClick={() => {
                             if (
                               confirm(
@@ -402,7 +405,7 @@ export function ProfilePage() {
                         >
                           <LogOut size={14} />
                           Leave
-                        </button>
+                        </Button>
                       ) : undefined
                     }
                   >
@@ -447,8 +450,9 @@ export function ProfilePage() {
                     secondaryAction={
                       canDeleteOrganization(org.membership.role) &&
                       org.id !== user.default_organization_id ? (
-                        <button
-                          className="button secondary-btn compact-action"
+                        <Button
+                          variant="secondary"
+                          size="compact"
                           onClick={() => {
                             if (
                               confirm(
@@ -462,7 +466,7 @@ export function ProfilePage() {
                         >
                           <RotateCcw size={14} />
                           Restore
-                        </button>
+                        </Button>
                       ) : undefined
                     }
                   >

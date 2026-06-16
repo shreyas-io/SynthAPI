@@ -4,6 +4,7 @@ import { AlertTriangle, RotateCcw, Search } from "lucide-react";
 
 import { useSelectedOrganization } from "../../../app/context/OrganizationContext";
 import { Avatar } from "../../../components/atoms/Avatar";
+import { Button, ButtonLink } from "../../../components/atoms/Button";
 import { ResourceCard } from "../../../components/molecules/ResourceCard";
 import {
   useDeleteProject,
@@ -66,9 +67,9 @@ export function ProjectsPage() {
           <p className="eyebrow">Projects</p>
           <h1>Mock API workspaces</h1>
         </div>
-        <Link className="button" to="/projects/new">
+        <ButtonLink to="/projects/new">
           New project
-        </Link>
+        </ButtonLink>
       </header>
 
       {currentData.isPending && <p>Loading projects...</p>}
@@ -91,13 +92,14 @@ export function ProjectsPage() {
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="Search projects..."
               />
-              <button
+              <Button
                 type="submit"
-                className="button secondary-btn compact-action"
+                variant="secondary"
+                size="compact"
                 style={{ marginLeft: "0.25rem" }}
               >
                 Search
-              </button>
+              </Button>
             </div>
           </label>
         </form>
@@ -195,15 +197,15 @@ export function ProjectsPage() {
                         </>
                       )}
                     </div>
-                    <button
-                      type="button"
-                      className="button secondary-btn compact-action"
+                    <Button
+                      variant="secondary"
+                      size="compact"
                       onClick={() => restoreProject.mutate(project.id)}
                       disabled={restoreProject.isPending}
                     >
                       <RotateCcw size={14} />
                       Restore
-                    </button>
+                    </Button>
                   </div>
                 ))}
               </section>
@@ -212,27 +214,27 @@ export function ProjectsPage() {
         )}
 
         <div className="pagination-row">
-          <button
-            type="button"
-            className="button secondary-btn compact-action"
+          <Button
+            variant="secondary"
+            size="compact"
             onClick={() => setPage((current) => Math.max(0, current - 1))}
             disabled={page === 0 || currentData.isFetching}
           >
             Previous
-          </button>
+          </Button>
           <span className="muted-text">
             Page {page + 1} of {totalPages}
           </span>
-          <button
-            type="button"
-            className="button secondary-btn compact-action"
+          <Button
+            variant="secondary"
+            size="compact"
             onClick={() =>
               setPage((current) => Math.min(totalPages - 1, current + 1))
             }
             disabled={page >= totalPages - 1 || currentData.isFetching}
           >
             Next
-          </button>
+          </Button>
         </div>
 
         {deleteProject.isError && (

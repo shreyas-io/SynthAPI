@@ -2,15 +2,15 @@ import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { Variable } from "../../features/projects/types";
+import { Button } from "../atoms/Button";
 import { JsonInput } from "../atoms/JsonInput";
+import { createId } from "../../lib/id/create_id";
 
 type VariableRow = Variable & {
   id: string;
   value_text: string;
   error?: string | null;
 };
-
-const createId = () => crypto.randomUUID();
 
 const stringifyValue = (value: unknown): string => {
   if (typeof value === "string") return value;
@@ -90,9 +90,8 @@ export function VariablesEditor({
     <section className="variables-editor">
       <div className="section-heading">
         <h3>{title}</h3>
-        <button
-          className="button purple-btn"
-          type="button"
+        <Button
+          variant="purple"
           onClick={() =>
             emit([
               ...rows,
@@ -108,7 +107,7 @@ export function VariablesEditor({
         >
           <Plus size={14} />
           Add
-        </button>
+        </Button>
       </div>
       {!rows.length && <p>No variables configured.</p>}
       {rows.map((row) => (
@@ -213,14 +212,13 @@ export function VariablesEditor({
               />
             </label>
           )}
-          <button
-            className="button danger-btn"
-            type="button"
+          <Button
+            variant="danger"
             onClick={() => emit(rows.filter((item) => item.id !== row.id))}
           >
             <Trash2 size={14} />
             Remove
-          </button>
+          </Button>
         </article>
       ))}
     </section>

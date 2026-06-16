@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from "react-router";
 
+import { ButtonAnchor } from "../../../components/atoms/Button";
 import { getGoogleAuthStartUrl } from "../api/auth_api";
 import { useAuthProviders } from "../hooks/auth_hooks";
 
@@ -26,8 +27,7 @@ export function GoogleAuthEntry({ alternateAction }: GoogleAuthEntryProps) {
       {providers.data && !googleEnabled && (
         <p className="error">Google sign in is not configured.</p>
       )}
-      <a
-        className="button"
+      <ButtonAnchor
         href={getGoogleAuthStartUrl(returnTo)}
         aria-disabled={!googleEnabled}
         onClick={(event) => {
@@ -37,7 +37,7 @@ export function GoogleAuthEntry({ alternateAction }: GoogleAuthEntryProps) {
         }}
       >
         Continue with Google
-      </a>
+      </ButtonAnchor>
       {alternateAction === "signup" ? (
         <p>
           No account? <Link to="/signup">Create one</Link>

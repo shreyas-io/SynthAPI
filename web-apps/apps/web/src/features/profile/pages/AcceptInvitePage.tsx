@@ -1,7 +1,8 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 
+import { Button, ButtonLink } from "../../../components/atoms/Button";
 import { acceptOrganizationInvite } from "../api/profile_api";
 
 export function AcceptInvitePage() {
@@ -33,17 +34,16 @@ export function AcceptInvitePage() {
         </p>
 
         {!accepted ? (
-          <button
-            type="button"
+          <Button
             onClick={() => acceptInviteMutation.mutate()}
             disabled={acceptInviteMutation.isPending || !inviteId}
           >
             {acceptInviteMutation.isPending ? "Accepting..." : "Accept invite"}
-          </button>
+          </Button>
         ) : (
-          <Link className="button" to="/projects">
+          <ButtonLink to="/projects">
             Go to projects
-          </Link>
+          </ButtonLink>
         )}
 
         {acceptInviteMutation.isError && (

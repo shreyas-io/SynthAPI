@@ -1,7 +1,9 @@
 import { FormEvent, useEffect, useState } from "react";
 import { Save, Trash2 } from "lucide-react";
 
+import { Button } from "../../../components/atoms/Button";
 import { JsonInput } from "../../../components/atoms/JsonInput";
+import { createId } from "../../../lib/id/create_id";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
 import type {
   MockApiResponse,
@@ -50,8 +52,6 @@ const actionTypes = [
   "remove",
   "script",
 ] as const;
-
-const createId = () => crypto.randomUUID();
 
 const stringifyValue = (value: unknown): string => {
   if (typeof value === "string") return value;
@@ -216,15 +216,15 @@ function KeyValueRows({
     <section className="key-value-editor">
       <div className="section-heading">
         <h3>{label}</h3>
-        <button
-          type="button"
-          className="button secondary-btn compact-action"
+        <Button
+          variant="secondary"
+          size="compact"
           onClick={() =>
             onChange([...rows, { id: createId(), key: "", value: "" }])
           }
         >
           Add
-        </button>
+        </Button>
       </div>
       {rows.map((row, index) => (
         <div key={row.id} className="key-value-row">
@@ -250,13 +250,13 @@ function KeyValueRows({
               )
             }
           />
-          <button
-            type="button"
-            className="button secondary-btn icon-btn"
+          <Button
+            variant="secondary"
+            className="icon-btn"
             onClick={() => onChange(rows.filter((r) => r.id !== row.id))}
           >
             ×
-          </button>
+          </Button>
         </div>
       ))}
     </section>
@@ -292,9 +292,9 @@ function PostActionForm({
             </option>
           ))}
         </select>
-        <button type="button" className="icon-btn" onClick={onRemove}>
+        <Button variant="secondary" className="icon-btn" onClick={onRemove}>
           ×
-        </button>
+        </Button>
       </div>
 
       {action.type === "script" ? (
@@ -378,26 +378,26 @@ function SseStreamItemForm({
     <div className="post-action-card form">
       <div className="section-heading">
         <div className="toolbar-actions">
-          <button
-            type="button"
-            className="button secondary-btn compact-action"
+          <Button
+            variant="secondary"
+            size="compact"
             disabled={isFirst}
             onClick={onMoveUp}
           >
             ↑
-          </button>
-          <button
-            type="button"
-            className="button secondary-btn compact-action"
+          </Button>
+          <Button
+            variant="secondary"
+            size="compact"
             disabled={isLast}
             onClick={onMoveDown}
           >
             ↓
-          </button>
+          </Button>
         </div>
-        <button type="button" className="icon-btn" onClick={onRemove}>
+        <Button variant="secondary" className="icon-btn" onClick={onRemove}>
           ×
-        </button>
+        </Button>
       </div>
 
       <div className="form-grid">
@@ -653,24 +653,24 @@ export function MockApiResponseEditor({
             </button>
           </div>
           <div className="toolbar-actions">
-            <button
+            <Button
               type="submit"
-              className="button primary-btn compact-action"
+              size="compact"
               disabled={isPending || !mockApiId}
             >
               <Save size={14} />
               {submitLabel}
-            </button>
+            </Button>
             {onDelete && (
-              <button
-                type="button"
-                className="button danger-btn compact-action"
+              <Button
+                variant="danger"
+                size="compact"
                 disabled={isPending || isDeleting}
                 onClick={onDelete}
               >
                 <Trash2 size={14} />
                 {isDeleting ? "Deleting..." : "Delete"}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -762,9 +762,9 @@ export function MockApiResponseEditor({
                           <div>
                             <h3>SSE events</h3>
                           </div>
-                          <button
-                            type="button"
-                            className="button secondary-btn compact-action"
+                          <Button
+                            variant="secondary"
+                            size="compact"
                             onClick={() =>
                               setSseItems([
                                 ...sseItems,
@@ -773,7 +773,7 @@ export function MockApiResponseEditor({
                             }
                           >
                             + Add
-                          </button>
+                          </Button>
                         </div>
                         {!sseItems.length && (
                           <p className="muted-text">
@@ -877,9 +877,9 @@ export function MockApiResponseEditor({
                 <div>
                   <h3>Post response actions</h3>
                 </div>
-                <button
-                  type="button"
-                  className="button secondary-btn compact-action"
+                <Button
+                  variant="secondary"
+                  size="compact"
                   onClick={() =>
                     setPostActions([
                       ...postActions,
@@ -888,7 +888,7 @@ export function MockApiResponseEditor({
                   }
                 >
                   + Add
-                </button>
+                </Button>
               </div>
               {!postActions.length && (
                 <p className="muted-text">

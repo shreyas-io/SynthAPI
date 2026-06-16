@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useSearchParams } from "react-router";
 
+import { Button } from "../../../components/atoms/Button";
 import { getChatTurnStreamUrl } from "../api/agent_chat_api";
 import {
   useCreateChatTurn,
@@ -591,14 +592,14 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
             </div>
           )}
         </div>
-        <button
-          className="button secondary-btn agent-new-chat-btn"
-          type="button"
+        <Button
+          variant="secondary"
+          className="agent-new-chat-btn"
           onClick={startDraftChat}
           disabled={isSending}
         >
           New Chat
-        </button>
+        </Button>
       </div>
 
       <div className="agent-chat-transcript" ref={transcriptRef}>

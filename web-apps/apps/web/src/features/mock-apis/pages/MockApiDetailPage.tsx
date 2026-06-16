@@ -10,6 +10,7 @@ import {
 import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useEffect, useState } from "react";
 
+import { Button } from "../../../components/atoms/Button";
 import {
   VariablesEditor,
   VariablesViewer,
@@ -135,9 +136,10 @@ export function MockApiDetailPage() {
               </div>
             </div>
             <div className="toolbar-actions">
-              <button
-                type="button"
-                className="button secondary-btn compact-action copy-curl-action"
+              <Button
+                variant="secondary"
+                size="compact"
+                className="copy-curl-action"
                 disabled={!mockApi.data.curl_command}
                 onClick={() => {
                   const curl = mockApi.data?.curl_command;
@@ -149,15 +151,16 @@ export function MockApiDetailPage() {
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
                 {copied ? "Copied" : "Copy curl"}
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 onClick={() => setVariablesOpen(true)}
-                className="button secondary-btn compact-action variables-action"
+                variant="secondary"
+                size="compact"
+                className="variables-action"
               >
                 <SlidersHorizontal size={14} />
                 Variables
-              </button>
+              </Button>
             </div>
           </header>
         )}
@@ -236,15 +239,15 @@ export function MockApiDetailPage() {
                       </p>
                     </div>
                     <div className="org-card-actions">
-                      <button
-                        type="button"
-                        className="button secondary-btn compact-action"
+                      <Button
+                        variant="secondary"
+                        size="compact"
                         onClick={() => restoreResponse.mutate(response.id)}
                         disabled={restoreResponse.isPending}
                       >
                         <RotateCcw size={14} />
                         Restore
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -276,9 +279,9 @@ export function MockApiDetailPage() {
                 <p className="eyebrow">Variables</p>
                 <h2>Mock API variables</h2>
               </div>
-              <button className="button secondary-btn" type="button" onClick={() => setVariablesOpen(false)}>
+              <Button variant="secondary" onClick={() => setVariablesOpen(false)}>
                 Close
-              </button>
+              </Button>
             </div>
             <nav className="editor-tabs" aria-label="Mock API variable tabs">
               <button
@@ -329,9 +332,8 @@ export function MockApiDetailPage() {
             {updateProjectMutation.isError && (
               <p className="error">{updateProjectMutation.error.message}</p>
             )}
-            <button
-              className="button secondary-btn"
-              type="button"
+            <Button
+              variant="secondary"
               disabled={
                 updateMockApiMutation.isPending ||
                 updateProjectMutation.isPending
@@ -356,7 +358,7 @@ export function MockApiDetailPage() {
               }}
             >
               Save variables
-            </button>
+            </Button>
           </section>
         </div>
       )}

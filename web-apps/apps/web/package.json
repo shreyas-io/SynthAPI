@@ -8,6 +8,8 @@
     "build": "XDG_CONFIG_HOME=../../.wrangler-state vite build",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run --config vitest.config.ts",
+    "storybook": "storybook dev -p 6006 --host 0.0.0.0",
+    "build-storybook": "storybook build",
     "preview": "XDG_CONFIG_HOME=../../.wrangler-state vite preview --host 127.0.0.1 --port 4173",
     "deploy": "pnpm run deploy:pages",
     "deploy:pages": "pnpm run build && sh -lc 'test -n \"$CLOUDFLARE_PAGES_PROJECT_NAME\" && XDG_CONFIG_HOME=../../.wrangler-state wrangler pages deploy dist --project-name \"$CLOUDFLARE_PAGES_PROJECT_NAME\"'"
@@ -27,12 +29,14 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "1.35.0",
+    "@storybook/react-vite": "^10.4.5",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@types/dagre": "^0.7.54",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "jsdom": "^29.1.1",
+    "storybook": "^10.4.5",
     "typescript": "^5.8.3",
     "vitest": "^4.1.5",
     "wrangler": "4.87.0"

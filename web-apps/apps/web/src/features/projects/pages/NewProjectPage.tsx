@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import { useNavigate } from "react-router";
 
 import { useSelectedOrganization } from "../../../app/context/OrganizationContext";
+import { Button } from "../../../components/atoms/Button";
 import { useCreateProject } from "../hooks/project_hooks";
 
 export function NewProjectPage() {
@@ -47,9 +48,9 @@ export function NewProjectPage() {
           />
         </label>
         {mutation.isError && <p className="error">{mutation.error.message}</p>}
-        <button disabled={mutation.isPending || !selectedOrganizationId}>
+        <Button type="submit" disabled={mutation.isPending || !selectedOrganizationId}>
           Create project
-        </button>
+        </Button>
       </form>
     </main>
   );

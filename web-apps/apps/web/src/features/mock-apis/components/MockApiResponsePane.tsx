@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { ButtonLink } from "../../../components/atoms/Button";
 import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useMockApiResponses } from "../../mock-api-responses/hooks/mock_api_response_hooks";
 import { useMockApi } from "../hooks/mock_api_hooks";
@@ -37,9 +38,9 @@ export function MockApiResponsePane({
             <p className="eyebrow">Responses</p>
             <h3>Configured responses</h3>
           </div>
-          <Link className="button" to={`/mock-apis/${mockApiId}/responses/new`}>
+          <ButtonLink to={`/mock-apis/${mockApiId}/responses/new`}>
             New
-          </Link>
+          </ButtonLink>
         </div>
         {responses.isPending && <p>Loading responses...</p>}
         {responses.isError && <p className="error">{responses.error.message}</p>}

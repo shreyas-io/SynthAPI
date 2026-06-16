@@ -1,6 +1,7 @@
 import { FormEvent, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
+import { Button } from "../../../components/atoms/Button";
 import { useCreateMockApi } from "../hooks/mock_api_hooks";
 import type { HttpMethod } from "../types";
 
@@ -65,7 +66,9 @@ export function NewMockApiPage() {
           />
         </label>
         {mutation.isError && <p className="error">{mutation.error.message}</p>}
-        <button disabled={mutation.isPending || !projectId}>Create mock API</button>
+        <Button type="submit" disabled={mutation.isPending || !projectId}>
+          Create mock API
+        </Button>
       </form>
     </main>
   );

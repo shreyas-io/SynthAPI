@@ -3,6 +3,7 @@ import { AlertTriangle, RotateCcw, Settings2 } from "lucide-react";
 import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useEffect, useState } from "react";
 
+import { Button } from "../../../components/atoms/Button";
 import { VariablesEditor } from "../../../components/organisms/VariablesEditor";
 import { ResourceCard } from "../../../components/molecules/ResourceCard";
 import {
@@ -79,14 +80,14 @@ export function ProjectDetailPage() {
               )}
             </div>
             <div className="toolbar-actions">
-              <button
-                type="button"
-                className="button secondary-btn compact-action"
+              <Button
+                variant="secondary"
+                size="compact"
                 onClick={() => setVariablesOpen(true)}
               >
                 <Settings2 size={14} />
                 Project Variables
-              </button>
+              </Button>
             </div>
           </header>
 
@@ -165,15 +166,15 @@ export function ProjectDetailPage() {
                           </p>
                         </div>
                         <div className="org-card-actions">
-                          <button
-                            type="button"
-                            className="button secondary-btn compact-action"
+                          <Button
+                            variant="secondary"
+                            size="compact"
                             onClick={() => restoreMockApi.mutate(api.id)}
                             disabled={restoreMockApi.isPending}
                           >
                             <RotateCcw size={14} />
                             Restore
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -199,9 +200,9 @@ export function ProjectDetailPage() {
                 <p className="eyebrow">Variables</p>
                 <h2>Project variables</h2>
               </div>
-              <button className="button secondary-btn" type="button" onClick={() => setVariablesOpen(false)}>
+              <Button variant="secondary" onClick={() => setVariablesOpen(false)}>
                 Close
-              </button>
+              </Button>
             </div>
             <nav className="editor-tabs" aria-label="Project variable tabs">
               <button
@@ -236,14 +237,13 @@ export function ProjectDetailPage() {
             {updateMutation.isError && (
               <p className="error">{updateMutation.error.message}</p>
             )}
-            <button
-              className="button secondary-btn"
-              type="button"
+            <Button
+              variant="secondary"
               disabled={updateMutation.isPending}
               onClick={saveVariables}
             >
               Save variables
-            </button>
+            </Button>
           </section>
         </div>
       )}

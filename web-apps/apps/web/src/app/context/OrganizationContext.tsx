@@ -20,15 +20,13 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<
     string | null
   >(null);
+  const defaultOrganizationId = profile.data?.user?.default_organization_id;
 
   useEffect(() => {
-    if (
-      profile.data?.user.default_organization_id &&
-      selectedOrganizationId === null
-    ) {
-      setSelectedOrganizationId(profile.data.user.default_organization_id);
+    if (defaultOrganizationId && selectedOrganizationId === null) {
+      setSelectedOrganizationId(defaultOrganizationId);
     }
-  }, [profile.data?.user.default_organization_id, selectedOrganizationId]);
+  }, [defaultOrganizationId, selectedOrganizationId]);
 
   return (
     <OrganizationContext.Provider

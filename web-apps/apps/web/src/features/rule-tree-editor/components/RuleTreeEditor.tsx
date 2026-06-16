@@ -20,6 +20,7 @@ import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 
 import { JsonInput } from "../../../components/atoms/JsonInput";
+import { createId } from "../../../lib/id/create_id";
 import type {
   PredicateValue,
   RulePredicate,
@@ -80,8 +81,6 @@ const operatorAliases: Record<string, string> = {
 
 const operatorNeedsExpected = (operator: string) =>
   (operatorsWithExpected as readonly string[]).includes(operator);
-
-const createId = () => crypto.randomUUID();
 
 // --- DAGRE LAYOUT ---
 const nodeWidth = 320;
