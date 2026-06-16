@@ -12,7 +12,6 @@ export async function createChatTurn(
   chat_session_id: string,
   input: {
     user_input: ChatTurnUserInput;
-    mode: "execution" | "planning";
   },
 ): Promise<string> {
   const session = await ctx.db
@@ -33,7 +32,7 @@ export async function createChatTurn(
     .values({
       id: turnId,
       chat_session_id,
-      mode: input.mode,
+      mode: "execution",
       user_input: JSON.stringify(input.user_input),
       conversation_context: null,
       status: "in_progress",

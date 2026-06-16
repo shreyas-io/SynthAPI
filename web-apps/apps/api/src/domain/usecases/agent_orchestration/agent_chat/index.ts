@@ -97,7 +97,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       .executeTakeFirst()) as unknown as
       | {
           id: string;
-          planning_config: unknown;
           chat_config: unknown;
         }
       | undefined;
@@ -129,13 +128,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
     const turn = (await ctx.db
       .selectFrom("chat_session_turns")
-      .select(["status", "chat_session_id", "mode", "user_input"])
+      .select(["status", "chat_session_id", "user_input"])
       .where("id", "=", turn_id)
       .where("chat_session_id", "=", chat_session_id)
       .executeTakeFirst()) as unknown as
       | Pick<
           ChatSessionTurnEt,
-          "status" | "chat_session_id" | "mode" | "user_input"
+          "status" | "chat_session_id" | "user_input"
         >
       | undefined;
 
@@ -181,10 +180,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       const agentConfig = await getAgentConfig(chatSession.agent_config_id);
 
-      const llmConfig =
-        turn.mode === "planning"
-          ? (agentConfig.planning_config as unknown as LLMConfig)
-          : (agentConfig.chat_config as unknown as LLMConfig);
+      const llmConfig = agentConfig.chat_config as unknown as LLMConfig;
       const llmConfigWithTools: LLMConfig = {
         ...llmConfig,
         custom_tools: toolRegistry.getAllToolDefinitions(),
@@ -410,7 +406,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       chat_session_id: string,
       input: {
         user_input: ChatTurnUserInput;
-        mode: "execution" | "planning";
       },
     ) => createChatTurn(ctx, chat_session_id, input),
     executeChatTurn: (

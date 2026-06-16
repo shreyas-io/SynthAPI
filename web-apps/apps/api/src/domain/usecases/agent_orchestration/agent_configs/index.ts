@@ -19,13 +19,9 @@ export const upsertAgentConfigInputSchema = z.object({
   description: z.string().nullable(),
   pricing_config: z.object({
     chat_config: z.record(z.string(), z.number()),
-    chat_fallback_config: z.record(z.string(), z.number()),
-    planning_config: z.record(z.string(), z.number()),
     compaction_config: z.record(z.string(), z.number()),
   }),
   chat_config: llmConfigInputSchema,
-  chat_fallback_config: llmConfigInputSchema,
-  planning_config: llmConfigInputSchema,
   compaction_config: llmConfigInputSchema.nullable(),
   compaction_threshold_tokens: z.number().nullable(),
   enabled: z.boolean(),
@@ -59,8 +55,6 @@ export const upsertAgentConfig =
       description: input.description,
       pricing_config: input.pricing_config,
       chat_config: withResolvedTools(input.chat_config),
-      chat_fallback_config: withResolvedTools(input.chat_fallback_config),
-      planning_config: withResolvedTools(input.planning_config),
       compaction_config: input.compaction_config
         ? withResolvedTools(input.compaction_config)
         : null,
@@ -88,11 +82,9 @@ export const upsertAgentConfig =
           description: config.description,
           pricing_config: JSON.stringify(config.pricing_config),
           chat_config: JSON.stringify(config.chat_config),
-          chat_fallback_config: JSON.stringify(config.chat_fallback_config),
-          planning_config: JSON.stringify(config.planning_config),
-          compaction_config: JSON.stringify(
-            config.compaction_config ?? config.planning_config,
-          ),
+          compaction_config: config.compaction_config
+            ? JSON.stringify(config.compaction_config)
+            : null,
           compaction_threshold_tokens:
             config.compaction_threshold_tokens ?? 0,
           enabled: config.enabled,
@@ -110,11 +102,9 @@ export const upsertAgentConfig =
           description: config.description,
           pricing_config: JSON.stringify(config.pricing_config),
           chat_config: JSON.stringify(config.chat_config),
-          chat_fallback_config: JSON.stringify(config.chat_fallback_config),
-          planning_config: JSON.stringify(config.planning_config),
-          compaction_config: JSON.stringify(
-            config.compaction_config ?? config.planning_config,
-          ),
+          compaction_config: config.compaction_config
+            ? JSON.stringify(config.compaction_config)
+            : null,
           compaction_threshold_tokens:
             config.compaction_threshold_tokens ?? 0,
           enabled: config.enabled,

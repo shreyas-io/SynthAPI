@@ -12,20 +12,10 @@ export type AgentConfigsTable = {
     JsonValue | string
   >;
   chat_config: ColumnType<JsonValue, JsonValue | string, JsonValue | string>;
-  chat_fallback_config: ColumnType<
-    JsonValue,
-    JsonValue | string,
-    JsonValue | string
-  >;
-  planning_config: ColumnType<
-    JsonValue,
-    JsonValue | string,
-    JsonValue | string
-  >;
   compaction_config: ColumnType<
-    JsonValue,
-    JsonValue | string,
-    JsonValue | string
+    JsonValue | null,
+    JsonValue | string | null,
+    JsonValue | string | null
   >;
   compaction_threshold_tokens: ColumnType<
     number,

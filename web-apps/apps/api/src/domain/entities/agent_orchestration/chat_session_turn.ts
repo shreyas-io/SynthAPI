@@ -29,7 +29,7 @@ export type ConversationContext = {
 export type ChatSessionTurnEt = {
   id: string;
   chat_session_id: string;
-  mode: "execution" | "planning";
+  mode: "execution";
   user_input: ChatTurnUserInput;
   conversation_context: ConversationContext | null;
   status: "in_progress" | "completed" | "failed";

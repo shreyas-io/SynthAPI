@@ -162,7 +162,7 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
           public_message: JSON.stringify(parsed.error.issues),
         });
       }
-      const { message, mode } = parsed.data;
+      const { message } = parsed.data;
 
       const user_input = [
         {
@@ -173,7 +173,6 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
 
       const turnId = await agent_chat.createChatTurn(chat_id, {
         user_input,
-        mode,
       });
 
       res.status(201).json({ id: turnId });

@@ -5,8 +5,6 @@
     "description": "Default agent config for local development",
     "pricing_config": {
       "chat_config": {},
-      "chat_fallback_config": {},
-      "planning_config": {},
       "compaction_config": {}
     },
     "chat_config": {
@@ -32,50 +30,6 @@
         "update_mock_api_response"
       ],
       "temperature": 0.2,
-      "max_tokens": 2048
-    },
-    "chat_fallback_config": {
-      "model_host": "openrouter",
-      "model_provider": "google",
-      "model_gateway": null,
-      "model_id": "google/gemma-4-26b-a4b-it",
-      "system_prompt": "You are a helpful assistant for managing mock APIs and projects.",
-      "input_messages": [],
-      "custom_tools": [],
-      "tool_keys": [
-        "list_projects",
-        "get_project",
-        "update_project_globals",
-        "update_project_constants",
-        "list_mock_apis",
-        "get_mock_api",
-        "create_mock_api",
-        "update_mock_api",
-        "list_mock_api_responses",
-        "get_mock_api_response",
-        "create_mock_api_response",
-        "update_mock_api_response"
-      ],
-      "temperature": 0.2,
-      "max_tokens": 2048
-    },
-    "planning_config": {
-      "model_host": "openrouter",
-      "model_provider": "google",
-      "model_gateway": null,
-      "model_id": "google/gemma-4-26b-a4b-it",
-      "system_prompt": "You are a planning assistant. You help users plan and understand their mock API setup. You have read-only access to projects and mock APIs.",
-      "input_messages": [],
-      "custom_tools": [],
-      "tool_keys": [
-        "list_projects",
-        "get_project",
-        "list_mock_apis",
-        "get_mock_api",
-        "list_mock_api_responses",
-        "get_mock_api_response"
-      ],
-      "temperature": 0.1,
       "max_tokens": 2048
     },
     "compaction_config": {
