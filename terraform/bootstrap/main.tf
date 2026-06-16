@@ -12,7 +12,8 @@ locals {
 }
 
 resource "aws_s3_bucket" "terraform_state" {
-  bucket = var.TF_STATE_BUCKET
+  bucket        = var.TF_STATE_BUCKET
+  force_destroy = true
 
   tags = local.common_tags
 }
