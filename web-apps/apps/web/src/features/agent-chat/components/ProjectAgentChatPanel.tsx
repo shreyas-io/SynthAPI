@@ -341,6 +341,26 @@ const messagesFromEvents = (events: ChatTurnEvent[]): ChatMessage[] => {
             toolUseId: payload.output.tool_use_id,
           },
         ];
+      case "compaction-started":
+        return [
+          {
+            id: event.id,
+            role: "system",
+            label: "Compaction started",
+            text: "Compacting chat context.",
+            eventType: event.event_type,
+          },
+        ];
+      case "chat-compacted":
+        return [
+          {
+            id: event.id,
+            role: "system",
+            label: "Chat compacted",
+            text: "Chat context was compacted.",
+            eventType: event.event_type,
+          },
+        ];
       case "turn-settled":
         if (payload.status === "failed") {
           return [
@@ -674,6 +694,32 @@ export function ProjectAgentChatPanel({
               status: payload.output.status,
               eventType: "tool-result",
               toolUseId: payload.output.tool_use_id,
+              transient: true,
+            },
+          ]);
+          break;
+        case "compaction-started":
+          setStreamMessages((current) => [
+            ...current,
+            {
+              id: `stream-compaction-started-${turnId}-${current.length}`,
+              role: "system",
+              label: "Compaction started",
+              text: "Compacting chat context.",
+              eventType: "compaction-started",
+              transient: true,
+            },
+          ]);
+          break;
+        case "chat-compacted":
+          setStreamMessages((current) => [
+            ...current,
+            {
+              id: `stream-chat-compacted-${turnId}-${current.length}`,
+              role: "system",
+              label: "Chat compacted",
+              text: "Chat context was compacted.",
+              eventType: "chat-compacted",
               transient: true,
             },
           ]);

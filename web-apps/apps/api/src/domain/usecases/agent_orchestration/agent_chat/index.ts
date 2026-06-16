@@ -16,6 +16,7 @@ import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
+import { generateText } from "../../../../infrastructure/agent_orchestration/ai/generate";
 import { createChatTurn } from "./create";
 import { AgentToolRegistry } from "../tools/registry";
 import type { ToolKey } from "../../../entities/agent_orchestration/tool_keys";
@@ -23,6 +24,7 @@ import type { ToolWorkspaceContext } from "../tools/types";
 
 export const AgentChatUsecase = (ctx: AppContext) => {
   const llm = streamText(ctx);
+  const textGenerator = generateText(ctx);
   const eventBus = ctx.eventBus;
   const toolRegistry = AgentToolRegistry();
   const runningTurns = new Set<string>();
@@ -98,6 +100,8 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       | {
           id: string;
           chat_config: unknown;
+          compaction_config: unknown | null;
+          compaction_threshold_tokens: number | null;
         }
       | undefined;
     if (!config) {
@@ -107,6 +111,65 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       });
     }
     return config;
+  };
+
+  const estimateTokenCount = (input: unknown): number => {
+    const serialized =
+      typeof input === "string" ? input : JSON.stringify(input ?? "");
+    return Math.ceil(serialized.length / 4);
+  };
+
+  const compactConversation = async (input: {
+    chat_turn_id: string;
+    sequence: number;
+    raw_messages: unknown[];
+    compaction_config: LLMConfig;
+  }): Promise<{ raw_messages: unknown[]; sequence: number }> => {
+    let sequence = input.sequence;
+
+    await createAndPublishEvent({
+      chat_turn_id: input.chat_turn_id,
+      sequence: sequence++,
+      event_type: "compaction-started",
+      payload: {
+        type: "compaction-started",
+      },
+    });
+
+    const compactedText = await textGenerator.generateText({
+      config: {
+        ...input.compaction_config,
+        input_messages: [
+          {
+            role: "user",
+            content: {
+              type: "text",
+              text: JSON.stringify(input.raw_messages),
+            },
+          },
+        ],
+        custom_tools: [],
+      },
+      raw: null,
+    });
+
+    const compactedRawMessages = [
+      {
+        role: "user" as const,
+        content: compactedText,
+      },
+    ];
+
+    await createAndPublishEvent({
+      chat_turn_id: input.chat_turn_id,
+      sequence: sequence++,
+      event_type: "chat-compacted",
+      payload: {
+        type: "chat-compacted",
+      },
+    });
+
+    return { raw_messages: compactedRawMessages, sequence };
   };
 
   const executeChatTurnInternal = async (
@@ -181,6 +244,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       const agentConfig = await getAgentConfig(chatSession.agent_config_id);
 
       const llmConfig = agentConfig.chat_config as unknown as LLMConfig;
+      const compactionConfig =
+        agentConfig.compaction_config as unknown as LLMConfig | null;
+      const compactionThresholdTokens =
+        agentConfig.compaction_threshold_tokens ?? 0;
       const llmConfigWithTools: LLMConfig = {
         ...llmConfig,
         custom_tools: toolRegistry.getAllToolDefinitions(),
@@ -218,6 +285,29 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       while (iteration < maxIterations) {
         iteration++;
+
+        const contextRawMessages = Array.isArray(currentRequest.raw)
+          ? currentRequest.raw
+          : [];
+        const tokenCount = estimateTokenCount(contextRawMessages);
+        if (
+          compactionConfig &&
+          compactionThresholdTokens > 0 &&
+          tokenCount > compactionThresholdTokens
+        ) {
+          const compacted = await compactConversation({
+            chat_turn_id: turn_id,
+            sequence,
+            raw_messages: contextRawMessages,
+            compaction_config: compactionConfig,
+          });
+          sequence = compacted.sequence;
+          currentRequest = {
+            ...currentRequest,
+            raw: compacted.raw_messages,
+          };
+        }
+
         const result = await llm.streamText(currentRequest);
         for await (const event of result.fullStream) {
           switch (event.type) {

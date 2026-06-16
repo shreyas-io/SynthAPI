@@ -11,6 +11,8 @@ export type ChatTurnEventType =
   | "assistant-message"
   | "tool-input"
   | "tool-response"
+  | "compaction-started"
+  | "chat-compacted"
   | "turn-settled";
 
 type ChatTurnStreamingEventType =
@@ -37,6 +39,12 @@ export type ChatTurnEventPayload =
       output: ToolUseDisplayBlock & {
         status: "success" | "failed";
       };
+    }
+  | {
+      type: "compaction-started";
+    }
+  | {
+      type: "chat-compacted";
     }
   | {
       type: "turn-settled";

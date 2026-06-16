@@ -51,6 +51,12 @@ export type ChatTurnEventPayload =
       };
     }
   | {
+      type: "compaction-started";
+    }
+  | {
+      type: "chat-compacted";
+    }
+  | {
       type: "turn-settled";
       status: "completed" | "failed";
       error?: string;
@@ -84,6 +90,8 @@ export type ChatTurnEvent = {
     | "assistant-message"
     | "tool-input"
     | "tool-response"
+    | "compaction-started"
+    | "chat-compacted"
     | "turn-settled";
   payload: ChatTurnEventPayload;
   created_at: string;
