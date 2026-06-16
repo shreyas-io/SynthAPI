@@ -227,8 +227,8 @@ const messagesFromEvents = (events: ChatTurnEvent[]): ChatMessage[] => {
 export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const chatIdFromUrl = searchParams.get("chat_id");
-  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const [isDraftChat, setIsDraftChat] = useState(false);
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(chatIdFromUrl);
+  const [isDraftChat, setIsDraftChat] = useState(() => !chatIdFromUrl);
   const [message, setMessage] = useState("");
   const [streamMessages, setStreamMessages] = useState<ChatMessage[]>([]);
   const [streamError, setStreamError] = useState<string | null>(null);
@@ -314,7 +314,18 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   }, []);
 
   useEffect(() => {
-    if (!chatIdFromUrl || chatIdFromUrl === selectedChatId) {
+    if (!chatIdFromUrl) {
+      if (!isDraftChat) {
+        closeStream();
+        setSelectedChatId(null);
+        setIsDraftChat(true);
+        setStreamMessages([]);
+        setStreamError(null);
+      }
+      return;
+    }
+
+    if (chatIdFromUrl === selectedChatId && !isDraftChat) {
       return;
     }
 
@@ -323,7 +334,7 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     setIsDraftChat(false);
     setStreamMessages([]);
     setStreamError(null);
-  }, [chatIdFromUrl, selectedChatId]);
+  }, [chatIdFromUrl, selectedChatId, isDraftChat]);
 
   const closeStream = () => {
     streamRef.current?.close();
@@ -360,17 +371,6 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
       const assistantDeltaId = `stream-assistant-delta-${turnId}`;
 
       switch (payload.type) {
-        case "user-input":
-          setStreamMessages((current) => [
-            ...current,
-            {
-              id: `stream-user-${turnId}-${current.length}`,
-              role: "user",
-              text: textFromInput(payload),
-              transient: true,
-            },
-          ]);
-          break;
         case "assistant-delta":
           setStreamMessages((current) => {
             const existing = current.find(
@@ -577,29 +577,46 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   return (
     <>
       <div className="agent-sidebar-header">
-        <div className="agent-chat-selector">
+        <div className="agent-header-actions" style={{ width: "100%", justifyContent: "space-between" }}>
+          <div className="agent-chat-selector">
+            <button
+              className="agent-chat-selector-toggle"
+              type="button"
+              onClick={() => setIsChatListOpen((value) => !value)}
+            >
+              <span>{chatSelectorLabel}</span>
+              <span aria-hidden="true">⌄</span>
+            </button>
+            {isChatListOpen && (
+              <div className="agent-chat-list" role="listbox">
+                {chatListContent}
+              </div>
+            )}
+          </div>
           <button
-            className="agent-chat-selector-toggle"
             type="button"
-            onClick={() => setIsChatListOpen((value) => !value)}
+            className="agent-new-chat-btn"
+            onClick={startDraftChat}
+            disabled={isSending}
+            title="New Chat"
           >
-            <span>{chatSelectorLabel}</span>
-            <span aria-hidden="true">⌄</span>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>New Chat</span>
           </button>
-          {isChatListOpen && (
-            <div className="agent-chat-list" role="listbox">
-              {chatListContent}
-            </div>
-          )}
         </div>
-        <Button
-          variant="secondary"
-          className="agent-new-chat-btn"
-          onClick={startDraftChat}
-          disabled={isSending}
-        >
-          New Chat
-        </Button>
       </div>
 
       <div className="agent-chat-transcript" ref={transcriptRef}>
