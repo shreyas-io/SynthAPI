@@ -35,13 +35,13 @@ variable "ACME_EMAIL" {
 variable "ACME_STAGING" {
   description = "Whether to use Let's Encrypt staging for certificate issuance."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "INSTANCE_TYPE" {
   description = "EC2 instance type for the API host."
   type        = string
-  default     = "t4g.micro"
+  default     = "t4g.nano"
 }
 
 variable "DB_INSTANCE_CLASS" {
