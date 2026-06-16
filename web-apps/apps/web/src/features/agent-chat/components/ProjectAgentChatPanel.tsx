@@ -1,14 +1,13 @@
 import {
-  FormEvent,
   useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import type { FormEvent } from "react";
 import { useSearchParams } from "react-router";
 
-import { Button } from "../../../components/atoms/Button";
 import { getChatTurnStreamUrl } from "../api/agent_chat_api";
 import {
   useCreateChatTurn,
@@ -24,6 +23,7 @@ import type {
   ChatTurnEvent,
   ChatTurnEventPayload,
   ChatTurnStreamingEventPayload,
+  FormPrompt,
 } from "../types";
 
 type ChatMessage =
@@ -49,6 +49,8 @@ type ChatMessage =
 type ProjectAgentChatPanelProps = {
   projectId: string;
 };
+
+const EMPTY_FORM_PROMPTS: FormPrompt[] = [];
 
 type UserInputPayload = Extract<ChatTurnEventPayload, { type: "user-input" }>;
 type AssistantMessagePayload = Extract<
@@ -131,6 +133,31 @@ const chatNameFromMessage = (message: string) => {
   }
 
   return compact.length > 48 ? `${compact.slice(0, 48)}...` : compact;
+};
+
+const promptKey = (prompt: FormPrompt, index: number) =>
+  `${index}:${prompt.question}`;
+
+const formatPromptAnswers = (
+  prompts: FormPrompt[],
+  answers: Record<string, string>,
+) => {
+  if (prompts.length === 0) {
+    return "";
+  }
+
+  if (prompts.length === 1) {
+    const prompt = prompts[0];
+    return prompt ? (answers[promptKey(prompt, 0)]?.trim() ?? "") : "";
+  }
+
+  return prompts
+    .map((prompt, index) => {
+      const answer = answers[promptKey(prompt, index)]?.trim() ?? "";
+      return answer;
+    })
+    .filter(Boolean)
+    .join("\n");
 };
 
 const payloadFromStreamEvent = (
@@ -230,6 +257,7 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   const [selectedChatId, setSelectedChatId] = useState<string | null>(chatIdFromUrl);
   const [isDraftChat, setIsDraftChat] = useState(() => !chatIdFromUrl);
   const [message, setMessage] = useState("");
+  const [promptAnswers, setPromptAnswers] = useState<Record<string, string>>({});
   const [streamMessages, setStreamMessages] = useState<ChatMessage[]>([]);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
@@ -277,7 +305,22 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     () => messagesFromEvents(events.data?.records ?? []),
     [events.data?.records],
   );
-  const messages = activeTurnId
+  const activePrompts = events.data?.prompts ?? EMPTY_FORM_PROMPTS;
+  const promptSignature = useMemo(
+    () =>
+      activePrompts
+        .map((prompt, index) => promptKey(prompt, index))
+        .join("|"),
+    [activePrompts],
+  );
+  const isPromptMode = activePrompts.length > 0 && !activeTurnId;
+  const canSubmitPromptAnswers =
+    isPromptMode &&
+    activePrompts.every((prompt, index) => {
+      const answer = promptAnswers[promptKey(prompt, index)]?.trim();
+      return Boolean(answer);
+    });
+  const messages = activeTurnId || streamMessages.length > 0
     ? [...canonicalMessages, ...streamMessages]
     : canonicalMessages;
   const transcriptScrollKey = messages
@@ -306,6 +349,22 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     input.style.height = "auto";
     input.style.height = `${input.scrollHeight}px`;
   }, [message]);
+
+  useEffect(() => {
+    if (!activePrompts.length) {
+      setPromptAnswers({});
+      return;
+    }
+
+    setPromptAnswers((current) => {
+      const next: Record<string, string> = {};
+      activePrompts.forEach((prompt, index) => {
+        const key = promptKey(prompt, index);
+        next[key] = current[key] ?? "";
+      });
+      return next;
+    });
+  }, [activePrompts, promptSignature]);
 
   useEffect(() => {
     return () => {
@@ -357,7 +416,6 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
   const startTurnStream = (chatId: string, turnId: string) => {
     streamRef.current?.close();
     setActiveTurnId(turnId);
-    setStreamMessages([]);
     setStreamError(null);
 
     const stream = new EventSource(getChatTurnStreamUrl(projectId, chatId, turnId), {
@@ -488,16 +546,22 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
     };
   };
 
-  const sendMessage = async (event?: { preventDefault: () => void }) => {
+  const sendMessage = async (
+    event?: FormEvent<HTMLFormElement>,
+    submittedMessage = message,
+  ) => {
     if (event) {
       event.preventDefault();
     }
-    const trimmed = message.trim();
+    const trimmed = submittedMessage.trim();
     if (!trimmed || isSending) {
       return;
     }
 
-    setMessage("");
+    if (submittedMessage === message) {
+      setMessage("");
+    }
+    setPromptAnswers({});
     setStreamMessages([
       {
         id: `optimistic-user-${Date.now()}`,
@@ -526,6 +590,26 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
       setStreamMessages([]);
       setStreamError(error instanceof Error ? error.message : String(error));
     }
+  };
+
+  const submitPromptAnswers = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canSubmitPromptAnswers) {
+      return;
+    }
+
+    await sendMessage(
+      undefined,
+      formatPromptAnswers(activePrompts, promptAnswers),
+    );
+  };
+
+  const skipPromptAnswers = async () => {
+    if (!isPromptMode || isSending) {
+      return;
+    }
+
+    await sendMessage(undefined, "skip");
   };
 
   const startDraftChat = () => {
@@ -687,34 +771,108 @@ export function ProjectAgentChatPanel({ projectId }: ProjectAgentChatPanelProps)
         {streamError && <p className="error">{streamError}</p>}
       </div>
 
-      <form className="agent-sidebar-footer" onSubmit={sendMessage}>
-        <textarea
-          ref={messageInputRef}
-          className="agent-input"
-          placeholder={
-            isDraftChat || selectedChatId
-              ? "Ask the agent..."
-              : "Create a new chat to start..."
-          }
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              void sendMessage();
+      {isPromptMode ? (
+        <form className="agent-sidebar-footer" onSubmit={submitPromptAnswers}>
+          <div className="agent-form-prompts">
+            {activePrompts.map((prompt, index) => {
+              const key = promptKey(prompt, index);
+              const options = prompt.options?.filter(Boolean) ?? [];
+
+              return (
+                <fieldset className="agent-form-prompt" key={key}>
+                  <legend>{prompt.question}</legend>
+                  {options.length > 0 ? (
+                    <div className="agent-form-options">
+                      {options.map((option, optionIndex) => (
+                        <button
+                          className={
+                            promptAnswers[key] === option
+                              ? "agent-form-option selected"
+                              : "agent-form-option"
+                          }
+                          type="button"
+                          key={`${optionIndex}:${option}`}
+                          onClick={() =>
+                            setPromptAnswers((current) => ({
+                              ...current,
+                              [key]: option,
+                            }))
+                          }
+                          disabled={isSending}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                  <textarea
+                    className="agent-form-answer"
+                    placeholder="Something Else"
+                    value={promptAnswers[key] ?? ""}
+                    onChange={(event) =>
+                      setPromptAnswers((current) => ({
+                        ...current,
+                        [key]: event.target.value,
+                      }))
+                    }
+                    disabled={isSending}
+                    rows={3}
+                  />
+                </fieldset>
+              );
+            })}
+          </div>
+          <div className="agent-form-actions">
+            <button
+              className="agent-form-skip"
+              type="button"
+              onClick={() => void skipPromptAnswers()}
+              disabled={isSending}
+            >
+              Skip
+            </button>
+            <button
+              className="agent-form-submit"
+              type="submit"
+              disabled={!canSubmitPromptAnswers || isSending}
+            >
+              {isSending ? "Sending..." : "Submit"}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <form className="agent-sidebar-footer" onSubmit={sendMessage}>
+          <textarea
+            ref={messageInputRef}
+            className="agent-input"
+            placeholder={
+              isDraftChat || selectedChatId
+                ? "Ask the agent..."
+                : "Create a new chat to start..."
             }
-          }}
-          disabled={isSending || (!selectedChatId && !isDraftChat)}
-          rows={4}
-        />
-        <button
-          className="agent-send-button"
-          type="submit"
-          disabled={isSending || !message.trim() || (!selectedChatId && !isDraftChat)}
-        >
-          {isSending ? "Sending..." : "Send"}
-        </button>
-      </form>
+            value={message}
+            onChange={(event) => setMessage(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                void sendMessage();
+              }
+            }}
+            disabled={isSending || (!selectedChatId && !isDraftChat)}
+            rows={4}
+          />
+          <button
+            className="agent-send-button"
+            type="submit"
+            disabled={isSending || !message.trim() || (!selectedChatId && !isDraftChat)}
+          >
+            {isSending && (
+              <span aria-hidden="true" className="agent-send-spinner" />
+            )}
+            {isSending ? "Sending" : "Send"}
+          </button>
+        </form>
+      )}
     </>
   );
 }

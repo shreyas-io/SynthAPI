@@ -2258,10 +2258,118 @@ h3 {
   display: none;
 }
 
+.agent-form-prompts {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.agent-form-prompt {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.agent-form-prompt legend {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.15rem;
+  padding: 0;
+  color: var(--color-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.agent-form-options {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.agent-form-option {
+  justify-content: flex-start;
+  width: 100%;
+  min-height: 2.15rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.45rem 0.55rem;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+}
+
+.agent-form-option:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.agent-form-option.selected {
+  border-color: var(--color-primary-subtle-border);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+.agent-form-answer {
+  min-height: 4.5rem;
+  resize: vertical;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.agent-form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.agent-form-submit,
+.agent-form-skip {
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.agent-form-submit {
+  border: 1px solid var(--color-primary-subtle-border);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary);
+}
+
+.agent-form-skip {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+}
+
+.agent-form-submit:hover:not(:disabled) {
+  background: var(--color-primary);
+  color: var(--color-bg);
+}
+
+.agent-form-skip:hover:not(:disabled) {
+  border-color: var(--color-border-strong);
+  background: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
 .agent-send-button {
   position: absolute;
   bottom: 1.25rem;
   right: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   border-radius: var(--radius-sm);
@@ -2280,6 +2388,16 @@ h3 {
 .agent-send-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.agent-send-spinner {
+  width: 0.65rem;
+  height: 0.65rem;
+  border: 1px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 999px;
+  animation: agentToolSpin 0.8s linear infinite;
+  flex: 0 0 auto;
 }
 
 .floating-chat-widget {

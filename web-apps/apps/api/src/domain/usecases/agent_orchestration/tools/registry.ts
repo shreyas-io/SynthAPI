@@ -3,12 +3,14 @@ import type { ToolKey } from "../../../entities/agent_orchestration/tool_keys";
 import { mockApiResponseTools } from "./mock_api_responses";
 import { mockApiTools } from "./mock_apis";
 import { projectTools } from "./projects";
+import { uiTools } from "./ui";
 import type { ITool } from "./types";
 
 const tools = {
   ...projectTools,
   ...mockApiTools,
   ...mockApiResponseTools,
+  ...uiTools,
 } satisfies Record<ToolKey, ITool>;
 
 export const AgentToolRegistry = () => ({

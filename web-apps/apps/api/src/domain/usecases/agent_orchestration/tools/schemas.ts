@@ -69,3 +69,8 @@ export const updateMockApiResponseToolInputDto = createMockApiResponseDto
   .extend({
     response_id: z.uuidv7(),
   });
+
+export const renderUiFormToolInputDto = z.object({
+  question: z.string(),
+  options: z.array(z.string()).max(5).optional(),
+});

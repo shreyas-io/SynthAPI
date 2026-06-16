@@ -89,6 +89,17 @@ export type ChatTurnEvent = {
   created_at: string;
 };
 
+export type FormPrompt = {
+  question: string;
+  options?: string[];
+};
+
+export type ChatTurnEventsResponse = {
+  total: number;
+  records: ChatTurnEvent[];
+  prompts: FormPrompt[];
+};
+
 export type ChatStreamEvent =
   | ChatTurnStreamingEventPayload
   | ChatTurnEvent;

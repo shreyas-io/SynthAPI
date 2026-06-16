@@ -209,16 +209,19 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
       await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(chat_sessions, project_id, chat_id);
 
-      const result = await chat_turn_events.getChatTurnEvents(
-        { chat_session_ids: [chat_id] },
-        {
-          limit: getNumber(req.query.limit, 50),
-          offset: getNumber(req.query.offset, 0),
-        },
-        { by: "sequence", order: "asc" },
-      );
+      const [result, prompts] = await Promise.all([
+        chat_turn_events.getChatTurnEvents(
+          { chat_session_ids: [chat_id] },
+          {
+            limit: getNumber(req.query.limit, 50),
+            offset: getNumber(req.query.offset, 0),
+          },
+          { by: "sequence", order: "asc" },
+        ),
+        chat_turn_events.getUnansweredPrompts(chat_id),
+      ]);
 
-      res.json(result);
+      res.json({ ...result, prompts });
     }),
   );
 

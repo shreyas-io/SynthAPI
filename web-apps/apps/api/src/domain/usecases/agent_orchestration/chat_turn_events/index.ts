@@ -172,6 +172,36 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
 
       return { total, records };
     },
+    getUnansweredPrompts: async (chatId: string): Promise<any[]> => {
+      const events = (await ctx.db
+        .selectFrom("chat_turn_events")
+        .innerJoin(
+          "chat_session_turns",
+          "chat_turn_events.chat_turn_id",
+          "chat_session_turns.id",
+        )
+        .where("chat_session_turns.chat_session_id", "=", chatId)
+        .selectAll("chat_turn_events")
+        .orderBy("chat_session_turns.created_at", "desc")
+        .orderBy("chat_turn_events.sequence", "desc")
+        .limit(50)
+        .execute()) as unknown as ChatTurnEventEt[];
+
+      const prompts: any[] = [];
+      for (const event of events) {
+        if (event.event_type === "user-input") {
+          break;
+        }
+        if (
+          event.event_type === "tool-input" &&
+          (event.payload as any).input?.label === "render_ui_form"
+        ) {
+          prompts.push((event.payload as any).input.content);
+        }
+      }
+
+      return prompts.reverse();
+    },
     countChatTurnEvents(filters: ChatTurnEventFilters): Promise<number> {
       return countChatTurnEvents(filters);
     },

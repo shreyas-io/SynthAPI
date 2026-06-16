@@ -205,4 +205,17 @@ export const toolDefinitions = {
       required: ["response_id"],
     },
   ),
+  render_ui_form: toolEntry("render_ui_form", "Render a form on the UI to ask the user a question with multiple options.", {
+    type: "object",
+    description: "Form rendering input",
+    properties: {
+      question: { type: "string", description: "The question to ask the user" },
+      options: {
+        type: "array",
+        description: "List of options (max 5)",
+        items: { type: "string", description: "Option label" },
+      },
+    },
+    required: ["question"],
+  }),
 } satisfies Record<ToolKey, ToolDefinition>;

@@ -1,7 +1,12 @@
 import { apiBaseUrl } from "../../../env";
 import { apiRequest } from "../../../lib/api/client";
 import type { ListResponse } from "../../projects/types";
-import type { ChatSession, ChatTurnEvent, ChatTurnStatus } from "../types";
+import type {
+  ChatSession,
+  ChatTurnEvent,
+  ChatTurnEventsResponse,
+  ChatTurnStatus,
+} from "../types";
 
 export const listProjectChats = (
   projectId: string,
@@ -46,7 +51,7 @@ export const listChatTurnEvents = (
   projectId: string,
   chatId: string,
   pagination = { limit: 100, offset: 0 },
-): Promise<ListResponse<ChatTurnEvent>> => {
+): Promise<ChatTurnEventsResponse> => {
   return apiRequest(
     `/api/v1/projects/${projectId}/chats/${chatId}/events?limit=${pagination.limit}&offset=${pagination.offset}`,
   );
