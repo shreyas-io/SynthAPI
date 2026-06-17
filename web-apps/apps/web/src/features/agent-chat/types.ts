@@ -23,7 +23,15 @@ export type TextMessageItem = {
   };
 };
 
-export type ChatTurnUserInput = Array<TextMessageItem>;
+export type FileMessageItem = {
+  type: "file";
+  source: {
+    type: "blob_store";
+    id: string;
+  };
+};
+
+export type ChatTurnUserInput = Array<TextMessageItem | FileMessageItem>;
 
 export type ToolUseDisplayBlock = {
   tool_use_id: string;

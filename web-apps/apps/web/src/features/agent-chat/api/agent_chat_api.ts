@@ -29,7 +29,11 @@ export const createProjectChat = (
 export const createChatTurn = (
   projectId: string,
   chatId: string,
-  input: { message: string; mode?: "execution" | "planning" },
+  input: {
+    message?: string;
+    files?: Array<{ id: string }>;
+    mode?: "execution" | "planning";
+  },
 ): Promise<{ id: string }> => {
   return apiRequest(`/api/v1/projects/${projectId}/chats/${chatId}/turns`, {
     method: "POST",

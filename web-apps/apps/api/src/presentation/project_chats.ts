@@ -8,6 +8,7 @@ import {
 } from "../domain/exceptions/exception";
 import { AgentChatUsecase } from "../domain/usecases/agent_orchestration/agent_chat";
 import { ChatSessionsUsecase } from "../domain/usecases/agent_orchestration/chat_sessions";
+import { ChatTurnBlobsUsecase } from "../domain/usecases/agent_orchestration/chat_turn_blobs";
 import { ChatTurnEventsUsecase } from "../domain/usecases/agent_orchestration/chat_turn_events";
 import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
 import { assertOrganizationHasAiCredits } from "../domain/usecases/organizations/plans";
@@ -88,6 +89,7 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
   const agent_chat = AgentChatUsecase(ctx);
   const chat_sessions = ChatSessionsUsecase(ctx);
   const chat_turn_events = ChatTurnEventsUsecase(ctx);
+  const chat_turn_blobs = ChatTurnBlobsUsecase(ctx);
 
   app.get(
     "/api/v1/projects/:project_id/chats",
@@ -162,13 +164,37 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
           public_message: JSON.stringify(parsed.error.issues),
         });
       }
-      const { message } = parsed.data;
+      const message = parsed.data.message?.trim() ?? "";
+      const files = parsed.data.files ?? [];
+
+      if (files.length > 0) {
+        const blobCount = await chat_turn_blobs.countChatTurnBlobs({
+          ids: files.map((file) => file.id),
+        });
+
+        if (blobCount !== files.length) {
+          throw new ApiGatewayException({
+            public_message: "One or more files were not found.",
+          });
+        }
+      }
 
       const user_input = [
-        {
-          type: "text" as const,
-          source: { type: "text" as const, text: message },
-        },
+        ...(message
+          ? [
+              {
+                type: "text" as const,
+                source: { type: "text" as const, text: message },
+              },
+            ]
+          : []),
+        ...files.map((file) => ({
+          type: "file" as const,
+          source: {
+            type: "blob_store" as const,
+            id: file.id,
+          },
+        })),
       ];
 
       const turnId = await agent_chat.createChatTurn(chat_id, {

@@ -3,6 +3,7 @@ import { logger } from "../../../../infrastructure/logger";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import type { LLMConfig } from "../../../entities/agent_orchestration/generation";
+import type { FilePart, TextPart, UserModelMessage } from "ai";
 import type {
   ChatSessionTurnEt,
   ChatTurnUserInput,
@@ -117,6 +118,58 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     const serialized =
       typeof input === "string" ? input : JSON.stringify(input ?? "");
     return Math.ceil(serialized.length / 4);
+  };
+
+  const buildUserMessages = async (
+    userInput: ChatTurnUserInput,
+  ): Promise<{
+    requestMessage: UserModelMessage;
+    contextMessage: UserModelMessage;
+  }> => {
+    const requestParts: Array<TextPart | FilePart> = [];
+    const contextParts: string[] = [];
+
+    for (const item of userInput) {
+      if (item.type === "text") {
+        requestParts.push({ type: "text", text: item.source.text });
+        contextParts.push(item.source.text);
+        continue;
+      }
+
+      const blob = await ctx.db
+        .selectFrom("chat_turn_blobs")
+        .select(["id", "mime_type", "size_bytes", "content"])
+        .where("id", "=", item.source.id)
+        .executeTakeFirst();
+
+      if (!blob) {
+        throw new AgentOrchestrationException({
+          public_message: `File '${item.source.id}' was not found.`,
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      requestParts.push({
+        type: "file",
+        data: blob.content,
+        mediaType: blob.mime_type,
+        filename: blob.id,
+      });
+      contextParts.push(
+        `[Attached file: ${blob.id}, MIME type: ${blob.mime_type}, Size: ${blob.size_bytes} bytes]`,
+      );
+    }
+
+    const requestContent =
+      requestParts.length === 1 && requestParts[0]?.type === "text"
+        ? requestParts[0].text
+        : requestParts;
+    const contextContent = contextParts.filter(Boolean).join("\n\n");
+
+    return {
+      requestMessage: { role: "user", content: requestContent },
+      contextMessage: { role: "user", content: contextContent },
+    };
   };
 
   const compactConversation = async (input: {
@@ -253,22 +306,14 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         custom_tools: toolRegistry.getAllToolDefinitions(),
       };
 
-      const userText = turn.user_input
-        .filter(
-          (
-            item,
-          ): item is {
-            type: "text";
-            source: { type: "text"; text: string };
-          } => item.type === "text",
-        )
-        .map((item) => item.source.text)
-        .join("\n");
-
-      const userMessage = { role: "user" as const, content: userText };
+      const { requestMessage: userMessage, contextMessage: contextUserMessage } =
+        await buildUserMessages(turn.user_input);
       const initialRawMessages = Array.isArray(initialRaw)
         ? [...initialRaw, userMessage]
         : [userMessage];
+      const contextRawMessages = Array.isArray(initialRaw)
+        ? [...initialRaw, contextUserMessage]
+        : [contextUserMessage];
 
       let currentRequest = {
         config: {
@@ -278,6 +323,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         },
         raw: initialRawMessages,
       };
+      let currentContextRaw = contextRawMessages;
 
       let iteration = 0;
       const maxIterations = 20;
@@ -306,6 +352,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             ...currentRequest,
             raw: compacted.raw_messages,
           };
+          currentContextRaw = compacted.raw_messages;
         }
 
         const result = await llm.streamText(currentRequest);
@@ -370,6 +417,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             ...currentRequest,
             raw: [...(currentRequest?.raw ?? []), ...(rawMessages ?? [])],
           };
+          currentContextRaw = [...currentContextRaw, ...(rawMessages ?? [])];
           break;
         }
 
@@ -447,6 +495,11 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             ...toolResultMessages,
           ],
         };
+        currentContextRaw = [
+          ...currentContextRaw,
+          ...rawMessages,
+          ...toolResultMessages,
+        ];
       }
 
       await createAndPublishEvent({
@@ -467,13 +520,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       await settleTurn({
         chat_turn_id: turn_id,
         sequence: sequence++,
-        conversation_context: currentRequest.raw
+        conversation_context: currentContextRaw
           ? {
               model_host: currentRequest.config.model_host,
               model_provider: currentRequest.config.model_provider,
               model_gateway: currentRequest.config.model_gateway,
               model_id: currentRequest.config.model_id,
-              raw_context: currentRequest.raw,
+              raw_context: currentContextRaw,
             }
           : null,
         status: "completed",

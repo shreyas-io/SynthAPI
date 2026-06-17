@@ -45,9 +45,14 @@ export const useCreateProjectChat = (projectId: string) => {
 
 export const useCreateChatTurn = (projectId: string) => {
   return useMutation({
-    mutationFn: (input: { chatId: string; message: string }) =>
+    mutationFn: (input: {
+      chatId: string;
+      message?: string;
+      files?: Array<{ id: string }>;
+    }) =>
       createChatTurn(projectId, input.chatId, {
-        message: input.message,
+        ...(input.message ? { message: input.message } : {}),
+        ...(input.files?.length ? { files: input.files } : {}),
         mode: "execution",
       }),
   });
