@@ -5,10 +5,11 @@
   "packageManager": "pnpm@11.1.1",
   "scripts": {
     "dev": "pnpm dev:local",
-    "dev:local": "pnpm --parallel --stream --filter @synthapi/api --filter @synthapi/web run \"/^dev$|^build:watch$/\"",
+    "dev:local": "pnpm --parallel --stream --filter @synthapi/api --filter @synthapi/web --filter @synthapi/landing run \"/^dev$|^build:watch$/\"",
     "build": "pnpm -r run build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",
-    "deploy:web": "pnpm --filter @synthapi/web run deploy"
+    "deploy:web": "pnpm --filter @synthapi/web run deploy",
+    "deploy:landing": "pnpm --filter @synthapi/landing run deploy"
   }
 }

@@ -10,45 +10,26 @@ function SynthLogoMark({ size }: { size: number }) {
       className="synth-logo-mark"
       width={size}
       height={size}
-      viewBox="0 0 64 64"
+      viewBox="0 0 40 40"
       role="img"
       aria-label="SynthAPI logo mark"
     >
-      <defs>
-        <filter id="synth-logo-glow" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="1.2" result="blur" />
-          <feMerge>
-            <feMergeNode in="blur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-      </defs>
-      <rect
-        x="5"
-        y="5"
-        width="54"
-        height="54"
-        rx="12"
-        className="synth-logo-surface"
+      <path
+        className="synth-logo-bracket"
+        d="M16 10H11.5C9.6 10 8 11.6 8 13.5V26.5C8 28.4 9.6 30 11.5 30H16"
       />
-      <g className="synth-logo-frame" filter="url(#synth-logo-glow)">
-        <path d="M22 8 32 3 42 8" />
-        <path d="M22 56 32 61 42 56" />
-        <path d="M8 22 3 32 8 42" />
-        <path d="M56 22 61 32 56 42" />
-        <path d="M14 14h8" />
-        <path d="M14 14v8" />
-        <path d="M50 14h-8" />
-        <path d="M50 14v8" />
-        <path d="M14 50h8" />
-        <path d="M14 50v-8" />
-        <path d="M50 50h-8" />
-        <path d="M50 50v-8" />
-        <path d="M24 18 32 12 40 18" />
-        <path d="M24 46 32 52 40 46" />
-        <path d="M18 24 12 32 18 40" />
-        <path d="M46 24 52 32 46 40" />
-      </g>
+      <path
+        className="synth-logo-bracket"
+        d="M24 10H28.5C30.4 10 32 11.6 32 13.5V26.5C32 28.4 30.4 30 28.5 30H24"
+      />
+      <path
+        className="synth-logo-signal-shadow"
+        d="M14.5 20.8H17.8L19.2 17.2L21.2 23L23 19H25.5"
+      />
+      <path
+        className="synth-logo-signal"
+        d="M14.5 20H17.8L19.2 16.4L21.2 22.2L23 18.2H25.5"
+      />
     </svg>
   );
 }

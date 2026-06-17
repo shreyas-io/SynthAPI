@@ -417,24 +417,30 @@ textarea {
   overflow: visible;
 }
 
-.synth-logo-surface {
-  fill: var(--color-surface);
-  stroke: var(--color-primary-subtle-border);
-  stroke-width: 1;
-}
-
-.synth-logo-frame {
+.synth-logo-mark path {
   fill: none;
-  stroke: var(--color-primary);
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.synth-logo-bracket {
+  stroke: var(--color-primary);
   stroke-width: 2.3;
+}
+
+.synth-logo-signal-shadow {
+  stroke: rgba(248, 90, 155, 0.42);
+  stroke-width: 2.2;
+}
+
+.synth-logo-signal {
+  stroke: var(--color-primary);
+  stroke-width: 1.5;
 }
 
 .synth-logo-wordmark {
   color: currentColor;
   font-size: 0.98rem;
-  font-style: italic;
   font-weight: 700;
   line-height: 1;
 }
