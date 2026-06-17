@@ -293,10 +293,45 @@ textarea {
 /* Auth */
 .auth-page {
   display: grid;
+  grid-template-rows: auto 1fr;
   min-height: 100vh;
-  place-items: center;
-  padding: 1rem;
+  padding: 1.25rem;
   background: var(--color-bg);
+}
+
+.auth-header {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.auth-page .card {
+  align-self: center;
+  justify-self: center;
+  width: min(100%, 390px);
+  min-height: 240px;
+  padding: 2rem;
+}
+
+.auth-page .form {
+  align-content: center;
+  gap: 1.4rem;
+}
+
+.auth-page h1 {
+  margin-bottom: 1rem;
+}
+
+.google-auth-button {
+  width: 100%;
+  min-height: 3rem;
+  gap: 0.65rem;
+}
+
+.google-auth-icon {
+  width: 1.15rem;
+  height: 1.15rem;
+  flex: 0 0 auto;
 }
 
 /* App Shell */

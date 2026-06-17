@@ -154,11 +154,15 @@ function Logo() {
 }
 
 function FeatureStack() {
-  const [activeFeatureId, setActiveFeatureId] =
-    useState<FeatureId>("workflow-rule-editor");
+  const [activeFeatureId, setActiveFeatureId] = useState<FeatureId>(
+    "workflow-rule-editor",
+  );
 
   return (
-    <div className="hero-feature-panel" aria-label="SynthAPI feature highlights">
+    <div
+      className="hero-feature-panel"
+      aria-label="SynthAPI feature highlights"
+    >
       {heroFeatures.map((feature, index) => {
         const isActive = activeFeatureId === feature.id;
 
@@ -267,7 +271,9 @@ function FeatureDiagram({
       <div className="team-node qa">QA</div>
       <div className="team-node partners">Partners</div>
       <div className="workspace-node">Mock workspace</div>
-      <div className="collaboration-note">Same endpoints, responses, rules, and examples</div>
+      <div className="collaboration-note">
+        Same endpoints, responses, rules, and examples
+      </div>
     </div>
   );
 }
@@ -307,11 +313,7 @@ export function LandingPage() {
     <main className="landing-page">
       <header className="site-header">
         <Logo />
-        <nav aria-label="Primary navigation">
-          <a href="#workflow">Workflow</a>
-          <a href="#features">Features</a>
-          <a href={signinUrl}>Sign in</a>
-        </nav>
+        <nav aria-label="Primary navigation"></nav>
       </header>
 
       <section className="hero">
