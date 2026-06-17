@@ -569,9 +569,14 @@ textarea {
 
 .dense-block-header h1,
 .editor-title-row h2 {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
   margin: 0;
   font-size: 1rem;
   line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-weight: 600;
 }
 
@@ -1169,6 +1174,7 @@ h3 {
 }
 
 .inline-tabs {
+  flex: 0 0 auto;
   min-height: 2.4rem;
 }
 
@@ -1435,6 +1441,7 @@ h3 {
 
 .toolbar-actions {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 0.4rem;
   justify-content: flex-end;
@@ -2027,6 +2034,7 @@ h3 {
   overflow-y: auto;
   padding: 0.75rem;
   font-size: 0.95rem;
+  background: var(--color-surface);
   scrollbar-width: none;
 }
 
@@ -2307,7 +2315,7 @@ h3 {
   line-height: 1.5;
   resize: none;
   overflow-y: auto;
-  background: var(--color-surface);
+  background: var(--color-surface-subtle);
   scrollbar-width: none;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -2593,7 +2601,7 @@ h3 {
 }
 
 .floating-chat-panel .agent-chat-transcript {
-  background: var(--color-bg);
+  background: var(--color-surface);
   flex: 1;
   min-height: 0;
 }

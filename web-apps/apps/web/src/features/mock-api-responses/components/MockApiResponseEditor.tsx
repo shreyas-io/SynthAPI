@@ -628,7 +628,9 @@ export function MockApiResponseEditor({
     <form className="response-editor-shell flat-editor" onSubmit={submit}>
       <div className="workspace-row editor-toolbar dense-editor-toolbar">
         <div className="editor-title-row">
-          <h2>{initialResponse ? initialResponse.name : "Create response"}</h2>
+          <h2 title={initialResponse ? initialResponse.name : "Create response"}>
+            {initialResponse ? initialResponse.name : "Create response"}
+          </h2>
           <div className="editor-tabs compact-tabs inline-tabs">
             <button
               className={activeTab === "response" ? "active" : ""}
@@ -655,21 +657,21 @@ export function MockApiResponseEditor({
           <div className="toolbar-actions">
             <Button
               type="submit"
-              size="compact"
+              size="icon"
+              aria-label={submitLabel}
               disabled={isPending || !mockApiId}
             >
               <Save size={14} />
-              {submitLabel}
             </Button>
             {onDelete && (
               <Button
                 variant="danger"
-                size="compact"
+                size="icon"
+                aria-label="Delete"
                 disabled={isPending || isDeleting}
                 onClick={onDelete}
               >
                 <Trash2 size={14} />
-                {isDeleting ? "Deleting..." : "Delete"}
               </Button>
             )}
           </div>
