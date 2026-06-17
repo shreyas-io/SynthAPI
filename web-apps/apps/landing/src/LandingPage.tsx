@@ -313,7 +313,9 @@ export function LandingPage() {
     <main className="landing-page">
       <header className="site-header">
         <Logo />
-        <nav aria-label="Primary navigation"></nav>
+        <nav aria-label="Primary navigation">
+          <a href={signinUrl}>Sign in</a>
+        </nav>
       </header>
 
       <section className="hero">
