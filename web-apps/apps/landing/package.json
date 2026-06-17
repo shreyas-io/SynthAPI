@@ -1,0 +1,27 @@
+{
+  "name": "@synthapi/landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev --config vite.dev.config.ts --host 0.0.0.0 --port 5174",
+    "build": "XDG_CONFIG_HOME=../../.wrangler-state vite build",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "deploy": "pnpm run deploy:pages",
+    "deploy:pages": "pnpm run build && sh -lc 'test -n \"$CLOUDFLARE_LANDING_PAGES_PROJECT_NAME\" && XDG_CONFIG_HOME=../../.wrangler-state wrangler pages deploy dist --project-name \"$CLOUDFLARE_LANDING_PAGES_PROJECT_NAME\"'"
+  },
+  "dependencies": {
+    "@cloudflare/vite-plugin": "1.35.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@xyflow/react": "^12.10.2",
+    "vite": "^8.0.10",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "wrangler": "4.87.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2"
+  }
+}
