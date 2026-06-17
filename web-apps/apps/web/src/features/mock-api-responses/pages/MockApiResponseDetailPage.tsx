@@ -26,7 +26,7 @@ export function MockApiResponseDetailPage() {
         <MockApiResponseEditor
           mockApiId={mockApiId}
           initialResponse={response.data}
-          submitLabel="Save response"
+          submitLabel="Save"
           isPending={mutation.isPending}
           errorMessage={mutation.error?.message}
           isDeleting={deleteMutation.isPending}

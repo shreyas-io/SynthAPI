@@ -39,7 +39,7 @@ export const WithIcons: Story = {
     <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
       <Button variant="primary">
         <Save size={14} />
-        Save response
+        Save
       </Button>
       <Button variant="secondary" size="compact">
         <Copy size={14} />

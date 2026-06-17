@@ -99,7 +99,7 @@ const meta = {
   ],
   args: {
     mockApiId: "mock-api-1",
-    submitLabel: "Save response",
+    submitLabel: "Save",
     isPending: false,
     onSubmit: () => {},
   },
