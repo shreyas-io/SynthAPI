@@ -1,6 +1,6 @@
 server {
     listen 80;
-    server_name ${api_domain} *.${mock_domain};
+    server_name ${api_domain} *-mock.${api_domain};
 
     location / {
         return 301 https://$host$request_uri;
@@ -34,7 +34,7 @@ server {
 
 server {
     listen 443 ssl http2;
-    server_name ~^(?<project_slug>[^.]+)\.${mock_domain}$;
+    server_name ~^(?<project_slug>.+)-mock\.${api_domain}$;
 
     ssl_certificate /etc/letsencrypt/live/${api_domain}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${api_domain}/privkey.pem;
