@@ -218,4 +218,48 @@ export const toolDefinitions = {
     },
     required: ["question"],
   }),
+  web_search: toolEntry(
+    "web_search",
+    "Search the public web for relevant pages using the configured Tavily API key.",
+    {
+      type: "object",
+      description: "Web search input",
+      properties: {
+        query: { type: "string", description: "Search query" },
+        limit: {
+          type: "number",
+          description: "Maximum number of results to return, from 1 to 10",
+        },
+        search_depth: {
+          type: "string",
+          description: "Tavily search depth: basic or advanced",
+        },
+        topic: {
+          type: "string",
+          description: "Tavily search topic: general, news, or finance",
+        },
+        include_answer: {
+          type: "boolean",
+          description: "Whether Tavily should include a generated answer summary",
+        },
+      },
+      required: ["query"],
+    },
+  ),
+  web_scrape: toolEntry(
+    "web_scrape",
+    "Fetch a public webpage by URL and return a best-effort Markdown representation of the HTML content.",
+    {
+      type: "object",
+      description: "Web scrape input",
+      properties: {
+        url: { type: "string", description: "Public http or https URL to scrape" },
+        max_chars: {
+          type: "number",
+          description: "Maximum markdown characters to return, from 1000 to 50000",
+        },
+      },
+      required: ["url"],
+    },
+  ),
 } satisfies Record<ToolKey, ToolDefinition>;

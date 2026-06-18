@@ -12,6 +12,8 @@ export const toolKeys = [
   "create_mock_api_response",
   "update_mock_api_response",
   "render_ui_form",
+  "web_search",
+  "web_scrape",
 ] as const;
 
 export type ToolKey = (typeof toolKeys)[number];

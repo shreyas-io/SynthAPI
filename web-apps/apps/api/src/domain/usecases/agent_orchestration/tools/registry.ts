@@ -5,12 +5,14 @@ import { mockApiTools } from "./mock_apis";
 import { projectTools } from "./projects";
 import { uiTools } from "./ui";
 import type { ITool } from "./types";
+import { webTools } from "./web";
 
 const tools = {
   ...projectTools,
   ...mockApiTools,
   ...mockApiResponseTools,
   ...uiTools,
+  ...webTools,
 } satisfies Record<ToolKey, ITool>;
 
 export const AgentToolRegistry = () => ({
