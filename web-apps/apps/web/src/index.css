@@ -2273,6 +2273,7 @@ h3 {
 .agent-markdown {
   display: grid;
   gap: 0.5rem;
+  white-space: normal;
 }
 
 .agent-markdown h1,
@@ -2308,6 +2309,38 @@ h3 {
   border-left: 2px solid var(--color-border-strong);
   color: var(--color-text-secondary);
   padding-left: 0.6rem;
+}
+
+.agent-markdown-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.agent-markdown table {
+  width: 100%;
+  min-width: 28rem;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.agent-markdown th,
+.agent-markdown td {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.45rem 0.55rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.agent-markdown th {
+  color: var(--color-text);
+  background: var(--color-surface-subtle);
+  font-weight: 700;
+}
+
+.agent-markdown tr:last-child td {
+  border-bottom: 0;
 }
 
 .agent-markdown code {

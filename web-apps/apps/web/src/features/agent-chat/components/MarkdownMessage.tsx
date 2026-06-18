@@ -4,8 +4,25 @@ type Block =
   | { type: "heading"; level: 1 | 2 | 3; text: string }
   | { type: "paragraph"; text: string }
   | { type: "list"; ordered: boolean; items: string[] }
+  | { type: "table"; headers: string[]; rows: string[][] }
   | { type: "code"; language: string | null; code: string }
   | { type: "quote"; text: string };
+
+const splitTableRow = (line: string): string[] =>
+  line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+
+const isTableSeparator = (line: string): boolean => {
+  const cells = splitTableRow(line);
+  return (
+    cells.length > 1 &&
+    cells.every((cell) => /^:?-{3,}:?$/.test(cell.replace(/\s+/g, "")))
+  );
+};
 
 const parseBlocks = (markdown: string): Block[] => {
   const blocks: Block[] = [];
@@ -60,6 +77,25 @@ const parseBlocks = (markdown: string): Block[] => {
       continue;
     }
 
+    const nextLine = lines[index + 1] ?? "";
+    if (line.includes("|") && isTableSeparator(nextLine)) {
+      const headers = splitTableRow(line);
+      const rows: string[][] = [];
+      index += 2;
+
+      while (index < lines.length && (lines[index] ?? "").includes("|")) {
+        const row = splitTableRow(lines[index] ?? "");
+        if (row.length !== headers.length) {
+          break;
+        }
+        rows.push(row);
+        index++;
+      }
+
+      blocks.push({ type: "table", headers, rows });
+      continue;
+    }
+
     const unorderedList = line.match(/^[-*]\s+(.+)$/);
     const orderedList = line.match(/^\d+\.\s+(.+)$/);
     if (unorderedList || orderedList) {
@@ -87,6 +123,10 @@ const parseBlocks = (markdown: string): Block[] => {
       !/^```/.test(lines[index] ?? "") &&
       !/^(#{1,3})\s+/.test(lines[index] ?? "") &&
       !/^>\s?/.test(lines[index] ?? "") &&
+      !(
+        (lines[index] ?? "").includes("|") &&
+        isTableSeparator(lines[index + 1] ?? "")
+      ) &&
       !/^[-*]\s+/.test(lines[index] ?? "") &&
       !/^\d+\.\s+/.test(lines[index] ?? "")
     ) {
@@ -159,6 +199,29 @@ export function MarkdownMessage({ markdown }: { markdown: string }) {
               </List>
             );
           }
+          case "table":
+            return (
+              <div className="agent-markdown-table-scroll" key={index}>
+                <table>
+                  <thead>
+                    <tr>
+                      {block.headers.map((header, headerIndex) => (
+                        <th key={headerIndex}>{parseInline(header)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {block.rows.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex}>{parseInline(cell)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
           case "code":
             return (
               <pre className="agent-markdown-code" key={index}>
