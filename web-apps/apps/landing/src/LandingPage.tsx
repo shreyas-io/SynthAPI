@@ -122,14 +122,12 @@ function Logo() {
 }
 
 function FeatureStack() {
-  const [activeFeatureId, setActiveFeatureId] = useState<FeatureId>(
-    "ai-setup",
-  );
+  const [activeFeatureId, setActiveFeatureId] = useState<FeatureId>("ai-setup");
 
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveFeatureId((currentId) => {
-        const currentIndex = heroFeatures.findIndex(f => f.id === currentId);
+        const currentIndex = heroFeatures.findIndex((f) => f.id === currentId);
         const nextIndex = (currentIndex + 1) % heroFeatures.length;
         return heroFeatures[nextIndex]?.id ?? heroFeatures[0].id;
       });
@@ -138,8 +136,9 @@ function FeatureStack() {
     return () => clearInterval(interval);
   }, [activeFeatureId]);
 
-  const activeFeature = heroFeatures.find(f => f.id === activeFeatureId) || heroFeatures[0];
-  const activeIndex = heroFeatures.findIndex(f => f.id === activeFeatureId);
+  const activeFeature =
+    heroFeatures.find((f) => f.id === activeFeatureId) || heroFeatures[0];
+  const activeIndex = heroFeatures.findIndex((f) => f.id === activeFeatureId);
 
   return (
     <div
@@ -270,7 +269,18 @@ function FeatureDiagram({
     >
       <div className="workspace-header">
         <div className="workspace-title">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
           <span>Core API Mock</span>
         </div>
         <div className="workspace-status">
@@ -339,9 +349,7 @@ export function LandingPage() {
     <main className="landing-page">
       <header className="site-header">
         <Logo />
-        <nav aria-label="Primary navigation">
-          <a href={signinUrl}>Sign in</a>
-        </nav>
+        <nav aria-label="Primary navigation"></nav>
       </header>
 
       <section className="hero">
@@ -366,7 +374,7 @@ export function LandingPage() {
             <span>AI-assisted setup</span>
           </div>
         </div>
-        
+
         <div className="hero-divider" aria-hidden="true"></div>
 
         <FeatureStack />
@@ -374,14 +382,20 @@ export function LandingPage() {
 
       <div className="detailed-features">
         {heroFeatures.map((feature, index) => (
-          <section key={feature.id} className="feature-showcase-section" id={feature.id}>
+          <section
+            key={feature.id}
+            className="feature-showcase-section"
+            id={feature.id}
+          >
             <div className="feature-showcase-diagram">
               <FeatureDiagram featureId={feature.id} variant="large" />
             </div>
             <div className="feature-showcase-copy">
               <h2>{feature.title}</h2>
               <p>{feature.text}</p>
-              <a href={signupUrl} className="secondary-action">Learn more</a>
+              <a href={signupUrl} className="secondary-action">
+                Learn more
+              </a>
             </div>
           </section>
         ))}
