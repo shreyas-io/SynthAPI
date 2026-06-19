@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Background, ReactFlow, type Edge, type Node } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
@@ -13,49 +13,6 @@ type FeatureId =
   | "live-mock-domains"
   | "ai-setup"
   | "collaboration";
-
-const features: Array<{
-  id: FeatureId;
-  title: string;
-  text: string;
-  detail: string;
-}> = [
-  {
-    id: "workflow-rule-editor",
-    title: "Visual logic builder",
-    text: "Route requests to different responses with a visual condition tree.",
-    detail:
-      "Match on headers, body, params, cookies, and variables while keeping success, error, limit, and edge-case responses visible for review before backend code exists.",
-  },
-  {
-    id: "live-mock-domains",
-    title: "Live mock endpoints",
-    text: "Expose mocks through stable URLs that real clients can call.",
-    detail:
-      "Point frontend apps, QA suites, demos, and partner integrations at the same mock URL so expected behavior stays available during reviews and handoffs.",
-  },
-  {
-    id: "ai-setup",
-    title: "AI mock assistant",
-    text: "Use the project agent to create and revise mock endpoints faster.",
-    detail:
-      "Generate endpoints and responses from a plain-language request, revise behavior as specs change, and keep generated mocks inspectable and editable.",
-  },
-  {
-    id: "collaboration",
-    title: "Shared API workspace",
-    text: "Keep API behavior, examples, and test scenarios in one place.",
-    detail:
-      "Give product, frontend, QA, backend, and partners the same mock surface so teams can work in parallel and review behavior changes before they become production contracts.",
-  },
-];
-
-const workflow = [
-  "Create a project workspace",
-  "Define endpoints by method and path",
-  "Add response rules, variables, headers, cookies, or SSE",
-  "Point your app at the generated mock URL",
-];
 
 const ruleFlowNodes: Node[] = [
   {
@@ -95,57 +52,68 @@ const ruleFlowEdges: Edge[] = [
 
 const heroFeatures = [
   {
-    id: "workflow-rule-editor",
-    label: "Visual logic builder",
-    title: "Route each request to the right mock response.",
-    text: "Build condition trees for plans, users, limits, and edge cases without hiding behavior in test setup.",
-    tags: ["Conditions", "Response routing"],
+    id: "ai-setup",
+    label: "Conversational Builder",
+    title: "Conversational Builder",
+    text: "Just chat with your agent to instantly generate complex mock endpoints, payloads, and routing logic.",
+    tags: ["Natural language", "Instant generation", "Context-aware"],
   },
   {
-    id: "ai-setup",
-    label: "AI mock assistant",
-    title: "Create and update mock APIs by describing the change.",
-    text: "Ask the project agent for endpoints, responses, and revisions, then inspect and edit the result.",
-    tags: ["Generate mocks", "Edit results"],
+    id: "workflow-rule-editor",
+    label: "Visual Rule Trees",
+    title: "Visual Rule Trees",
+    text: "Go beyond static JSON. Define dynamic responses, edge cases, and errors with an intuitive visual editor.",
+    tags: ["Conditional routing", "Dynamic responses", "Error simulation"],
   },
   {
     id: "live-mock-domains",
-    label: "Live mock endpoints",
-    title: "Use real URLs before real services are ready.",
-    text: "Point apps, tests, demos, and partner integrations at stable mock endpoints.",
-    tags: ["Stable URLs", "Real clients"],
+    label: "Stateful Simulation",
+    title: "Stateful Simulation",
+    text: "Simulate real backend behavior. Maintain state and use variables across multiple API calls to test realistic user flows.",
+    tags: ["State management", "Variables", "Persistent data"],
   },
   {
     id: "collaboration",
-    label: "Shared API workspace",
-    title: "Keep expected API behavior in one inspectable place.",
-    text: "Use the same workspace across product, frontend, QA, backend, and partners.",
-    tags: ["Shared mocks", "Team reviews"],
+    label: "Team Workspaces",
+    title: "Team Workspaces",
+    text: "Unblock your entire frontend team with shared projects, real-time sync, and role-based access control.",
+    tags: ["Shared projects", "Instant sync", "RBAC"],
   },
 ] as const;
+
+function LogoIcon() {
+  return (
+    <svg
+      viewBox="0 0 40 40"
+      role="img"
+      focusable="false"
+      className="brand-svg-icon"
+    >
+      <path
+        className="brand-bracket"
+        d="M16 10H11.5C9.6 10 8 11.6 8 13.5V26.5C8 28.4 9.6 30 11.5 30H16"
+      />
+      <path
+        className="brand-bracket"
+        d="M24 10H28.5C30.4 10 32 11.6 32 13.5V26.5C32 28.4 30.4 30 28.5 30H24"
+      />
+      <path
+        className="brand-signal-shadow"
+        d="M14.5 20.8H17.8L19.2 17.2L21.2 23L23 19H25.5"
+      />
+      <path
+        className="brand-signal"
+        d="M14.5 20H17.8L19.2 16.4L21.2 22.2L23 18.2H25.5"
+      />
+    </svg>
+  );
+}
 
 function Logo() {
   return (
     <span className="brand">
       <span className="brand-mark" aria-hidden="true">
-        <svg viewBox="0 0 40 40" role="img" focusable="false">
-          <path
-            className="brand-bracket"
-            d="M16 10H11.5C9.6 10 8 11.6 8 13.5V26.5C8 28.4 9.6 30 11.5 30H16"
-          />
-          <path
-            className="brand-bracket"
-            d="M24 10H28.5C30.4 10 32 11.6 32 13.5V26.5C32 28.4 30.4 30 28.5 30H24"
-          />
-          <path
-            className="brand-signal-shadow"
-            d="M14.5 20.8H17.8L19.2 17.2L21.2 23L23 19H25.5"
-          />
-          <path
-            className="brand-signal"
-            d="M14.5 20H17.8L19.2 16.4L21.2 22.2L23 18.2H25.5"
-          />
-        </svg>
+        <LogoIcon />
       </span>
       <span className="brand-name">SynthAPI</span>
       <span className="brand-alpha">Alpha</span>
@@ -155,53 +123,62 @@ function Logo() {
 
 function FeatureStack() {
   const [activeFeatureId, setActiveFeatureId] = useState<FeatureId>(
-    "workflow-rule-editor",
+    "ai-setup",
   );
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveFeatureId((currentId) => {
+        const currentIndex = heroFeatures.findIndex(f => f.id === currentId);
+        const nextIndex = (currentIndex + 1) % heroFeatures.length;
+        return heroFeatures[nextIndex].id;
+      });
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [activeFeatureId]);
+
+  const activeFeature = heroFeatures.find(f => f.id === activeFeatureId) || heroFeatures[0];
+  const activeIndex = heroFeatures.findIndex(f => f.id === activeFeatureId);
 
   return (
     <div
-      className="hero-feature-panel"
+      className="hero-feature-presentation"
       aria-label="SynthAPI feature highlights"
     >
-      {heroFeatures.map((feature, index) => {
-        const isActive = activeFeatureId === feature.id;
+      <nav className="hero-feature-nav" aria-label="Feature navigation">
+        <div className="nav-track"></div>
+        {heroFeatures.map((feature, index) => {
+          const isActive = activeFeatureId === feature.id;
 
-        return (
-          <article
-            className="hero-feature-card"
-            data-expanded={isActive}
-            key={feature.id}
-          >
+          return (
             <button
-              className="hero-feature-card-trigger"
+              key={feature.id}
               type="button"
-              aria-expanded={isActive}
-              aria-controls={`hero-feature-detail-${feature.id}`}
+              className={`nav-item ${isActive ? "active" : ""}`}
               onClick={() => setActiveFeatureId(feature.id)}
+              aria-pressed={isActive}
             >
-              <span>{String(index + 1).padStart(2, "0")}</span>
-              <strong>{feature.label}</strong>
+              <span className="nav-point"></span>
+              <span className="nav-label">{feature.label}</span>
             </button>
-            <div
-              className="hero-feature-card-detail"
-              id={`hero-feature-detail-${feature.id}`}
-              hidden={!isActive}
-            >
-              <h3>{feature.title}</h3>
-              <p>{feature.text}</p>
-              <FeatureDiagram featureId={feature.id} variant="large" />
-              <div className="hero-feature-tags">
-                {feature.tags.map((tag) => (
-                  <small key={tag}>{tag}</small>
-                ))}
-              </div>
-              <a className="hero-feature-link" href={`#${feature.id}`}>
-                View feature
-              </a>
-            </div>
-          </article>
-        );
-      })}
+          );
+        })}
+      </nav>
+
+      <article className="hero-active-card">
+        <div className="layer-badge">
+          Layer {String(activeIndex + 1).padStart(2, "0")}
+        </div>
+        <h3>{activeFeature.title}</h3>
+        <p>{activeFeature.text}</p>
+        <div className="hero-feature-tags">
+          {activeFeature.tags.map((tag) => (
+            <small key={tag}>{tag}</small>
+          ))}
+        </div>
+        <FeatureDiagram featureId={activeFeature.id} variant="large" />
+      </article>
     </div>
   );
 }
@@ -223,17 +200,32 @@ function FeatureDiagram({
         className={`feature-diagram ai-diagram ${variant === "large" ? "feature-diagram-large" : ""}`}
         aria-hidden="true"
       >
-        <div className="ai-prompt-card">
-          <span>Request</span>
-          <p>Create checkout, refund, and webhook mocks.</p>
+        <div className="chat-message user-message">
+          <p>
+            Create a checkout endpoint that fails if the amount is over $100.
+          </p>
         </div>
-        <div className="diagram-line" />
-        <div className="diagram-node ai-node">Agent</div>
-        <div className="diagram-line" />
-        <div className="ai-output-stack">
-          <span>Endpoints</span>
-          <span>Responses</span>
-          <span>Updates</span>
+        <div className="chat-message agent-message">
+          <div className="agent-avatar">
+            <LogoIcon />
+          </div>
+          <div className="agent-content">
+            <p>
+              I've created the <code>POST /checkout</code> endpoint with two
+              rules:
+            </p>
+            <div className="agent-attachments">
+              <div className="chat-file-attachment">
+                <span>rule_success_200.json</span>
+              </div>
+              <div className="chat-file-attachment">
+                <span>rule_error_amount_exceeded_400.json</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="chat-message user-message">
+          <p>Perfect, now add a webhook payload for success.</p>
         </div>
       </div>
     );
@@ -242,37 +234,71 @@ function FeatureDiagram({
   if (featureId === "live-mock-domains") {
     return (
       <div
-        className={`feature-diagram domain-diagram ${variant === "large" ? "feature-diagram-large" : ""}`}
+        className={`feature-diagram stateful-diagram ${variant === "large" ? "feature-diagram-large" : ""}`}
         aria-hidden="true"
       >
-        <pre className="domain-curl">{`curl https://acme.mock.synthapi.dev/checkout/sess_123 \\
-  -H "content-type: application/json" \\
-  -d '{"amount": 4900, "currency": "usd"}'`}</pre>
-        <div className="domain-result">
-          <span>HTTP 200</span>
-          <code>{`{ "status": "approved" }`}</code>
+        <div className="flowchart-node request-node">
+          <code>POST /generate-image</code>
         </div>
-        <div className="domain-status-row">
-          <span>Frontend</span>
-          <span>QA suite</span>
-          <span>Partner</span>
+        <div className="flowchart-decision">
+          <code>user.credits {">"} 0 ?</code>
         </div>
+        <div className="flowchart-node response-node success-node">
+          <span className="status-chip success">200 OK</span>
+          <div className="node-action">
+            Set <code>credits = credits - 1</code>
+          </div>
+        </div>
+        <div className="flowchart-node response-node error-node">
+          <span className="status-chip error">402 Payment Required</span>
+          <div className="node-action">
+            Return <code>"Insufficient credits"</code>
+          </div>
+        </div>
+        <svg className="flowchart-svg-connectors">
+          <path d="M 50% 2.5rem V 6.5rem L 25% 10rem V 12rem" />
+          <path d="M 50% 6.5rem L 75% 10rem V 12rem" />
+        </svg>
       </div>
     );
   }
 
   return (
     <div
-      className={`feature-diagram collaboration-diagram ${variant === "large" ? "feature-diagram-large" : ""}`}
+      className={`feature-diagram workspace-diagram ${variant === "large" ? "feature-diagram-large" : ""}`}
       aria-hidden="true"
     >
-      <div className="team-node product">Product</div>
-      <div className="team-node design">Design</div>
-      <div className="team-node qa">QA</div>
-      <div className="team-node partners">Partners</div>
-      <div className="workspace-node">Mock workspace</div>
-      <div className="collaboration-note">
-        Same endpoints, responses, rules, and examples
+      <div className="workspace-header">
+        <div className="workspace-title">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+          <span>Core API Mock</span>
+        </div>
+        <div className="workspace-status">
+          <span className="live-indicator"></span> Live Sync
+        </div>
+      </div>
+      <div className="workspace-members">
+        <div className="member-row">
+          <div className="member-info">
+            <div className="member-avatar frontend">F</div>
+            <span className="member-name">Frontend Team</span>
+          </div>
+          <span className="role-badge editor">Editor</span>
+        </div>
+        <div className="member-row">
+          <div className="member-info">
+            <div className="member-avatar qa">Q</div>
+            <span className="member-name">QA Automation</span>
+          </div>
+          <span className="role-badge viewer">Viewer</span>
+        </div>
+        <div className="member-row">
+          <div className="member-info">
+            <div className="member-avatar partner">P</div>
+            <span className="member-name">Partner App</span>
+          </div>
+          <span className="role-badge viewer">Viewer</span>
+        </div>
       </div>
     </div>
   );
@@ -320,19 +346,18 @@ export function LandingPage() {
 
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">Mock APIs with real behavior</p>
-          <h1>Build API sandboxes before the backend is ready.</h1>
+          <p className="eyebrow">Next-Generation API Simulation</p>
+          <h1>Bring complex backend behaviors to life, instantly.</h1>
           <p className="hero-text">
-            SynthAPI gives teams live mock endpoints, conditional responses,
-            request-aware templates, variables, SSE streams, and an AI agent for
-            creating and maintaining mocks.
+            Standard mock servers fail when you need to test real-world state
+            and complex logic. SynthAPI combines generative AI with powerful
+            rule trees to build intelligent API replicas. Define your logic with
+            AI, and instantly generate production-ready mock APIs that keep your
+            teams moving.
           </p>
           <div className="hero-actions">
             <a className="primary-action" href={signupUrl}>
-              Sign up
-            </a>
-            <a className="secondary-action" href={signinUrl}>
-              Sign in
+              Start building for free
             </a>
           </div>
           <div className="hero-proof" aria-label="Product capabilities">
@@ -341,39 +366,23 @@ export function LandingPage() {
             <span>AI-assisted setup</span>
           </div>
         </div>
+        
+        <div className="hero-divider" aria-hidden="true"></div>
+
         <FeatureStack />
       </section>
 
-      <section className="workflow-section" id="workflow">
-        <div className="workflow-copy">
-          <h2>From route idea to callable endpoint.</h2>
-          <p>
-            Define the API shape, attach behavior, and hand teams a URL they can
-            use immediately.
-          </p>
-        </div>
-        <div className="workflow-steps">
-          {workflow.map((step) => (
-            <article className="workflow-step" key={step}>
-              <p>{step}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <div className="feature-sections" id="features">
-        {features.map((feature, index) => (
-          <section
-            className="feature-detail-section"
-            id={feature.id}
-            key={feature.title}
-          >
-            <div className="feature-detail-copy">
+      <div className="detailed-features">
+        {heroFeatures.map((feature, index) => (
+          <section key={feature.id} className="feature-showcase-section" id={feature.id}>
+            <div className="feature-showcase-diagram">
+              <FeatureDiagram featureId={feature.id} variant="large" />
+            </div>
+            <div className="feature-showcase-copy">
               <h2>{feature.title}</h2>
               <p>{feature.text}</p>
-              <p>{feature.detail}</p>
+              <a href={signupUrl} className="secondary-action">Learn more</a>
             </div>
-            <FeatureDiagram featureId={feature.id} />
           </section>
         ))}
       </div>
