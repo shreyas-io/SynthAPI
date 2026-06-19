@@ -21,12 +21,6 @@ variable "DOMAIN_NAME" {
   type        = string
 }
 
-variable "PLATFORM_PAGES_CNAME_TARGET" {
-  description = "Cloudflare Pages CNAME target for platform.<domain>. Leave empty to skip the record."
-  type        = string
-  default     = ""
-}
-
 variable "ACME_EMAIL" {
   description = "Email used for Let's Encrypt registration."
   type        = string

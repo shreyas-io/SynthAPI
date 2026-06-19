@@ -1,11 +1,11 @@
-output "route53_name_servers" {
-  description = "Nameservers to delegate at the registrar."
-  value       = aws_route53_zone.primary.name_servers
-}
-
 output "api_url" {
   description = "Public API base URL."
   value       = "https://${local.api_domain}"
+}
+
+output "api_public_ip" {
+  description = "Elastic IP to use for Cloudflare A records."
+  value       = aws_eip.api.public_ip
 }
 
 output "mock_base_url_template" {

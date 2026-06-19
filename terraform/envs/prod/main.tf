@@ -14,14 +14,12 @@ locals {
   name_prefix             = "${var.PROJECT_NAME}-${var.ENVIRONMENT}"
   api_domain              = "api.${var.DOMAIN_NAME}"
   mock_domain             = "mock.${var.DOMAIN_NAME}"
-  platform_domain         = "platform.${var.DOMAIN_NAME}"
   ecr_registry            = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.AWS_REGION}.amazonaws.com"
   api_image               = "${aws_ecr_repository.api.repository_url}:${var.API_IMAGE_TAG}"
   public_subnet_primary   = "10.0.1.0/24"
   public_subnet_secondary = "10.0.4.0/24"
   private_subnet_az1      = "10.0.2.0/24"
   private_subnet_az2      = "10.0.3.0/24"
-  platform_cname          = trimspace(var.PLATFORM_PAGES_CNAME_TARGET)
   common_tags = {
     Project     = var.PROJECT_NAME
     Environment = var.ENVIRONMENT
@@ -230,40 +228,6 @@ resource "aws_eip" "api" {
   })
 }
 
-resource "aws_route53_zone" "primary" {
-  name = var.DOMAIN_NAME
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-zone"
-  })
-}
-
-resource "aws_route53_record" "api" {
-  zone_id = aws_route53_zone.primary.zone_id
-  name    = local.api_domain
-  type    = "A"
-  ttl     = 300
-  records = [aws_eip.api.public_ip]
-}
-
-resource "aws_route53_record" "mock_wildcard" {
-  zone_id = aws_route53_zone.primary.zone_id
-  name    = "*.${local.mock_domain}"
-  type    = "A"
-  ttl     = 300
-  records = [aws_eip.api.public_ip]
-}
-
-resource "aws_route53_record" "platform" {
-  count = local.platform_cname == "" ? 0 : 1
-
-  zone_id = aws_route53_zone.primary.zone_id
-  name    = local.platform_domain
-  type    = "CNAME"
-  ttl     = 300
-  records = [local.platform_cname]
-}
-
 data "aws_iam_policy_document" "ec2_assume_role" {
   statement {
     effect = "Allow"
@@ -320,29 +284,6 @@ data "aws_iam_policy_document" "ec2_runtime" {
       "ec2:AssociateAddress",
       "ec2:DescribeAddresses",
       "ec2:DescribeInstances",
-    ]
-
-    resources = ["*"]
-  }
-
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "route53:ChangeResourceRecordSets",
-    ]
-
-    resources = [aws_route53_zone.primary.arn]
-  }
-
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "route53:GetChange",
-      "route53:ListHostedZones",
-      "route53:ListHostedZonesByName",
-      "route53:ListResourceRecordSets",
     ]
 
     resources = ["*"]

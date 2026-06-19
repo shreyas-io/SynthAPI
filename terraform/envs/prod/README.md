@@ -4,6 +4,14 @@ This root creates the live AWS backend stack for SynthAPI.
 
 `ACME_STAGING` defaults to `false`, so first-boot certificate issuance uses the production Let's Encrypt CA. Set it to `true` only when testing certificate issuance or avoiding production rate limits during setup.
 
+DNS for `DOMAIN_NAME` is expected to be hosted in Cloudflare. The EC2 bootstrap uses the Cloudflare DNS Certbot plugin to create temporary `_acme-challenge` TXT records for Let's Encrypt.
+
+Create these Cloudflare DNS records manually:
+
+- `api.<domain>`: `A` record to the Terraform-created Elastic IP.
+- `*.mock.<domain>`: `A` record to the same Elastic IP.
+- `platform.<domain>`: `CNAME` record to the Cloudflare Pages target, if needed.
+
 ## Secrets Ownership
 
 - AWS Secrets Manager bootstrap secret JSON:
@@ -14,6 +22,10 @@ This root creates the live AWS backend stack for SynthAPI.
   - `INFISICAL_SECRET_PATH`
   - `INFISICAL_CLIENT_ID`
   - `INFISICAL_CLIENT_SECRET`
+  - `CLOUDFLARE_API_TOKEN`
+
+The Cloudflare token only needs DNS edit access for the `DOMAIN_NAME` zone.
+
 - Infisical app/runtime values:
   - `DB_USER`
   - `DB_PASS`

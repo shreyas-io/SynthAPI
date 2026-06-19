@@ -17,7 +17,7 @@ fi
 
 python3 -m venv /opt/certbot
 /opt/certbot/bin/pip install --upgrade pip
-/opt/certbot/bin/pip install certbot certbot-dns-route53
+/opt/certbot/bin/pip install certbot certbot-dns-cloudflare
 ln -sf /opt/certbot/bin/certbot /usr/local/bin/certbot
 
 systemctl enable --now docker
@@ -115,6 +115,30 @@ if [[ -f /etc/letsencrypt/live/${api_domain}/fullchain.pem ]]; then
   exit 0
 fi
 
+secret_json="$(aws secretsmanager get-secret-value \
+  --region ${region} \
+  --secret-id ${bootstrap_secret_arn} \
+  --version-stage ${bootstrap_secret_stage} \
+  --query SecretString \
+  --output text)"
+
+mkdir -p /root/.secrets/certbot
+python3 - "$secret_json" <<'PY' >/root/.secrets/certbot/cloudflare.ini
+import json
+import sys
+
+payload = json.loads(sys.argv[1])
+if "VAULT_INIT" in payload:
+    payload = json.loads(payload["VAULT_INIT"])
+
+token = payload.get("CLOUDFLARE_API_TOKEN")
+if not token:
+    raise SystemExit("missing bootstrap secret key: CLOUDFLARE_API_TOKEN")
+
+print(f"dns_cloudflare_api_token = {token}")
+PY
+chmod 600 /root/.secrets/certbot/cloudflare.ini
+
 certbot certonly \
   --non-interactive \
   --agree-tos \
@@ -122,7 +146,9 @@ certbot certonly \
 %{ if acme_staging ~}
   --test-cert \
 %{ endif ~}
-  --dns-route53 \
+  --dns-cloudflare \
+  --dns-cloudflare-credentials /root/.secrets/certbot/cloudflare.ini \
+  --dns-cloudflare-propagation-seconds 120 \
   -d ${api_domain} \
   -d "*.${mock_domain}"
 EOF
