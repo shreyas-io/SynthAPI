@@ -231,9 +231,34 @@ h3 {
   background: var(--cyan);
   color: #11160f;
   box-shadow:
-    0 0 16px rgba(105, 210, 231, 0.4),
-    0 0 8px rgba(105, 210, 231, 0.3);
+    0 0 32px rgba(105, 210, 231, 0.62),
+    0 0 18px rgba(105, 210, 231, 0.5),
+    0 0 6px rgba(255, 255, 255, 0.55) inset;
+  animation: primary-action-glow 2.8s ease-in-out infinite;
   transition: all 0.2s ease-in-out;
+}
+
+@keyframes primary-action-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 22px rgba(105, 210, 231, 0.46),
+      0 0 12px rgba(105, 210, 231, 0.36),
+      0 0 5px rgba(255, 255, 255, 0.45) inset;
+  }
+
+  50% {
+    box-shadow:
+      0 0 38px rgba(105, 210, 231, 0.72),
+      0 0 24px rgba(105, 210, 231, 0.58),
+      0 0 8px rgba(255, 255, 255, 0.62) inset;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-action {
+    animation: none;
+  }
 }
 
 .primary-action:hover {
