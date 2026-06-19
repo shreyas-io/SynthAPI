@@ -131,7 +131,7 @@ function FeatureStack() {
       setActiveFeatureId((currentId) => {
         const currentIndex = heroFeatures.findIndex(f => f.id === currentId);
         const nextIndex = (currentIndex + 1) % heroFeatures.length;
-        return heroFeatures[nextIndex].id;
+        return heroFeatures[nextIndex]?.id ?? heroFeatures[0].id;
       });
     }, 10000);
 
