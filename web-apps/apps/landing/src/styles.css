@@ -256,7 +256,8 @@ h3 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .primary-action {
+  .primary-action,
+  .nav-point {
     animation: none;
   }
 }
@@ -335,8 +336,27 @@ h3 {
   border-radius: 50%;
   background: var(--surface);
   border: 2px solid var(--border-strong);
+  box-shadow:
+    0 0 10px rgba(105, 210, 231, 0.3),
+    0 0 18px rgba(105, 210, 231, 0.18);
+  animation: nav-point-glow 3.2s ease-in-out infinite;
   transition: all 0.2s ease;
   flex-shrink: 0;
+}
+
+@keyframes nav-point-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 8px rgba(105, 210, 231, 0.22),
+      0 0 14px rgba(105, 210, 231, 0.14);
+  }
+
+  50% {
+    box-shadow:
+      0 0 14px rgba(105, 210, 231, 0.42),
+      0 0 24px rgba(105, 210, 231, 0.28);
+  }
 }
 
 .nav-label {
@@ -344,21 +364,29 @@ h3 {
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--muted);
-  transition: color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
 }
 
 .nav-item:hover .nav-label {
   color: var(--text);
+  text-shadow: 0 0 10px rgba(105, 210, 231, 0.28);
 }
 
 .nav-item.active .nav-point {
   background: var(--cyan);
   border-color: var(--cyan);
-  box-shadow: 0 0 12px var(--cyan);
+  box-shadow:
+    0 0 16px rgba(105, 210, 231, 0.9),
+    0 0 28px rgba(105, 210, 231, 0.45);
 }
 
 .nav-item.active .nav-label {
   color: var(--cyan);
+  text-shadow:
+    0 0 12px rgba(105, 210, 231, 0.62),
+    0 0 24px rgba(105, 210, 231, 0.32);
 }
 
 .hero-active-card {
