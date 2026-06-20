@@ -903,7 +903,13 @@ h3 {
 .grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .project-grid {
@@ -2595,11 +2601,15 @@ h3 {
 
 .terminal-chat-resize-handle {
   order: 2;
-  flex: 0 0 0.45rem;
-  width: 0.45rem;
+  flex: 0 0 1rem;
+  width: 1rem;
   cursor: ew-resize;
   background: transparent;
   border-right: 1px solid var(--color-border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
 }
 
 .terminal-chat-resize-handle:hover {

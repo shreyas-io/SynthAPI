@@ -5,6 +5,7 @@ import {
   ChevronRight,
   ChevronUp,
   Terminal,
+  GripVertical,
 } from "lucide-react";
 import { useState, type PointerEvent } from "react";
 
@@ -64,7 +65,9 @@ export function ProjectWorkspaceLayout() {
             role="separator"
             aria-orientation="vertical"
             aria-label="Resize Ask AI panel"
-          />
+          >
+            <GripVertical size={14} />
+          </div>
           <div className="terminal-chat-content">
             <ProjectAgentChatPanel projectId={projectId} />
           </div>
