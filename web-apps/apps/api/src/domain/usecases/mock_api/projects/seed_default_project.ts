@@ -42,11 +42,85 @@ export async function seed_default_project(
     variables: [],
   });
 
+  // Unauthorized response
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: chatApi.id,
+    execution_order: 1,
+    name: "Unauthorized",
+    is_default: false,
+    response: {
+      status_code: 401,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          error: "Invalid API key.",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Unauthenticated",
+      type: "or",
+      predicates: [
+        {
+          label: "Invalid API Key",
+          type: "simple",
+          actual: "{{request.headers.x-api-key}}",
+          operator: "not_equals",
+          expected: "{{constants.expected_api_key}}",
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  // Invalid Request Body response
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: chatApi.id,
+    execution_order: 2,
+    name: "Invalid Parameters",
+    is_default: false,
+    response: {
+      status_code: 400,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          error: "Missing required parameters (model, messages).",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Invalid Body",
+      type: "or",
+      predicates: [
+        {
+          label: "Model empty",
+          type: "simple",
+          actual: "{{request.body.value.model}}",
+          operator: "string_empty",
+        },
+        {
+          label: "Messages empty",
+          type: "simple",
+          actual: "{{request.body.value.messages}}",
+          operator: "empty_array",
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
   // Success response
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: chatApi.id,
+    execution_order: 3,
     name: "Successful Completion",
-    is_default: false,
+    is_default: true,
     response: {
       status_code: 200,
       headers: { "content-type": "application/json" },
@@ -63,16 +137,7 @@ export async function seed_default_project(
         },
       },
     },
-    rule_tree: {
-      label: "Valid request",
-      type: "and",
-      predicates: [
-        { label: "Valid API Key", type: "simple", actual: "{{request.headers.x-api-key}}", operator: "equals", expected: "{{constants.expected_api_key}}" },
-        { label: "Model specified", type: "simple", actual: "{{request.body.value.model}}", operator: "string_not_empty" },
-        { label: "Messages present", type: "simple", actual: "{{request.body.value.messages}}", operator: "not_empty_array" },
-      ],
-      children: [],
-    },
+    rule_tree: null,
     post_response_actions: [],
   });
 
@@ -93,53 +158,91 @@ export async function seed_default_project(
   }));
   sseEvents.push({ delay_ms: 200, sse: { event: "done", data: { status: "finished", usage: { input_tokens: 15, output_tokens: words.length } } } });
 
+  // Unauthorized response
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: streamApi.id,
-    name: "Text generation stream",
+    execution_order: 1,
+    name: "Unauthorized",
     is_default: false,
     response: {
-      status_code: 200,
-      headers: { "content-type": "text/event-stream", "cache-control": "no-cache" },
+      status_code: 401,
+      headers: { "content-type": "application/json" },
       cookies: {},
-      body: { type: "sse", mode: "events", events: sseEvents },
+      body: {
+        type: "json",
+        value: {
+          error: "Invalid API key.",
+        },
+      },
     },
     rule_tree: {
-      label: "Valid stream request",
-      type: "and",
+      label: "Unauthenticated",
+      type: "or",
       predicates: [
-        { label: "Valid API Key", type: "simple", actual: "{{request.headers.x-api-key}}", operator: "equals", expected: "{{constants.expected_api_key}}" },
-        { label: "Temperature validation", type: "simple", actual: "{{request.body.value.temperature}}", operator: "lte", expected: 2 },
-        { label: "Model specified", type: "simple", actual: "{{request.body.value.model}}", operator: "string_not_empty" },
+        {
+          label: "Invalid API Key",
+          type: "simple",
+          actual: "{{request.headers.x-api-key}}",
+          operator: "not_equals",
+          expected: "{{constants.expected_api_key}}",
+        },
       ],
       children: [],
     },
     post_response_actions: [],
   });
 
-  // Default error (Unauthorized/Invalid)
-  await responsesUsecase.createMockApiResponse(user, {
-    mock_api_id: chatApi.id,
-    name: "Unauthorized / Invalid Parameters",
-    is_default: true,
-    response: {
-      status_code: 401,
-      headers: { "content-type": "application/json" },
-      cookies: {},
-      body: { type: "json", value: { error: "Invalid API key or missing required parameters (model, messages)." } },
-    },
-    rule_tree: null,
-    post_response_actions: [],
-  });
-  
+  // Invalid Parameters response
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: streamApi.id,
-    name: "Unauthorized / Invalid Parameters",
-    is_default: true,
+    execution_order: 2,
+    name: "Invalid Parameters",
+    is_default: false,
     response: {
-      status_code: 401,
+      status_code: 400,
       headers: { "content-type": "application/json" },
       cookies: {},
-      body: { type: "json", value: { error: "Invalid API key or missing required parameters (model, temperature <= 2)." } },
+      body: {
+        type: "json",
+        value: {
+          error: "Missing required parameters (model, temperature <= 2).",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Invalid Body",
+      type: "or",
+      predicates: [
+        {
+          label: "Temperature > 2",
+          type: "simple",
+          actual: "{{request.body.value.temperature}}",
+          operator: "gt",
+          expected: 2,
+        },
+        {
+          label: "Model empty",
+          type: "simple",
+          actual: "{{request.body.value.model}}",
+          operator: "string_empty",
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  // Success stream response
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: streamApi.id,
+    execution_order: 3,
+    name: "Text generation stream",
+    is_default: true,
+    response: {
+      status_code: 200,
+      headers: { "content-type": "text/event-stream", "cache-control": "no-cache" },
+      cookies: {},
+      body: { type: "sse", mode: "events", events: sseEvents },
     },
     rule_tree: null,
     post_response_actions: [],
