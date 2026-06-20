@@ -52,7 +52,10 @@ type MaterializedResponseBody =
   | { type: "sse"; stream: AsyncIterable<SseStreamItemEt> };
 
 const createStaticSseStream = (
-  events: MockApiResponseEt["response"]["body"] & { type: "sse"; mode: "events" },
+  events: MockApiResponseEt["response"]["body"] & {
+    type: "sse";
+    mode: "events";
+  },
   execution_context: ExecutionContextEt,
 ): AsyncIterable<SseStreamItemEt> => ({
   async *[Symbol.asyncIterator]() {
@@ -373,6 +376,21 @@ export async function executePublicMockApi(
 
   execution_context.response = mock_api_response.response;
 
+  const headers = recursivelyMapTemplateParams(
+    mock_api_response.response.headers,
+    execution_context,
+  );
+
+  const cookies = recursivelyMapTemplateParams(
+    mock_api_response.response.cookies,
+    execution_context,
+  );
+  const body = await materializeResponseBody(
+    ctx,
+    mock_api_response.response.body,
+    execution_context,
+  );
+
   await executePostResponseActions(ctx, {
     project_id: project.id,
     mock_api_id: mock_api.id,
@@ -383,18 +401,8 @@ export async function executePublicMockApi(
   return {
     mock_api_id: mock_api.id,
     status_code: mock_api_response.response.status_code,
-    headers: recursivelyMapTemplateParams(
-      mock_api_response.response.headers,
-      execution_context,
-    ),
-    cookies: recursivelyMapTemplateParams(
-      mock_api_response.response.cookies,
-      execution_context,
-    ),
-    body: await materializeResponseBody(
-      ctx,
-      mock_api_response.response.body,
-      execution_context,
-    ),
+    headers,
+    cookies,
+    body,
   };
 }
