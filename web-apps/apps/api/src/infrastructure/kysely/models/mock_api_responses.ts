@@ -8,6 +8,7 @@ export type MockApiResponsesTable = {
   mock_api_id: string;
   name: string;
   is_default: ColumnType<boolean, boolean | undefined, boolean>;
+  execution_order: ColumnType<number, number, number>;
   response: ColumnType<JsonObject, JsonObject | string, JsonObject | string>;
   rule_tree: ColumnType<
     JsonObject,

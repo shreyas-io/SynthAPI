@@ -23,6 +23,11 @@ export type TextBody = {
   value: string;
 };
 
+export type JsonScriptBody = {
+  type: "json_script";
+  code: string;
+};
+
 export type RequestBodyEt =
   | JsonBody
   | TextBody
@@ -30,7 +35,7 @@ export type RequestBodyEt =
   | EmptyBody;
 
 export type ResponseBodyEt = JsonBody | TextBody | EmptyBody;
-export type ConfiguredResponseBodyEt = JsonBody | TextBody | EmptyBody | SseBodyEt;
+export type ConfiguredResponseBodyEt = JsonBody | TextBody | EmptyBody | SseBodyEt | JsonScriptBody;
 
 export type ExecutionContextEt = {
   request: {

@@ -16,6 +16,10 @@ const responseBodyDto = z.discriminatedUnion("type", [
     type: z.literal("empty"),
   }),
   sseBodySchema,
+  z.object({
+    type: z.literal("json_script"),
+    code: z.string(),
+  }),
 ]);
 
 const responseDto = z.object({
@@ -32,6 +36,7 @@ export const createMockApiResponseDto = z.object({
   response: responseDto,
   rule_tree: createMockApiRuleTreeDto.nullable().optional(),
   post_response_actions: z.array(mockApiPostResponseActionDto).optional(),
+  execution_order: z.number().int().min(1).optional(),
 });
 
 export const listMockApiResponsesFilterDto = z.object({
@@ -47,6 +52,6 @@ export const listMockApiResponsesPaginationDto = z.object({
 });
 
 export const listMockApiResponsesSortDto = z.object({
-  by: z.enum(["name", "created_at"]),
+  by: z.enum(["name", "created_at", "execution_order"]),
   order: z.enum(["asc", "desc"]),
 });

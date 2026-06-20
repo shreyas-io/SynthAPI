@@ -6,6 +6,7 @@ import {
   deleteMockApiResponse,
   getMockApiResponse,
   listMockApiResponses,
+  reorderMockApiResponses,
   restoreMockApiResponse,
   updateMockApiResponse,
 } from "../api/mock_api_responses_api";
@@ -118,6 +119,52 @@ export const useRestoreMockApiResponse = (mockApiId: string | undefined) => {
       });
       await queryClient.invalidateQueries({
         queryKey: queryKeys.mockApiResponse(mockApiId, responseId),
+      });
+    },
+  });
+};
+
+export const useReorderMockApiResponses = (mockApiId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (responseIds: string[]) =>
+      reorderMockApiResponses(mockApiId!, responseIds),
+    async onMutate(responseIds) {
+      if (!mockApiId) return;
+
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.mockApiResponses(mockApiId),
+      });
+
+      const previousResponses = queryClient.getQueryData<any>(
+        queryKeys.mockApiResponses(mockApiId),
+      );
+
+      if (previousResponses?.records) {
+        const newRecords = [...previousResponses.records].sort((a, b) => {
+          return responseIds.indexOf(a.id) - responseIds.indexOf(b.id);
+        });
+        queryClient.setQueryData(queryKeys.mockApiResponses(mockApiId), {
+          ...previousResponses,
+          records: newRecords,
+        });
+      }
+
+      return { previousResponses };
+    },
+    onError(err, newOrder, context) {
+      if (context?.previousResponses && mockApiId) {
+        queryClient.setQueryData(
+          queryKeys.mockApiResponses(mockApiId),
+          context.previousResponses,
+        );
+      }
+    },
+    onSettled() {
+      if (!mockApiId) return;
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.mockApiResponses(mockApiId),
       });
     },
   });

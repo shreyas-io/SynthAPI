@@ -17,7 +17,9 @@ type MockApiResponseInput = Pick<
   | "response"
   | "rule_tree"
   | "post_response_actions"
->;
+> & {
+  execution_order?: number;
+};
 
 type MockApiResponseFilters = {
   ids?: string[] | undefined;
@@ -48,6 +50,27 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       const mock_api_response = await ctx.db
         .transaction()
         .execute(async (trx) => {
+          const countRes = await trx
+            .selectFrom("mock_api_responses")
+            .select((eb) => eb.fn.count("id").as("count"))
+            .where("mock_api_id", "=", input.mock_api_id)
+            .where("deleted_at", "is", null)
+            .executeTakeFirst();
+
+          const expectedOrder = Number(countRes?.count ?? 0) + 1;
+
+          if (
+            input.execution_order !== undefined &&
+            input.execution_order !== expectedOrder
+          ) {
+            throw new MockApiException({
+              public_message: `Execution order must be sequential. Expected ${expectedOrder}, got ${input.execution_order}.`,
+              status_code: HttpStatusCode.BAD_REQUEST,
+            });
+          }
+
+          const execution_order = input.execution_order ?? expectedOrder;
+
           if (input.is_default) {
             await trx
               .updateTable("mock_api_responses")
@@ -63,6 +86,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
               mock_api_id: input.mock_api_id,
               name: input.name,
               is_default: input.is_default,
+              execution_order,
               response: JSON.stringify(input.response),
               ...(input.rule_tree
                 ? { rule_tree: JSON.stringify(input.rule_tree) }
@@ -90,7 +114,11 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
     getMockApiResponse: async (id: string): Promise<MockApiResponseEt> => {
       const mock_api_response = await ctx.db
         .selectFrom("mock_api_responses")
-        .innerJoin("mock_apis", "mock_apis.id", "mock_api_responses.mock_api_id")
+        .innerJoin(
+          "mock_apis",
+          "mock_apis.id",
+          "mock_api_responses.mock_api_id",
+        )
         .innerJoin("projects", "projects.id", "mock_apis.project_id")
         .selectAll("mock_api_responses")
         .where("mock_api_responses.id", "=", id)
@@ -134,6 +162,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
           "mock_api_id",
           "name",
           "is_default",
+          "execution_order",
           "deleted_at",
           "created_at",
         ]);
@@ -225,7 +254,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
           .execute();
       });
     },
-    async deleteMockApiResponse(user: AuthenticatedUser, id: string): Promise<void> {
+    async deleteMockApiResponse(
+      user: AuthenticatedUser,
+      id: string,
+    ): Promise<void> {
       const mock_api_response = await ctx.db
         .selectFrom("mock_api_responses")
         .select(["id", "deleted_at", "mock_api_id"])
@@ -244,7 +276,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       }
 
       const mockApis = MockApisUsecase(ctx);
-      await mockApis.assertMockApiWriteAccess(user, mock_api_response.mock_api_id);
+      await mockApis.assertMockApiWriteAccess(
+        user,
+        mock_api_response.mock_api_id,
+      );
 
       await ctx.db
         .updateTable("mock_api_responses")
@@ -252,11 +287,41 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         .where("id", "=", id)
         .execute();
     },
-    async restoreMockApiResponse(user: AuthenticatedUser, id: string): Promise<void> {
+    reorderMockApiResponses: async (
+      user: AuthenticatedUser,
+      mock_api_id: string,
+      response_ids: string[],
+    ): Promise<void> => {
+      const mockApis = MockApisUsecase(ctx);
+      await mockApis.assertMockApiWriteAccess(user, mock_api_id);
+
+      await ctx.db.transaction().execute(async (trx) => {
+        // Update execution_order incrementally based on the array order
+        for (let i = 0; i < response_ids.length; i++) {
+          const id = response_ids[i];
+          if (id) {
+            await trx
+              .updateTable("mock_api_responses")
+              .set({ execution_order: i + 1 })
+              .where("id", "=", id)
+              .where("mock_api_id", "=", mock_api_id)
+              .execute();
+          }
+        }
+      });
+    },
+    async restoreMockApiResponse(
+      user: AuthenticatedUser,
+      id: string,
+    ): Promise<void> {
       await ctx.db.transaction().execute(async (trx) => {
         const mock_api_response = await trx
           .selectFrom("mock_api_responses")
-          .innerJoin("mock_apis", "mock_apis.id", "mock_api_responses.mock_api_id")
+          .innerJoin(
+            "mock_apis",
+            "mock_apis.id",
+            "mock_api_responses.mock_api_id",
+          )
           .innerJoin("projects", "projects.id", "mock_apis.project_id")
           .select([
             "mock_api_responses.id",
@@ -276,7 +341,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         }
 
         const mockApis = MockApisUsecase(ctx);
-        await mockApis.assertMockApiWriteAccess(user, mock_api_response.mock_api_id);
+        await mockApis.assertMockApiWriteAccess(
+          user,
+          mock_api_response.mock_api_id,
+        );
 
         if (mock_api_response.is_default) {
           await trx

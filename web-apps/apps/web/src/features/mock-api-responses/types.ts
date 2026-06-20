@@ -6,13 +6,19 @@ export type PredicateValue =
   | Record<string, unknown>
   | unknown[];
 
-export type RulePredicate = {
-  label: string;
-  type: "simple";
-  actual: string;
-  operator: string;
-  expected?: PredicateValue;
-};
+export type RulePredicate =
+  | {
+      label: string;
+      type: "simple";
+      actual: string;
+      operator: string;
+      expected?: PredicateValue;
+    }
+  | {
+      label: string;
+      type: "custom";
+      script: string;
+    };
 
 export type RuleTree = {
   label: string;
@@ -37,6 +43,7 @@ export type ResponseBody =
   | { type: "json"; value: unknown }
   | { type: "text"; value: string }
   | { type: "empty" }
+  | { type: "json_script"; code: string }
   | {
       type: "sse";
       mode: "events";
@@ -91,6 +98,7 @@ export type MockApiResponse = {
   mock_api_id: string;
   name: string;
   is_default: boolean;
+  execution_order: number;
   response: {
     status_code: number;
     headers: Record<string, unknown>;
