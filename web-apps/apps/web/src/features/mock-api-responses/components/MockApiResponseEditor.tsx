@@ -144,7 +144,9 @@ const hasSseContentType = (rows: KeyValueRow[]): boolean =>
 const normalizeRuleTree = (ruleTree: RuleTree | null): RuleTree | null => {
   if (!ruleTree) return null;
 
-  const predicates = ruleTree.predicates.filter((pred) => pred.actual.trim());
+  const predicates = ruleTree.predicates.filter((pred) => 
+    pred.type === "custom" ? pred.script.trim() : pred.actual.trim()
+  );
   const predicateBranches = predicates.map((pred) => ({
     label: pred.label,
     type: "and" as const,
@@ -619,7 +621,7 @@ export function MockApiResponseEditor({
         cookies: recordFromRows(cookies),
         body,
       },
-      rule_tree: isDefault ? null : normalizeRuleTree(ruleTree),
+      rule_tree: normalizeRuleTree(ruleTree),
       post_response_actions: postActions,
     });
   };
@@ -628,31 +630,33 @@ export function MockApiResponseEditor({
     <form className="response-editor-shell flat-editor" onSubmit={submit}>
       <div className="workspace-row editor-toolbar dense-editor-toolbar">
         <div className="editor-title-row">
-          <h2 title={initialResponse ? initialResponse.name : "Create response"}>
-            {initialResponse ? initialResponse.name : "Create response"}
-          </h2>
-          <div className="editor-tabs compact-tabs inline-tabs">
-            <button
-              className={activeTab === "response" ? "active" : ""}
-              type="button"
-              onClick={() => setActiveTab("response")}
-            >
-              Response
-            </button>
-            <button
-              className={activeTab === "actions" ? "active" : ""}
-              type="button"
-              onClick={() => setActiveTab("actions")}
-            >
-              Actions
-            </button>
-            <button
-              className={activeTab === "rules" ? "active" : ""}
-              type="button"
-              onClick={() => setActiveTab("rules")}
-            >
-              Rules
-            </button>
+          <div style={{ display: "flex", flex: 1, alignItems: "center", gap: "24px" }}>
+            <h2 title={initialResponse ? initialResponse.name : "Create response"} style={{ flex: "none", maxWidth: "400px" }}>
+              {initialResponse ? initialResponse.name : "Create response"}
+            </h2>
+            <div className="editor-tabs compact-tabs inline-tabs">
+              <button
+                className={activeTab === "response" ? "active" : ""}
+                type="button"
+                onClick={() => setActiveTab("response")}
+              >
+                Response
+              </button>
+              <button
+                className={activeTab === "actions" ? "active" : ""}
+                type="button"
+                onClick={() => setActiveTab("actions")}
+              >
+                Actions
+              </button>
+              <button
+                className={activeTab === "rules" ? "active" : ""}
+                type="button"
+                onClick={() => setActiveTab("rules")}
+              >
+                Rules
+              </button>
+            </div>
           </div>
           <div className="toolbar-actions">
             <Button
@@ -922,18 +926,12 @@ export function MockApiResponseEditor({
 
           {activeTab === "rules" && (
             <div className="editor-tab-panel rule-editor-panel flat-panel">
-              {isDefault && !ruleTree ? (
-                <div className="empty-state">
-                  Default responses do not use rule trees.
-                </div>
-              ) : (
-                <div className="rule-editor-frame">
-                  <RuleTreeEditor
-                    initialTree={ruleTree}
-                    onChange={setRuleTree}
-                  />
-                </div>
-              )}
+              <div className="rule-editor-frame">
+                <RuleTreeEditor
+                  initialTree={ruleTree}
+                  onChange={setRuleTree}
+                />
+              </div>
             </div>
           )}
         </div>

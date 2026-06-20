@@ -334,7 +334,7 @@ export async function executePublicMockApi(
     .selectAll()
     .where("mock_api_id", "=", mock_api.id)
     .where("deleted_at", "is", null)
-    .orderBy("created_at", "desc")
+    .orderBy("execution_order", "asc")
     .execute()) as unknown as MockApiResponseEt[];
 
   let mock_api_response: (typeof mock_api_responses)[number] | undefined;
@@ -342,7 +342,6 @@ export async function executePublicMockApi(
     | (typeof mock_api_responses)[number]
     | undefined;
 
-  // TODO: run in parallel
   for (const response of mock_api_responses) {
     if (response.is_default) {
       default_mock_api_response ??= response;

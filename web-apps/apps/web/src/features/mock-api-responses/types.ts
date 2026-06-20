@@ -6,13 +6,19 @@ export type PredicateValue =
   | Record<string, unknown>
   | unknown[];
 
-export type RulePredicate = {
-  label: string;
-  type: "simple";
-  actual: string;
-  operator: string;
-  expected?: PredicateValue;
-};
+export type RulePredicate =
+  | {
+      label: string;
+      type: "simple";
+      actual: string;
+      operator: string;
+      expected?: PredicateValue;
+    }
+  | {
+      label: string;
+      type: "custom";
+      script: string;
+    };
 
 export type RuleTree = {
   label: string;

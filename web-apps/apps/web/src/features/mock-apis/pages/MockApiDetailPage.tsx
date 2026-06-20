@@ -6,7 +6,28 @@ import {
   Copy,
   RotateCcw,
   SlidersHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
+import { useReorderMockApiResponses } from "../../mock-api-responses/hooks/mock_api_response_hooks";
+
 import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useEffect, useState } from "react";
 
@@ -26,6 +47,34 @@ import { useMockApi, useMockApis, useUpdateMockApi } from "../hooks/mock_api_hoo
 
 type ResponseTab = "active" | "deleted";
 
+
+function SortableResponseItem({ response, isActive, mockApiId, projectId }: any) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+  } = useSortable({ id: response.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className={`response-sidebar-item ${isActive ? "active" : ""}`}>
+      <div className="drag-handle" {...attributes} {...listeners}>
+        <GripVertical size={14} />
+      </div>
+      <Link to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/${response.id}`} className="response-link">
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{response.name}</span>
+        {response.is_default && <span className="pill" style={{ flexShrink: 0 }}>Default</span>}
+      </Link>
+    </div>
+  );
+}
+
 export function MockApiDetailPage() {
   const { projectId, mockApiId } = useParams();
   const location = useLocation();
@@ -35,7 +84,7 @@ export function MockApiDetailPage() {
   const [variables, setVariables] = useState<Variable[]>([]);
   const [globals, setGlobals] = useState<Variable[]>([]);
   const [variablesOpen, setVariablesOpen] = useState(false);
-  const [responseTab, setResponseTab] = useState<ResponseTab>("active");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [variablesTab, setVariablesTab] = useState<
     "globals" | "constants" | "local"
   >("globals");
@@ -52,6 +101,25 @@ export function MockApiDetailPage() {
   const project = useProject(projectId);
   const updateMockApiMutation = useUpdateMockApi(mockApiId);
   const updateProjectMutation = useUpdateProject(projectId);
+  const reorderResponses = useReorderMockApiResponses(mockApiId);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  function handleDragEnd(event: any) {
+    const { active, over } = event;
+    if (active.id !== over.id) {
+      const oldIndex = activeResponses.findIndex((r) => r.id === active.id);
+      const newIndex = activeResponses.findIndex((r) => r.id === over.id);
+      const newOrder = arrayMove(activeResponses, oldIndex, newIndex);
+      reorderResponses.mutate(newOrder.map(r => r.id));
+    }
+  }
+
 
   useEffect(() => {
     setVariables(mockApi.data?.variables ?? []);
@@ -89,6 +157,7 @@ export function MockApiDetailPage() {
   }, [location.pathname, mockApiId]);
 
   const activeApis = mockApis.data?.records ?? [];
+  const [responseTab, setResponseTab] = useState<ResponseTab>("active");
   const activeResponses = responses.data?.records ?? [];
   const deletedResponses = deletedResponsesQuery.data?.records ?? [];
   const currentResponses = responseTab === "active" ? responses : deletedResponsesQuery;
@@ -165,111 +234,130 @@ export function MockApiDetailPage() {
           </header>
         )}
 
-        <div className="workspace-row response-strip">
-          <span className="response-strip-label">Responses</span>
-          <span className="response-status-toggle" aria-label="Response status">
-            <button
-              type="button"
-              className={`response-status-tab ${
-                responseTab === "active" ? "active" : ""
-              }`}
-              onClick={() => setResponseTab("active")}
-            >
-              Active
-            </button>
-            <button
-              type="button"
-              className={`response-status-tab ${
-                responseTab === "deleted" ? "active" : ""
-              }`}
-              onClick={() => setResponseTab("deleted")}
-            >
-              Deleted
-            </button>
-          </span>
-           {responseTab === "active" && (
-             <>
-             {currentResponses.isPending && <span className="muted-text">Loading responses...</span>}
-             {currentResponses.isError && <span className="error">{currentResponses.error.message}</span>}
-             {activeResponses.map((response) => {
-               const isActive = location.pathname.includes(`/responses/${response.id}`);
-               return (
-                 <Link
-                   className={`response-tab ${isActive ? "active" : ""}`}
-                   to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/${response.id}`}
-                   key={response.id}
-                 >
-                   {response.name} {response.is_default && " (default)"}
-                 </Link>
-               );
-             })}
-             <Link 
-               className="response-tab add-response-tab"
-               to={`/projects/${projectId}/mock-apis/${mockApiId}/responses/new`}
-               title="New Response"
-             >
-               +
-             </Link>
-             </>
-           )}
-        </div>
-
-        {responseTab === "deleted" && (
-          <section className="profile-section deleted-responses-section">
-            <div className="org-deleted-banner">
-              <AlertTriangle size={16} />
-              Deleted responses are hidden from response matching.
-            </div>
-            {currentResponses.isPending && <p>Loading responses...</p>}
-            {currentResponses.isError && <p className="error">{currentResponses.error.message}</p>}
-            {deletedResponses.length === 0 ? (
-              <p className="muted-text">No deleted responses.</p>
-            ) : (
-              <div className="org-list deleted-grid">
-                {deletedResponses.map((response) => (
-                  <div className="org-card card org-deleted" key={response.id}>
-                    <div className="org-card-header">
-                      <h3>{response.name}</h3>
-                      {response.is_default && <span className="pill">Default</span>}
-                    </div>
-                    <div className="org-card-meta">
-                      <p>
-                        <strong>Deleted:</strong>{" "}
-                        {new Date(response.deleted_at!).toLocaleString()}
-                      </p>
-                    </div>
-                    <div className="org-card-actions">
-                      <Button
-                        variant="secondary"
-                        size="compact"
-                        onClick={() => restoreResponse.mutate(response.id)}
-                        disabled={restoreResponse.isPending}
-                      >
-                        <RotateCcw size={14} />
-                        Restore
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+        <div className="workspace-content-with-sidebar">
+          <aside className="response-sidebar" style={{ width: sidebarCollapsed ? "48px" : "320px", transition: "width 0.2s ease" }}>
+            {sidebarCollapsed ? (
+              <div style={{ padding: '16px 12px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  style={{ background: 'transparent', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', padding: '4px' }}
+                  onClick={() => setSidebarCollapsed(false)}
+                  title="Expand sidebar"
+                >
+                  <PanelLeftOpen size={18} />
+                </button>
               </div>
-            )}
-            {restoreResponse.isError && (
-              <p className="error">Failed to restore response.</p>
-            )}
-          </section>
-        )}
+            ) : (
+              <>
+                <div className="editor-tabs" style={{ padding: '16px 16px 0', borderBottom: 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <button
+                      type="button"
+                      className={responseTab === "active" ? "active" : ""}
+                      onClick={() => setResponseTab("active")}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      className={responseTab === "deleted" ? "active" : ""}
+                      onClick={() => setResponseTab("deleted")}
+                    >
+                      Deleted
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    style={{ background: 'transparent', border: 'none', color: 'var(--color-text-secondary)', cursor: 'pointer', padding: '4px' }}
+                    onClick={() => setSidebarCollapsed(true)}
+                    title="Collapse sidebar"
+                  >
+                    <PanelLeftClose size={18} />
+                  </button>
+                </div>
 
-      {responseTab === "deleted" ? (
-        <section className="workspace-empty">
-          <p>Select a response status or restore a deleted response.</p>
-        </section>
-      ) : location.pathname.endsWith(mockApiId) ? (
-        <section className="workspace-empty">
-          <p>Select or create a response.</p>
-        </section>
-      ) : (
-        <Outlet />
-      )}
+                <div className="sidebar-content">
+                  {responseTab === "active" && (
+                    <>
+                      <div className="sidebar-actions">
+                        <Button variant="secondary" size="compact" onClick={() => navigate(`/projects/${projectId}/mock-apis/${mockApiId}/responses/new`)}>
+                          + New Response
+                        </Button>
+                      </div>
+                      {currentResponses.isPending && <span className="muted-text">Loading...</span>}
+                      {currentResponses.isError && <span className="error">{currentResponses.error.message}</span>}
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                      >
+                        <SortableContext
+                          items={activeResponses.map((r) => r.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          <div className="response-list">
+                            {activeResponses.map((response) => (
+                              <SortableResponseItem
+                                key={response.id}
+                                response={response}
+                                isActive={location.pathname.includes(`/responses/${response.id}`)}
+                                projectId={projectId!}
+                                mockApiId={mockApiId!}
+                              />
+                            ))}
+                          </div>
+                        </SortableContext>
+                      </DndContext>
+                    </>
+                  )}
+
+                  {responseTab === "deleted" && (
+                    <div className="deleted-list">
+                      {currentResponses.isPending && <p>Loading...</p>}
+                      {deletedResponses.length === 0 ? (
+                        <p className="muted-text">No deleted responses.</p>
+                      ) : (
+                        deletedResponses.map((response) => (
+                          <div className="deleted-response-item card" key={response.id}>
+                            <div className="deleted-response-meta">
+                              <h4>{response.name}</h4>
+                              <span className="muted-text text-sm">
+                                {new Date(response.deleted_at!).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <Button
+                              variant="secondary"
+                              size="compact"
+                              onClick={() => restoreResponse.mutate(response.id)}
+                              disabled={restoreResponse.isPending}
+                            >
+                              <RotateCcw size={14} />
+                              Restore
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </aside>
+
+          <div className="workspace-main-content">
+            {responseTab === "deleted" ? (
+              <section className="workspace-empty">
+                <p>Select a response status or restore a deleted response.</p>
+              </section>
+            ) : location.pathname.endsWith(mockApiId) ? (
+              <section className="workspace-empty">
+                <p>Select or create a response.</p>
+              </section>
+            ) : (
+              <Outlet />
+            )}
+          </div>
+        </div>
 
       {variablesOpen && (
         <div className="variable-reference-modal-backdrop">

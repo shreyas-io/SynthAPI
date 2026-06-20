@@ -32,6 +32,7 @@ export const createMockApiResponseDto = z.object({
   response: responseDto,
   rule_tree: createMockApiRuleTreeDto.nullable().optional(),
   post_response_actions: z.array(mockApiPostResponseActionDto).optional(),
+  execution_order: z.number().int().min(1).optional(),
 });
 
 export const listMockApiResponsesFilterDto = z.object({

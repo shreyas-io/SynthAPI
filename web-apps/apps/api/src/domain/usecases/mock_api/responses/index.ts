@@ -17,7 +17,9 @@ type MockApiResponseInput = Pick<
   | "response"
   | "rule_tree"
   | "post_response_actions"
->;
+> & {
+  execution_order?: number;
+};
 
 type MockApiResponseFilters = {
   ids?: string[] | undefined;
@@ -48,6 +50,27 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       const mock_api_response = await ctx.db
         .transaction()
         .execute(async (trx) => {
+          const countRes = await trx
+            .selectFrom("mock_api_responses")
+            .select((eb) => eb.fn.count("id").as("count"))
+            .where("mock_api_id", "=", input.mock_api_id)
+            .where("deleted_at", "is", null)
+            .executeTakeFirst();
+
+          const expectedOrder = Number(countRes?.count ?? 0) + 1;
+
+          if (
+            input.execution_order !== undefined &&
+            input.execution_order !== expectedOrder
+          ) {
+            throw new MockApiException({
+              public_message: `Execution order must be sequential. Expected ${expectedOrder}, got ${input.execution_order}.`,
+              status_code: HttpStatusCode.BAD_REQUEST,
+            });
+          }
+
+          const execution_order = input.execution_order ?? expectedOrder;
+
           if (input.is_default) {
             await trx
               .updateTable("mock_api_responses")
@@ -63,6 +86,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
               mock_api_id: input.mock_api_id,
               name: input.name,
               is_default: input.is_default,
+              execution_order,
               response: JSON.stringify(input.response),
               ...(input.rule_tree
                 ? { rule_tree: JSON.stringify(input.rule_tree) }
@@ -251,6 +275,29 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         .set({ deleted_at: new Date() })
         .where("id", "=", id)
         .execute();
+    },
+    reorderMockApiResponses: async (
+      user: AuthenticatedUser,
+      mock_api_id: string,
+      response_ids: string[],
+    ): Promise<void> => {
+      const mockApis = MockApisUsecase(ctx);
+      await mockApis.assertMockApiWriteAccess(user, mock_api_id);
+
+      await ctx.db.transaction().execute(async (trx) => {
+        // Update execution_order incrementally based on the array order
+        for (let i = 0; i < response_ids.length; i++) {
+          const id = response_ids[i];
+          if (id) {
+            await trx
+              .updateTable("mock_api_responses")
+              .set({ execution_order: i + 1 })
+              .where("id", "=", id)
+              .where("mock_api_id", "=", mock_api_id)
+              .execute();
+          }
+        }
+      });
     },
     async restoreMockApiResponse(user: AuthenticatedUser, id: string): Promise<void> {
       await ctx.db.transaction().execute(async (trx) => {
