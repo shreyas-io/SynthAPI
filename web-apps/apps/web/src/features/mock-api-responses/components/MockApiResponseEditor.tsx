@@ -82,6 +82,7 @@ const recordFromRows = (rows: KeyValueRow[]): Record<string, unknown> =>
 const bodyTextFromResponse = (body: ResponseBody): string => {
   if (body.type === "empty") return "";
   if (body.type === "json") return JSON.stringify(body.value, null, 2);
+  if (body.type === "json_script") return body.code;
   if (body.type === "sse") {
     return body.mode === "script" ? body.code : "";
   }
@@ -598,6 +599,11 @@ export function MockApiResponseEditor({
                 mode: "script",
                 code: sseScript,
               };
+      } else if (bodyType === "json_script") {
+        body = {
+          type: "json_script",
+          code: bodyText,
+        };
       } else {
         body = {
           type: "empty",
@@ -719,6 +725,7 @@ export function MockApiResponseEditor({
                     }
                   >
                     <option value="json">json</option>
+                    <option value="json_script">json_script</option>
                     <option value="text">text</option>
                     <option value="sse">sse</option>
                     <option value="empty">empty</option>
@@ -734,6 +741,14 @@ export function MockApiResponseEditor({
                     onChange={(value) => {
                       setBodyText(value);
                       setBodyJsonError(null);
+                    }}
+                  />
+                ) : bodyType === "json_script" ? (
+                  <JsonInput
+                    label="Python JSON builder script"
+                    value={bodyText}
+                    onChange={(value) => {
+                      setBodyText(value);
                     }}
                   />
                 ) : bodyType === "sse" ? (

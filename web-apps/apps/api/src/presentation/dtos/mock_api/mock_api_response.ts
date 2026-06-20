@@ -16,6 +16,10 @@ const responseBodyDto = z.discriminatedUnion("type", [
     type: z.literal("empty"),
   }),
   sseBodySchema,
+  z.object({
+    type: z.literal("json_script"),
+    code: z.string(),
+  }),
 ]);
 
 const responseDto = z.object({

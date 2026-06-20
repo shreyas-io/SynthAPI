@@ -250,6 +250,18 @@ const materializeResponseBody = async (
   body: MockApiResponseEt["response"]["body"],
   execution_context: ExecutionContextEt,
 ): Promise<MaterializedResponseBody> => {
+  if (body.type === "json_script") {
+    const { result } = await ctx.pyodide.execute({
+      code: body.code,
+      timeout_ms: 5000,
+      context: execution_context,
+    });
+    return {
+      type: "json",
+      value: result,
+    };
+  }
+
   if (body.type !== "sse") {
     return recursivelyMapTemplateParams(
       body,

@@ -43,6 +43,7 @@ export type ResponseBody =
   | { type: "json"; value: unknown }
   | { type: "text"; value: string }
   | { type: "empty" }
+  | { type: "json_script"; code: string }
   | {
       type: "sse";
       mode: "events";

@@ -147,31 +147,68 @@ export async function seed_default_project(
 
   // --- PROJECT 2: Blog CRUD ---
   const blogSlug = createSlug("blog-api", organization_id);
-  
+
   const blogProject = await projectsUsecase.createProject(user, {
     slug: blogSlug,
     name: "Blog CRUD API",
-    description: "A complete blog management system with posts CRUD and stateful behavior.",
+    description:
+      "A complete blog management system with posts CRUD and stateful behavior.",
     organization_id,
     globals: [
-      { name: "posts", type: "array", value: [] },
+      { name: "posts", type: "object", value: {} },
       { name: "next_id", type: "number", value: 1 },
+      { name: "total_posts", type: "number", value: 0 },
     ] satisfies VariableEt[],
-    constants: [{ name: "auth_token", type: "string", value: "Bearer synth-secret-token" }] satisfies VariableEt[],
+    constants: [
+      {
+        name: "auth_token",
+        type: "string",
+        value: "Bearer synth-secret-token",
+      },
+    ] satisfies VariableEt[],
   });
 
-  // 2.1 List Posts (with pagination)
+  // 2.1 List Posts
   const listApi = await mockApisUsecase.createMockApi(user, {
     project_id: blogProject.id,
     method: "GET",
     path: "/posts",
     name: "List Posts",
-    description: "Returns a paginated list of blog posts.",
+    description: "Returns a list of blog posts.",
     variables: [],
   });
 
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: listApi.id,
+    execution_order: 1,
+    name: "Unauthorized",
+    is_default: false,
+    response: {
+      status_code: 401,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: { type: "json", value: { error: "Valid Bearer token required." } },
+    },
+    rule_tree: {
+      label: "Unauthenticated",
+      type: "or",
+      predicates: [
+        {
+          label: "Invalid Auth Token",
+          type: "simple",
+          actual: "{{request.headers.authorization}}",
+          operator: "not_equals",
+          expected: "{{constants.auth_token}}",
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: listApi.id,
+    execution_order: 2,
     name: "Success",
     is_default: true,
     response: {
@@ -179,17 +216,33 @@ export async function seed_default_project(
       headers: { "content-type": "application/json" },
       cookies: {},
       body: {
-        type: "json",
-        value: {
-          data: "{{globals.posts}}",
-          meta: { total: "{{globals.posts.length}}", page: "{{request.query_params.page || 1}}" }
-        },
+        type: "json_script",
+        code: `
+posts_map = globals.get("posts", {})
+all_posts = list(posts_map.values())
+
+query_params = request.get("query_params", {})
+page = int(query_params.get("page", 1))
+limit = int(query_params.get("limit", 10))
+
+offset = (page - 1) * limit
+paginated_posts = all_posts[offset : offset + limit]
+
+return {
+    "data": paginated_posts,
+    "meta": {
+        "total": len(all_posts),
+        "page": page,
+        "limit": limit
+    }
+}
+`,
       },
     },
     rule_tree: null,
     post_response_actions: [],
   });
-  
+
   // 2.2 Get Single Post
   const getSingleApi = await mockApisUsecase.createMockApi(user, {
     project_id: blogProject.id,
@@ -202,6 +255,70 @@ export async function seed_default_project(
 
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: getSingleApi.id,
+    execution_order: 1,
+    name: "Unauthorized",
+    is_default: false,
+    response: {
+      status_code: 401,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: { type: "json", value: { error: "Valid Bearer token required." } },
+    },
+    rule_tree: {
+      label: "Unauthenticated",
+      type: "or",
+      predicates: [
+        {
+          label: "Invalid Auth Token",
+          type: "simple",
+          actual: "{{request.headers.authorization}}",
+          operator: "not_equals",
+          expected: "{{constants.auth_token}}",
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: getSingleApi.id,
+    execution_order: 2,
+    name: "Not Found",
+    is_default: false,
+    response: {
+      status_code: 404,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          error: "Post not found.",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Invalid ID",
+      type: "or",
+      predicates: [
+        {
+          label: "Check ID exists",
+          type: "custom",
+          script: `
+posts = globals.get("posts", {})
+post_id = str(request.get("path_params", {}).get("id"))
+return post_id not in posts
+`,
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: getSingleApi.id,
+    execution_order: 3,
     name: "Success",
     is_default: true,
     response: {
@@ -213,7 +330,7 @@ export async function seed_default_project(
         value: {
           id: "{{request.path_params.id}}",
           title: "Post {{request.path_params.id}}",
-          content: "Dynamically fetched post"
+          content: "Dynamically fetched post",
         },
       },
     },
@@ -227,33 +344,137 @@ export async function seed_default_project(
     method: "POST",
     path: "/posts",
     name: "Create Post",
-    description: "Adds a new post to the global list.",
+    description: "Adds a new post to the global key-value map.",
     variables: [],
   });
 
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: createApi.id,
-    name: "Post Created",
+    execution_order: 1,
+    name: "Unauthorized",
     is_default: false,
+    response: {
+      status_code: 401,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          error: "Valid Bearer token required.",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Unauthenticated",
+      type: "or",
+      predicates: [
+        {
+          label: "Invalid Auth Token",
+          type: "simple",
+          actual: "{{request.headers.authorization}}",
+          operator: "not_equals",
+          expected: "{{constants.auth_token}}",
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: createApi.id,
+    execution_order: 2,
+    name: "Invalid Request Body",
+    is_default: false,
+    response: {
+      status_code: 400,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          error: "Bad Request",
+          message: "Validation failed. Title must be unique < 128 chars, Content <= 4096 chars, Status must be draft or published.",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Invalid Body",
+      type: "or",
+      predicates: [
+        {
+          label: "Validation Script",
+          type: "custom",
+          script: `
+body = request.get("body", {}).get("value", {})
+title = body.get("title")
+content = body.get("content")
+status = body.get("status")
+
+if not isinstance(title, str) or len(title) >= 128 or len(title) == 0:
+    return True
+if not isinstance(content, str) or len(content) > 4096 or len(content) == 0:
+    return True
+if status not in ["draft", "published"]:
+    return True
+
+posts = globals.get("posts", {})
+if any(str(p.get("title")) == str(title) for p in posts.values()):
+    return True
+
+return False
+`,
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: createApi.id,
+    execution_order: 3,
+    name: "Post Created",
+    is_default: true,
     response: {
       status_code: 201,
       headers: { "content-type": "application/json" },
       cookies: {},
-      body: { type: "json", value: { id: "{{globals.next_id}}", title: "{{request.body.value.title}}", content: "{{request.body.value.content}}" } },
+      body: {
+        type: "json",
+        value: {
+          id: "{{globals.next_id}}",
+          title: "{{request.body.value.title}}",
+          content: "{{request.body.value.content}}",
+        },
+      },
     },
-    rule_tree: {
-      label: "Authenticated and Valid",
-      type: "and",
-      predicates: [
-        { label: "Authenticated", type: "simple", actual: "{{request.headers.authorization}}", operator: "equals", expected: "{{constants.auth_token}}" },
-        { label: "Title required", type: "simple", actual: "{{request.body.value.title}}", operator: "string_not_empty" },
-        { label: "Content required", type: "simple", actual: "{{request.body.value.content}}", operator: "string_not_empty" },
-      ],
-      children: [],
-    },
+    rule_tree: null,
     post_response_actions: [
-      { type: "append", scope: "global", key: "posts", value: { id: "{{globals.next_id}}", title: "{{request.body.value.title}}", content: "{{request.body.value.content}}" }, order: 1 },
-      { type: "increment", scope: "global", key: "next_id", amount: 1, order: 2 },
+      {
+        type: "script",
+        language: "python",
+        code: `
+posts = globals.get("posts", {})
+next_id = globals.get("next_id", 1)
+
+new_post = {
+    "id": next_id,
+    "title": request.get("body", {}).get("value", {}).get("title"),
+    "content": request.get("body", {}).get("value", {}).get("content"),
+    "status": request.get("body", {}).get("value", {}).get("status")
+}
+
+posts[str(next_id)] = new_post
+
+return [
+    {"type": "set", "scope": "global", "key": "posts", "value": posts, "order": 1},
+    {"type": "increment", "scope": "global", "key": "next_id", "amount": 1, "order": 2},
+    {"type": "increment", "scope": "global", "key": "total_posts", "amount": 1, "order": 3}
+]
+`,
+        order: 1,
+      },
     ],
   });
 
@@ -269,25 +490,115 @@ export async function seed_default_project(
 
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: updateApi.id,
-    name: "Post Updated",
+    execution_order: 1,
+    name: "Unauthorized",
     is_default: false,
     response: {
-      status_code: 200,
+      status_code: 401,
       headers: { "content-type": "application/json" },
       cookies: {},
-      body: { type: "json", value: { id: "{{request.path_params.id}}", title: "{{request.body.value.title}}", content: "{{request.body.value.content}}" } },
+      body: {
+        type: "json",
+        value: {
+          error: "Valid Bearer token required.",
+        },
+      },
     },
     rule_tree: {
-      label: "Authenticated and Valid",
-      type: "and",
+      label: "Unauthenticated",
+      type: "or",
       predicates: [
-        { label: "Authenticated", type: "simple", actual: "{{request.headers.authorization}}", operator: "equals", expected: "{{constants.auth_token}}" },
-        { label: "Title required", type: "simple", actual: "{{request.body.value.title}}", operator: "string_not_empty" },
-        { label: "Content required", type: "simple", actual: "{{request.body.value.content}}", operator: "string_not_empty" },
+        {
+          label: "Invalid Auth Token",
+          type: "simple",
+          actual: "{{request.headers.authorization}}",
+          operator: "not_equals",
+          expected: "{{constants.auth_token}}",
+        },
       ],
       children: [],
     },
     post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: updateApi.id,
+    execution_order: 2,
+    name: "Not Found",
+    is_default: false,
+    response: {
+      status_code: 404,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          error: "Post not found.",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Invalid ID",
+      type: "or",
+      predicates: [
+        {
+          label: "Check ID exists",
+          type: "custom",
+          script: `
+posts = globals.get("posts", {})
+post_id = str(request.get("path_params", {}).get("id"))
+return post_id not in posts
+`,
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: updateApi.id,
+    execution_order: 3,
+    name: "Post Updated",
+    is_default: true,
+    response: {
+      status_code: 200,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          id: "{{request.path_params.id}}",
+          title: "{{request.body.value.title}}",
+          content: "{{request.body.value.content}}",
+        },
+      },
+    },
+    rule_tree: null,
+    post_response_actions: [
+      {
+        type: "script",
+        language: "python",
+        code: `
+posts = globals.get("posts", {})
+post_id = str(request.get("path_params", {}).get("id"))
+
+if post_id in posts:
+    body = request.get("body", {}).get("value", {})
+    if "title" in body:
+        posts[post_id]["title"] = body["title"]
+    if "content" in body:
+        posts[post_id]["content"] = body["content"]
+    if "status" in body:
+        posts[post_id]["status"] = body["status"]
+
+return [
+    {"type": "set", "scope": "global", "key": "posts", "value": posts, "order": 1}
+]
+`,
+        order: 1,
+      },
+    ],
   });
 
   // 2.5 Delete Post
@@ -302,77 +613,97 @@ export async function seed_default_project(
 
   await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: deleteApi.id,
-    name: "Success",
-    is_default: false,
-    response: {
-      status_code: 200,
-      headers: { "content-type": "application/json" },
-      cookies: {},
-      body: { type: "json", value: { message: "Post deleted successfully" } },
-    },
-    rule_tree: {
-      label: "Authenticated",
-      type: "and",
-      predicates: [
-        { label: "Authenticated", type: "simple", actual: "{{request.headers.authorization}}", operator: "equals", expected: "{{constants.auth_token}}" }
-      ],
-      children: [],
-    },
-    post_response_actions: [
-      {
-        type: "script",
-        language: "python",
-        code: `
-posts = globals.get("posts", [])
-post_id = request.get("path_params", {}).get("id")
-new_posts = [p for p in posts if str(p.get("id")) != str(post_id)]
-return [{"type": "set", "scope": "global", "key": "posts", "value": new_posts, "order": 1}]
-`,
-        order: 1,
-      },
-    ],
-  });
-
-  // Default Error Responses
-  await responsesUsecase.createMockApiResponse(user, {
-    mock_api_id: createApi.id,
-    name: "Unauthorized / Invalid",
-    is_default: true,
-    response: {
-      status_code: 401,
-      headers: { "content-type": "application/json" },
-      cookies: {},
-      body: { type: "json", value: { error: "Valid Bearer token required and valid body required." } },
-    },
-    rule_tree: null,
-    post_response_actions: [],
-  });
-  
-  await responsesUsecase.createMockApiResponse(user, {
-    mock_api_id: updateApi.id,
-    name: "Unauthorized / Invalid",
-    is_default: true,
-    response: {
-      status_code: 401,
-      headers: { "content-type": "application/json" },
-      cookies: {},
-      body: { type: "json", value: { error: "Valid Bearer token required and valid body required." } },
-    },
-    rule_tree: null,
-    post_response_actions: [],
-  });
-  
-  await responsesUsecase.createMockApiResponse(user, {
-    mock_api_id: deleteApi.id,
+    execution_order: 1,
     name: "Unauthorized",
-    is_default: true,
+    is_default: false,
     response: {
       status_code: 401,
       headers: { "content-type": "application/json" },
       cookies: {},
       body: { type: "json", value: { error: "Valid Bearer token required." } },
     },
-    rule_tree: null,
+    rule_tree: {
+      label: "Unauthenticated",
+      type: "or",
+      predicates: [
+        {
+          label: "Invalid Auth Token",
+          type: "simple",
+          actual: "{{request.headers.authorization}}",
+          operator: "not_equals",
+          expected: "{{constants.auth_token}}",
+        },
+      ],
+      children: [],
+    },
     post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: deleteApi.id,
+    execution_order: 2,
+    name: "Not Found",
+    is_default: false,
+    response: {
+      status_code: 404,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: {
+        type: "json",
+        value: {
+          error: "Post not found.",
+        },
+      },
+    },
+    rule_tree: {
+      label: "Invalid ID",
+      type: "or",
+      predicates: [
+        {
+          label: "Check ID exists",
+          type: "custom",
+          script: `
+posts = globals.get("posts", {})
+post_id = str(request.get("path_params", {}).get("id"))
+return post_id not in posts
+`,
+        },
+      ],
+      children: [],
+    },
+    post_response_actions: [],
+  });
+
+  await responsesUsecase.createMockApiResponse(user, {
+    mock_api_id: deleteApi.id,
+    execution_order: 3,
+    name: "Success",
+    is_default: true,
+    response: {
+      status_code: 200,
+      headers: { "content-type": "application/json" },
+      cookies: {},
+      body: { type: "json", value: { message: "Post deleted successfully" } },
+    },
+    rule_tree: null,
+    post_response_actions: [
+      {
+        type: "script",
+        language: "python",
+        code: `
+posts = globals.get("posts", {})
+post_id = str(request.get("path_params", {}).get("id"))
+
+if post_id in posts:
+    del posts[post_id]
+
+return [
+    {"type": "set", "scope": "global", "key": "posts", "value": posts, "order": 1},
+    {"type": "decrement", "scope": "global", "key": "total_posts", "amount": 1, "order": 2}
+]
+`,
+        order: 1,
+      },
+    ],
   });
 }
