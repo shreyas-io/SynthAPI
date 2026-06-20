@@ -1095,7 +1095,7 @@ export function ProjectAgentChatPanel({
               }
             }}
             disabled={isSending || (!selectedChatId && !isDraftChat)}
-            rows={4}
+            rows={3}
           />
           <button
             className="agent-send-button"
