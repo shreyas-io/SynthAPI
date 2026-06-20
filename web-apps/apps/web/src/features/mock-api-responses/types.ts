@@ -110,4 +110,9 @@ export type MockApiResponse = {
   deleted_at: string | null;
 };
 
-export type MockApiResponseInput = Omit<MockApiResponse, "id" | "deleted_at">;
+export type MockApiResponseInput = Omit<
+  MockApiResponse,
+  "id" | "deleted_at" | "execution_order"
+> & {
+  execution_order?: number;
+};

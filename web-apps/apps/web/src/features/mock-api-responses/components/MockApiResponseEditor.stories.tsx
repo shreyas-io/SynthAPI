@@ -8,6 +8,7 @@ const responseFixture: MockApiResponse = {
   mock_api_id: "mock-api-1",
   name: "Created",
   is_default: true,
+  execution_order: 1,
   response: {
     status_code: 201,
     headers: {
@@ -54,6 +55,7 @@ const conditionalResponseFixture: MockApiResponse = {
   id: "response-2",
   name: "Missing authorization",
   is_default: false,
+  execution_order: 2,
   response: {
     status_code: 401,
     headers: {
