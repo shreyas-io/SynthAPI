@@ -1,8 +1,13 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "@synthapi/ui": ["packages/ui/src/index.ts"],
+      "@synthapi/ui/*": ["packages/ui/src/*"]
+    },
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,

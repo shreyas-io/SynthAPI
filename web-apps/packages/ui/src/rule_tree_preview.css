@@ -1,0 +1,134 @@
+.sui-rule-tree-preview {
+  --sui-font-sans:
+    "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  --sui-font-mono:
+    "JetBrains Mono", "SFMono-Regular", "Cascadia Code", "Liberation Mono",
+    monospace;
+  --sui-color-surface: #0a0a0a;
+  --sui-color-surface-subtle: #121212;
+  --sui-color-surface-hover: #121212;
+  --sui-color-border: #1a1a1a;
+  --sui-color-border-strong: #262626;
+  --sui-color-text: #f8f8f2;
+  --sui-color-text-secondary: #a0a08e;
+  --sui-color-text-muted: #75715e;
+  --sui-color-accent: #66d9ef;
+  --sui-color-accent-soft: rgba(102, 217, 239, 0.12);
+  --sui-radius-sm: 6px;
+  --sui-radius-md: 8px;
+  --sui-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  width: 100%;
+  font-family: var(--sui-font-sans);
+}
+
+.sui-rule-flow-frame {
+  width: 100%;
+  min-height: 28rem;
+  overflow: hidden;
+  border: 1px solid var(--sui-color-border);
+  border-radius: var(--sui-radius-md);
+  background: var(--sui-color-surface);
+}
+
+.sui-rule-flow-frame .react-flow {
+  height: 100%;
+  min-height: 28rem;
+  background: var(--sui-color-surface);
+}
+
+.sui-rule-flow-frame .react-flow__pane,
+.sui-rule-flow-frame .react-flow__viewport {
+  cursor: default;
+}
+
+.sui-rule-flow-frame .react-flow__edge-path {
+  stroke: var(--sui-color-border-strong);
+  stroke-width: 1.5px;
+}
+
+.sui-rule-flow-frame .react-flow__attribution {
+  display: none;
+}
+
+.sui-rf-node {
+  min-width: 200px;
+  overflow: hidden;
+  border: 1px solid var(--sui-color-border-strong);
+  border-radius: var(--sui-radius-sm);
+  background: var(--sui-color-surface);
+  box-shadow: var(--sui-shadow-md);
+  color: var(--sui-color-text);
+}
+
+.sui-rf-node.is-selected {
+  border-color: var(--sui-color-accent);
+  box-shadow:
+    0 0 0 1px var(--sui-color-accent),
+    0 0 0 6px var(--sui-color-accent-soft);
+}
+
+.sui-rf-node-logic {
+  min-width: 140px;
+  border-color: var(--sui-color-accent);
+}
+
+.sui-rf-node-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.65rem;
+  border-bottom: 1px solid var(--sui-color-border);
+  background: var(--sui-color-surface-subtle);
+}
+
+.sui-eyebrow {
+  margin: 0;
+  color: var(--sui-color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.sui-rf-node-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.65rem;
+}
+
+.sui-rf-node-body label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--sui-color-text-secondary);
+  font-size: 0.78rem;
+}
+
+.sui-rf-input,
+.sui-rf-select,
+.sui-rf-textarea {
+  width: 100%;
+  border: 1px solid var(--sui-color-border);
+  border-radius: 4px;
+  padding: 0.35rem 0.45rem;
+  background: var(--sui-color-surface);
+  color: var(--sui-color-text);
+  font-family: var(--sui-font-sans);
+  font-size: 0.82rem;
+}
+
+.sui-rf-textarea {
+  min-height: 3.5rem;
+  resize: none;
+  font-family: var(--sui-font-mono);
+  line-height: 1.4;
+}
+
+.sui-rf-input:disabled,
+.sui-rf-select:disabled,
+.sui-rf-textarea:disabled {
+  opacity: 1;
+  cursor: default;
+  -webkit-text-fill-color: var(--sui-color-text);
+}

@@ -505,6 +505,11 @@ h3 {
   box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.22);
 }
 
+.landing-rule-tree-preview .sui-rule-flow-frame,
+.landing-rule-tree-preview .sui-rule-flow-frame .react-flow {
+  min-height: 28rem;
+}
+
 .brand-svg-icon {
   width: 100%;
   height: 100%;
@@ -525,6 +530,15 @@ h3 {
   font-size: 0.85rem;
   line-height: 1.4;
   animation: fade-in-up 0.4s ease-out forwards;
+}
+
+.chat-message code {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--cyan-soft);
 }
 
 .user-message {
@@ -571,20 +585,38 @@ h3 {
   color: var(--muted);
 }
 
-.agent-content code {
-  background: rgba(255, 255, 255, 0.1);
-  padding: 0.1rem 0.3rem;
-  border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.8rem;
-  color: var(--cyan-soft);
-}
-
 .agent-attachments {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   align-items: flex-start;
+}
+
+.ai-diagram-detail {
+  justify-content: space-between;
+  gap: 1.25rem;
+}
+
+.ai-diagram-detail .chat-message {
+  max-width: 100%;
+}
+
+.ai-diagram-detail .user-message {
+  max-width: 82%;
+}
+
+.ai-diagram-detail .agent-message {
+  width: 100%;
+}
+
+.ai-diagram-detail .agent-content {
+  width: 100%;
+}
+
+.ai-diagram-detail .agent-attachments {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
 .chat-file-attachment {
@@ -700,14 +732,17 @@ h3 {
   font-weight: 700;
   padding: 0.2rem 0.4rem;
   border-radius: 4px;
-  color: #111;
 }
 
 .status-chip.success {
-  background: #64ffda;
+  color: #64ffda;
+  border: 1px solid rgba(100, 255, 218, 0.4);
+  background: rgba(100, 255, 218, 0.08);
 }
 .status-chip.error {
-  background: #ff5252;
+  color: #ff5252;
+  border: 1px solid rgba(255, 82, 82, 0.4);
+  background: rgba(255, 82, 82, 0.08);
 }
 
 .node-action {
@@ -717,6 +752,116 @@ h3 {
 .node-action code {
   color: var(--text);
   font-family: var(--font-mono);
+}
+
+/* Stateful Diagram Detail */
+.stateful-diagram-detail {
+  display: flex !important;
+  flex-direction: column;
+  padding: 2rem !important;
+  gap: 0;
+  align-items: stretch;
+}
+
+.state-timeline {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.state-step {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  gap: 1.5rem;
+  font-family: var(--font-mono);
+}
+
+.state-step code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.step-request,
+.step-response {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+.step-response.success {
+  border-color: rgba(100, 255, 218, 0.3);
+  background: rgba(100, 255, 218, 0.05);
+}
+
+.http-method {
+  font-weight: 700;
+  padding-right: 0.5rem;
+}
+
+.http-method.post {
+  color: var(--amber);
+}
+
+.http-method.get {
+  color: var(--cyan);
+}
+
+.step-mutation,
+.step-condition {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--cyan-soft);
+  background: var(--cyan-dim);
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  border: 1px dashed var(--border-strong);
+  min-width: 0;
+  word-wrap: break-word;
+}
+
+.mutation-label,
+.condition-label {
+  font-family: var(--font-sans);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--cyan);
+  margin-bottom: 0.2rem;
+}
+
+.request-body,
+.response-body {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.state-step-connector {
+  height: 2rem;
+  width: 2px;
+  background: var(--border-strong);
+  margin: 0 auto;
+  position: relative;
+}
+.state-step-connector::after {
+  content: "";
+  position: absolute;
+  bottom: -2px;
+  left: -4px;
+  width: 10px;
+  height: 10px;
+  background: var(--border-strong);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
 }
 
 /* Workspace Diagram */
@@ -834,16 +979,106 @@ h3 {
   text-transform: uppercase;
 }
 
-.role-badge.editor {
+.role-badge.admin {
   background: rgba(105, 210, 231, 0.15);
   color: var(--cyan);
   border: 1px solid rgba(105, 210, 231, 0.3);
 }
 
-.role-badge.viewer {
+.role-badge.member {
   background: rgba(255, 255, 255, 0.05);
   color: var(--muted);
   border: 1px solid var(--border-strong);
+}
+
+/* Workspace Detail Layout */
+.workspace-diagram-detail {
+  display: flex !important;
+  flex-direction: row !important;
+  padding: 0 !important;
+  align-items: stretch;
+}
+
+.workspace-sidebar {
+  width: 150px;
+  background: rgba(0, 0, 0, 0.15);
+  border-right: 1px solid var(--border-strong);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-title {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: var(--subtle);
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.05em;
+}
+
+.sidebar-item {
+  font-size: 0.75rem;
+  color: var(--muted);
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 0.2rem;
+}
+
+.sidebar-item.active {
+  background: var(--cyan-dim);
+  color: var(--cyan-soft);
+  font-weight: 600;
+}
+
+.workspace-main {
+  flex: 1;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.workspace-tabs {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+  margin-bottom: 0.5rem;
+}
+
+.workspace-tabs .tab {
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding-bottom: 0.6rem;
+  cursor: pointer;
+  position: relative;
+}
+
+.workspace-tabs .tab.active {
+  color: var(--cyan);
+  font-weight: 600;
+}
+
+.workspace-tabs .tab.active::after {
+  content: "";
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--cyan);
+}
+
+.member-details {
+  display: flex;
+  flex-direction: column;
+}
+
+.member-email {
+  font-size: 0.65rem;
+  color: var(--subtle);
 }
 
 .rule-flow-preview .react-flow,
@@ -915,11 +1150,42 @@ h3 {
   margin-bottom: 1.5rem;
 }
 
-.feature-showcase-copy p {
+.feature-section-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.feature-section-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 12px;
+  background: var(--cyan-dim);
+  color: var(--cyan);
+  flex-shrink: 0;
+  box-shadow: 0 0 16px rgba(105, 210, 231, 0.1);
+  border: 1px solid rgba(105, 210, 231, 0.2);
+}
+
+.feature-section-icon svg {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.feature-showcase-body {
+  display: grid;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.feature-showcase-body p {
   font-size: 1.1rem;
   line-height: 1.6;
   color: var(--muted);
-  margin-bottom: 2rem;
+  margin: 0;
   max-width: 35rem;
 }
 
@@ -930,6 +1196,57 @@ h3 {
 .feature-showcase-diagram .feature-diagram {
   min-height: 28rem;
   border-width: 1.5px;
+}
+
+/* CTA Section */
+.cta-section {
+  margin: 6rem auto 4rem;
+  padding: 4rem 2rem;
+  text-align: center;
+  border: 1px solid var(--border-strong);
+  border-radius: 24px;
+  background: radial-gradient(circle at top, rgba(105, 210, 231, 0.08) 0%, rgba(6, 7, 6, 0.5) 100%);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2rem;
+  box-shadow: 0 2rem 4rem rgba(0, 0, 0, 0.4);
+}
+
+.cta-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+}
+
+.cta-section h2 {
+  font-size: clamp(2.2rem, 3.5vw, 3.2rem);
+  max-width: 24ch;
+  line-height: 1.15;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text);
+}
+
+.cta-subtitle {
+  font-size: 1.15rem;
+  color: var(--muted);
+  max-width: 36ch;
+  margin: -1rem 0 0 0;
+}
+
+.cta-section .primary-action {
+  font-size: 1.1rem;
+  padding: 0 2rem;
+  min-height: 3.4rem;
+  border-radius: 12px;
 }
 
 @media (max-width: 980px) {
