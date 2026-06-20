@@ -70,7 +70,44 @@ export const ProjectsUsecase = (ctx: AppContext) => {
     return organizationId;
   };
 
+  const assertOrganizationWriteAccess = async (
+    user: AuthenticatedUser,
+    organizationId: string,
+  ): Promise<string> => {
+    const membership = await ctx.db
+      .selectFrom("organization_memberships")
+      .innerJoin(
+        "organizations",
+        "organizations.id",
+        "organization_memberships.organization_id",
+      )
+      .select(["organization_memberships.id", "organization_memberships.role"])
+      .where("organization_memberships.organization_id", "=", organizationId)
+      .where("organizations.deleted_at", "is", null)
+      .where("organization_memberships.user_id", "=", user.id)
+      .where("organization_memberships.status", "=", "active")
+      .executeTakeFirst();
+
+    if (!membership) {
+      throw new MockApiException({
+        public_message: "You do not have access to this organization.",
+        status_code: HttpStatusCode.FORBIDDEN,
+      });
+    }
+
+    if (membership.role === "viewer") {
+      throw new MockApiException({
+        public_message: "Viewers cannot modify resources in this organization.",
+        status_code: HttpStatusCode.FORBIDDEN,
+      });
+    }
+
+    return organizationId;
+  };
+
   return {
+    assertOrganizationAccess,
+    assertOrganizationWriteAccess,
     createProject: async (
       user: AuthenticatedUser,
       input: Pick<
@@ -84,7 +121,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       >,
     ) => {
       const organization_id = input.organization_id;
-      const validated_org_id = await assertOrganizationAccess(
+      const validated_org_id = await assertOrganizationWriteAccess(
         user,
         organization_id,
       );
@@ -333,7 +370,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         });
       }
 
-      await assertOrganizationAccess(user, project.organization_id);
+      await assertOrganizationWriteAccess(user, project.organization_id);
 
       await ctx.db
         .updateTable("projects")
@@ -365,7 +402,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         });
       }
 
-      await assertOrganizationAccess(user, project.organization_id);
+      await assertOrganizationWriteAccess(user, project.organization_id);
 
       if (project.deleted_at) {
         return;
@@ -394,7 +431,7 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         });
       }
 
-      await assertOrganizationAccess(user, project.organization_id);
+      await assertOrganizationWriteAccess(user, project.organization_id);
 
       await ctx.db
         .updateTable("projects")

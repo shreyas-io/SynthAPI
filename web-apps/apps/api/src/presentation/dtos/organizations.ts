@@ -6,7 +6,7 @@ export const createOrganizationDto = z.object({
 
 export const addOrganizationMemberDto = z.object({
   email: z.email(),
-  role: z.enum(["admin", "member"]),
+  role: z.enum(["admin", "member", "viewer"]),
 });
 
 export const getInvitesQueryDto = z.object({

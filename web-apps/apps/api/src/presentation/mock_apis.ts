@@ -62,7 +62,8 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
         });
       }
       const input = parsed.data;
-      const mock_api = await mock_apis.createMockApi({
+      const user = getAuthenticatedUser(req.user);
+      const mock_api = await mock_apis.createMockApi(user, {
         method: input.method,
         path: input.path,
         name: input.name,
@@ -170,7 +171,8 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
         });
       }
       const input = parsed.data;
-      await mock_apis.updateMockApi(req.params.id as string, {
+      const user = getAuthenticatedUser(req.user);
+      await mock_apis.updateMockApi(user, req.params.id as string, {
         method: input.method,
         path: input.path,
         name: input.name,
@@ -185,7 +187,8 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
   app.delete(
     "/api/v1/mock-apis/:id",
     asyncRoute(async (req, res) => {
-      await mock_apis.deleteMockApi(req.params.id as string);
+      const user = getAuthenticatedUser(req.user);
+      await mock_apis.deleteMockApi(user, req.params.id as string);
       res.status(204).send();
     }),
   );
@@ -193,7 +196,8 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
   app.post(
     "/api/v1/mock-apis/:id/restore",
     asyncRoute(async (req, res) => {
-      await mock_apis.restoreMockApi(req.params.id as string);
+      const user = getAuthenticatedUser(req.user);
+      await mock_apis.restoreMockApi(user, req.params.id as string);
       res.json({});
     }),
   );

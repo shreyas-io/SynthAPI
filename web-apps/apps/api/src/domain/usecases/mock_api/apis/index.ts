@@ -4,7 +4,9 @@ import {
   HttpStatusCode,
   MockApiException,
 } from "../../../exceptions/exception";
+import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import type { MockApiEt } from "../../../entities/mock_api";
+import { ProjectsUsecase } from "../projects";
 
 type MockApiInput = Pick<
   MockApiEt,
@@ -33,7 +35,45 @@ type MockApiSort = {
 
 export const MockApisUsecase = (ctx: AppContext) => {
   return {
-    createMockApi: async (input: MockApiInput): Promise<MockApiEt> => {
+    assertMockApiWriteAccess: async (
+      user: AuthenticatedUser,
+      mockApiId: string,
+    ): Promise<void> => {
+      const membership = await ctx.db
+        .selectFrom("mock_apis")
+        .innerJoin("projects", "projects.id", "mock_apis.project_id")
+        .innerJoin(
+          "organization_memberships",
+          "organization_memberships.organization_id",
+          "projects.organization_id",
+        )
+        .select(["organization_memberships.role"])
+        .where("mock_apis.id", "=", mockApiId)
+        .where("mock_apis.deleted_at", "is", null)
+        .where("projects.deleted_at", "is", null)
+        .where("organization_memberships.user_id", "=", user.id)
+        .where("organization_memberships.status", "=", "active")
+        .executeTakeFirst();
+
+      if (!membership) {
+        throw new MockApiException({
+          public_message: "You do not have access to this mock API.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      if (membership.role === "viewer") {
+        throw new MockApiException({
+          public_message: "Viewers cannot modify resources in this organization.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+    },
+    createMockApi: async (user: AuthenticatedUser, input: MockApiInput): Promise<MockApiEt> => {
+      const projects = ProjectsUsecase(ctx);
+      const project = await projects.getProject(user, input.project_id);
+      await projects.assertOrganizationWriteAccess(user, project.organization_id);
+
       const mock_api = await ctx.db
         .insertInto("mock_apis")
         .values({
@@ -171,7 +211,12 @@ export const MockApisUsecase = (ctx: AppContext) => {
         records,
       };
     },
-    async updateMockApi(id: string, input: MockApiInput): Promise<void> {
+    async updateMockApi(user: AuthenticatedUser, id: string, input: MockApiInput): Promise<void> {
+      const mock_api = await this.getMockApi(id);
+      const projects = ProjectsUsecase(ctx);
+      const project = await projects.getProject(user, mock_api.project_id);
+      await projects.assertOrganizationWriteAccess(user, project.organization_id);
+
       await ctx.db
         .updateTable("mock_apis")
         .set({
@@ -188,10 +233,10 @@ export const MockApisUsecase = (ctx: AppContext) => {
         .where("deleted_at", "is", null)
         .execute();
     },
-    async deleteMockApi(id: string): Promise<void> {
+    async deleteMockApi(user: AuthenticatedUser, id: string): Promise<void> {
       const mock_api = await ctx.db
         .selectFrom("mock_apis")
-        .select(["id", "deleted_at"])
+        .select(["id", "deleted_at", "project_id"])
         .where("id", "=", id)
         .executeTakeFirst();
 
@@ -206,17 +251,21 @@ export const MockApisUsecase = (ctx: AppContext) => {
         return;
       }
 
+      const projects = ProjectsUsecase(ctx);
+      const project = await projects.getProject(user, mock_api.project_id);
+      await projects.assertOrganizationWriteAccess(user, project.organization_id);
+
       await ctx.db
         .updateTable("mock_apis")
         .set({ deleted_at: new Date() })
         .where("id", "=", id)
         .execute();
     },
-    async restoreMockApi(id: string): Promise<void> {
+    async restoreMockApi(user: AuthenticatedUser, id: string): Promise<void> {
       const mock_api = await ctx.db
         .selectFrom("mock_apis")
         .innerJoin("projects", "projects.id", "mock_apis.project_id")
-        .select(["mock_apis.id"])
+        .select(["mock_apis.id", "mock_apis.project_id"])
         .where("mock_apis.id", "=", id)
         .where("projects.deleted_at", "is", null)
         .executeTakeFirst();
@@ -227,6 +276,10 @@ export const MockApisUsecase = (ctx: AppContext) => {
           status_code: HttpStatusCode.NOT_FOUND,
         });
       }
+
+      const projects = ProjectsUsecase(ctx);
+      const project = await projects.getProject(user, mock_api.project_id);
+      await projects.assertOrganizationWriteAccess(user, project.organization_id);
 
       await ctx.db
         .updateTable("mock_apis")

@@ -258,18 +258,18 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
       user: AuthenticatedUser,
       organization_id: string,
       target_user_email: string,
-      role: "admin" | "member",
+      role: "admin" | "member" | "viewer",
     ) => {
       const membership = await getMembership(user, organization_id);
 
-      if (membership.role === "member") {
+      if (membership.role === "member" || membership.role === "viewer") {
         throw new MockApiException({
           public_message: "Only owners and admins can invite members.",
           status_code: HttpStatusCode.FORBIDDEN,
         });
       }
 
-      if (membership.role !== "owner" && role !== "member") {
+      if (membership.role !== "owner" && role === "admin") {
         throw new MockApiException({
           public_message: "Only owners can invite admins.",
           status_code: HttpStatusCode.FORBIDDEN,
@@ -539,7 +539,6 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
           "organization_memberships.created_at as joined_at",
         ])
         .where("organization_memberships.organization_id", "=", organization_id)
-        .where("organization_memberships.role", "in", ["admin", "owner"])
         .execute();
 
       return members;

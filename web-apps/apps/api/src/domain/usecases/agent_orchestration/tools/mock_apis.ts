@@ -61,7 +61,7 @@ export const mockApiTools = {
       const mock_apis = MockApisUsecase(ctx);
 
       return toJson(
-        await mock_apis.createMockApi({
+        await mock_apis.createMockApi(workspace.user, {
           project_id: workspace.project_id,
           method: parsed.method,
           path: parsed.path,
@@ -82,7 +82,7 @@ export const mockApiTools = {
         workspace.project_id,
       );
 
-      await mock_apis.updateMockApi(existing.id, {
+      await mock_apis.updateMockApi(workspace.user, existing.id, {
         project_id: workspace.project_id,
         method: parsed.method ?? existing.method,
         path: parsed.path ?? existing.path,

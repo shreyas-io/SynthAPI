@@ -4,7 +4,10 @@ import {
   HttpStatusCode,
   MockApiException,
 } from "../../../exceptions/exception";
+import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import { MockApiResponseEt } from "../../../entities/mock_api_response/mock_api_response";
+import { MockApisUsecase } from "../apis";
+import { ProjectsUsecase } from "../projects";
 
 type MockApiResponseInput = Pick<
   MockApiResponseEt,
@@ -36,8 +39,12 @@ type MockApiResponseSort = {
 export const MockApiResponsesUsecase = (ctx: AppContext) => {
   return {
     createMockApiResponse: async (
+      user: AuthenticatedUser,
       input: MockApiResponseInput,
     ): Promise<MockApiResponseEt> => {
+      const mockApis = MockApisUsecase(ctx);
+      await mockApis.assertMockApiWriteAccess(user, input.mock_api_id);
+
       const mock_api_response = await ctx.db
         .transaction()
         .execute(async (trx) => {
@@ -177,9 +184,13 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       };
     },
     async updateMockApiResponse(
+      user: AuthenticatedUser,
       id: string,
       input: MockApiResponseInput,
     ): Promise<void> {
+      const mockApis = MockApisUsecase(ctx);
+      await mockApis.assertMockApiWriteAccess(user, input.mock_api_id);
+
       await ctx.db.transaction().execute(async (trx) => {
         if (input.is_default) {
           await trx
@@ -214,10 +225,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
           .execute();
       });
     },
-    async deleteMockApiResponse(id: string): Promise<void> {
+    async deleteMockApiResponse(user: AuthenticatedUser, id: string): Promise<void> {
       const mock_api_response = await ctx.db
         .selectFrom("mock_api_responses")
-        .select(["id", "deleted_at"])
+        .select(["id", "deleted_at", "mock_api_id"])
         .where("id", "=", id)
         .executeTakeFirst();
 
@@ -232,13 +243,16 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         return;
       }
 
+      const mockApis = MockApisUsecase(ctx);
+      await mockApis.assertMockApiWriteAccess(user, mock_api_response.mock_api_id);
+
       await ctx.db
         .updateTable("mock_api_responses")
         .set({ deleted_at: new Date() })
         .where("id", "=", id)
         .execute();
     },
-    async restoreMockApiResponse(id: string): Promise<void> {
+    async restoreMockApiResponse(user: AuthenticatedUser, id: string): Promise<void> {
       await ctx.db.transaction().execute(async (trx) => {
         const mock_api_response = await trx
           .selectFrom("mock_api_responses")
@@ -260,6 +274,9 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
             status_code: HttpStatusCode.NOT_FOUND,
           });
         }
+
+        const mockApis = MockApisUsecase(ctx);
+        await mockApis.assertMockApiWriteAccess(user, mock_api_response.mock_api_id);
 
         if (mock_api_response.is_default) {
           await trx

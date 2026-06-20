@@ -1,6 +1,6 @@
 import type { Express } from "express";
 
-import { ApiGatewayException } from "../domain/exceptions/exception";
+import { ApiGatewayException, HttpStatusCode } from "../domain/exceptions/exception";
 import { MockApiResponsesUsecase } from "../domain/usecases/mock_api/responses";
 import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
@@ -11,6 +11,17 @@ import {
   listMockApiResponsesSortDto,
 } from "./dtos/mock_api/mock_api_response";
 import { getNumber, getString, getStringArray } from "./utils";
+
+const getAuthenticatedUser = (user: Express.Request["user"]) => {
+  if (!user) {
+    throw new ApiGatewayException({
+      public_message: "Unauthorized",
+      status_code: HttpStatusCode.UNAUTHORIZED,
+    });
+  }
+
+  return user;
+};
 
 export const addMockApiResponseRoutes = (
   app: Express,
@@ -31,8 +42,9 @@ export const addMockApiResponseRoutes = (
         });
       }
       const input = parsed.data;
+      const user = getAuthenticatedUser(req.user);
       const mock_api_response =
-        await mock_api_responses.createMockApiResponse({
+        await mock_api_responses.createMockApiResponse(user, {
           mock_api_id: input.mock_api_id,
           name: input.name,
           is_default: input.is_default,
@@ -131,7 +143,9 @@ export const addMockApiResponseRoutes = (
         });
       }
       const input = parsed.data;
+      const user = getAuthenticatedUser(req.user);
       await mock_api_responses.updateMockApiResponse(
+        user,
         req.params.response_id as string,
         {
           mock_api_id: input.mock_api_id,
@@ -149,7 +163,9 @@ export const addMockApiResponseRoutes = (
   app.delete(
     "/api/v1/mock-apis/:id/responses/:response_id",
     asyncRoute(async (req, res) => {
+      const user = getAuthenticatedUser(req.user);
       await mock_api_responses.deleteMockApiResponse(
+        user,
         req.params.response_id as string,
       );
       res.status(204).send();
@@ -159,7 +175,9 @@ export const addMockApiResponseRoutes = (
   app.post(
     "/api/v1/mock-apis/:id/responses/:response_id/restore",
     asyncRoute(async (req, res) => {
+      const user = getAuthenticatedUser(req.user);
       await mock_api_responses.restoreMockApiResponse(
+        user,
         req.params.response_id as string,
       );
       res.json({});

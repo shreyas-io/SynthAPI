@@ -63,7 +63,7 @@ export const mockApiResponseTools = {
 
       const responses = MockApiResponsesUsecase(ctx);
       return toJson(
-        await responses.createMockApiResponse({
+        await responses.createMockApiResponse(workspace.user, {
           mock_api_id: parsed.mock_api_id,
           name: parsed.name,
           is_default: parsed.is_default,
@@ -84,7 +84,7 @@ export const mockApiResponseTools = {
       const mock_api = await mock_apis.getMockApi(existing.mock_api_id);
       assertMockApiResponse(existing, mock_api, workspace.project_id);
 
-      await responses.updateMockApiResponse(existing.id, {
+      await responses.updateMockApiResponse(workspace.user, existing.id, {
         mock_api_id: existing.mock_api_id,
         name: parsed.name ?? existing.name,
         is_default: parsed.is_default ?? existing.is_default,

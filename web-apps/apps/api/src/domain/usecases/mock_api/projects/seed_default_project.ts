@@ -33,7 +33,7 @@ export async function seed_default_project(
   });
 
   // 1.1 Non-streaming generation
-  const chatApi = await mockApisUsecase.createMockApi({
+  const chatApi = await mockApisUsecase.createMockApi(user, {
     project_id: llmProject.id,
     method: "POST",
     path: "/v1/chat/completions",
@@ -43,7 +43,7 @@ export async function seed_default_project(
   });
 
   // Success response
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: chatApi.id,
     name: "Successful Completion",
     is_default: false,
@@ -77,7 +77,7 @@ export async function seed_default_project(
   });
 
   // 1.2 Streaming generation
-  const streamApi = await mockApisUsecase.createMockApi({
+  const streamApi = await mockApisUsecase.createMockApi(user, {
     project_id: llmProject.id,
     method: "POST",
     path: "/v1/chat/completions/stream",
@@ -93,7 +93,7 @@ export async function seed_default_project(
   }));
   sseEvents.push({ delay_ms: 200, sse: { event: "done", data: { status: "finished", usage: { input_tokens: 15, output_tokens: words.length } } } });
 
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: streamApi.id,
     name: "Text generation stream",
     is_default: false,
@@ -117,7 +117,7 @@ export async function seed_default_project(
   });
 
   // Default error (Unauthorized/Invalid)
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: chatApi.id,
     name: "Unauthorized / Invalid Parameters",
     is_default: true,
@@ -131,7 +131,7 @@ export async function seed_default_project(
     post_response_actions: [],
   });
   
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: streamApi.id,
     name: "Unauthorized / Invalid Parameters",
     is_default: true,
@@ -161,7 +161,7 @@ export async function seed_default_project(
   });
 
   // 2.1 List Posts (with pagination)
-  const listApi = await mockApisUsecase.createMockApi({
+  const listApi = await mockApisUsecase.createMockApi(user, {
     project_id: blogProject.id,
     method: "GET",
     path: "/posts",
@@ -170,7 +170,7 @@ export async function seed_default_project(
     variables: [],
   });
 
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: listApi.id,
     name: "Success",
     is_default: true,
@@ -191,7 +191,7 @@ export async function seed_default_project(
   });
   
   // 2.2 Get Single Post
-  const getSingleApi = await mockApisUsecase.createMockApi({
+  const getSingleApi = await mockApisUsecase.createMockApi(user, {
     project_id: blogProject.id,
     method: "GET",
     path: "/posts/:id",
@@ -200,7 +200,7 @@ export async function seed_default_project(
     variables: [],
   });
 
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: getSingleApi.id,
     name: "Success",
     is_default: true,
@@ -222,7 +222,7 @@ export async function seed_default_project(
   });
 
   // 2.3 Create Post
-  const createApi = await mockApisUsecase.createMockApi({
+  const createApi = await mockApisUsecase.createMockApi(user, {
     project_id: blogProject.id,
     method: "POST",
     path: "/posts",
@@ -231,7 +231,7 @@ export async function seed_default_project(
     variables: [],
   });
 
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: createApi.id,
     name: "Post Created",
     is_default: false,
@@ -258,7 +258,7 @@ export async function seed_default_project(
   });
 
   // 2.4 Update Post
-  const updateApi = await mockApisUsecase.createMockApi({
+  const updateApi = await mockApisUsecase.createMockApi(user, {
     project_id: blogProject.id,
     method: "PUT",
     path: "/posts/:id",
@@ -267,7 +267,7 @@ export async function seed_default_project(
     variables: [],
   });
 
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: updateApi.id,
     name: "Post Updated",
     is_default: false,
@@ -291,7 +291,7 @@ export async function seed_default_project(
   });
 
   // 2.5 Delete Post
-  const deleteApi = await mockApisUsecase.createMockApi({
+  const deleteApi = await mockApisUsecase.createMockApi(user, {
     project_id: blogProject.id,
     method: "DELETE",
     path: "/posts/:id",
@@ -300,7 +300,7 @@ export async function seed_default_project(
     variables: [],
   });
 
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: deleteApi.id,
     name: "Success",
     is_default: false,
@@ -334,7 +334,7 @@ return [{"type": "set", "scope": "global", "key": "posts", "value": new_posts, "
   });
 
   // Default Error Responses
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: createApi.id,
     name: "Unauthorized / Invalid",
     is_default: true,
@@ -348,7 +348,7 @@ return [{"type": "set", "scope": "global", "key": "posts", "value": new_posts, "
     post_response_actions: [],
   });
   
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: updateApi.id,
     name: "Unauthorized / Invalid",
     is_default: true,
@@ -362,7 +362,7 @@ return [{"type": "set", "scope": "global", "key": "posts", "value": new_posts, "
     post_response_actions: [],
   });
   
-  await responsesUsecase.createMockApiResponse({
+  await responsesUsecase.createMockApiResponse(user, {
     mock_api_id: deleteApi.id,
     name: "Unauthorized",
     is_default: true,

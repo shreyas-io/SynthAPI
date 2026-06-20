@@ -1,4 +1,4 @@
-export type OrganizationMemberRole = "owner" | "admin" | "member";
+export type OrganizationMemberRole = "owner" | "admin" | "member" | "viewer";
 
 export type OrganizationMembershipStatus = "active" | "stale";
 
