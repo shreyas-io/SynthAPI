@@ -9,7 +9,7 @@ export const listMockApiResponses = (
   ListResponse<
     Pick<
       MockApiResponse,
-      "id" | "mock_api_id" | "name" | "is_default" | "deleted_at"
+      "id" | "mock_api_id" | "name" | "is_default" | "execution_order" | "deleted_at"
     >
   >
 > => {

@@ -119,8 +119,8 @@ export const addMockApiResponseRoutes = (
       }
 
       const parsedSort = listMockApiResponsesSortDto.safeParse({
-        by: getString(req.query.sort_by) ?? "created_at",
-        order: getString(req.query.sort_order) ?? "desc",
+        by: getString(req.query.sort_by) ?? "execution_order",
+        order: getString(req.query.sort_order) ?? "asc",
       });
       if (!parsedSort.success) {
         throw new ApiGatewayException({

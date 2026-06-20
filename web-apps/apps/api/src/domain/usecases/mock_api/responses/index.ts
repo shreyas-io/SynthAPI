@@ -114,7 +114,11 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
     getMockApiResponse: async (id: string): Promise<MockApiResponseEt> => {
       const mock_api_response = await ctx.db
         .selectFrom("mock_api_responses")
-        .innerJoin("mock_apis", "mock_apis.id", "mock_api_responses.mock_api_id")
+        .innerJoin(
+          "mock_apis",
+          "mock_apis.id",
+          "mock_api_responses.mock_api_id",
+        )
         .innerJoin("projects", "projects.id", "mock_apis.project_id")
         .selectAll("mock_api_responses")
         .where("mock_api_responses.id", "=", id)
@@ -158,6 +162,7 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
           "mock_api_id",
           "name",
           "is_default",
+          "execution_order",
           "deleted_at",
           "created_at",
         ]);
@@ -249,7 +254,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
           .execute();
       });
     },
-    async deleteMockApiResponse(user: AuthenticatedUser, id: string): Promise<void> {
+    async deleteMockApiResponse(
+      user: AuthenticatedUser,
+      id: string,
+    ): Promise<void> {
       const mock_api_response = await ctx.db
         .selectFrom("mock_api_responses")
         .select(["id", "deleted_at", "mock_api_id"])
@@ -268,7 +276,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
       }
 
       const mockApis = MockApisUsecase(ctx);
-      await mockApis.assertMockApiWriteAccess(user, mock_api_response.mock_api_id);
+      await mockApis.assertMockApiWriteAccess(
+        user,
+        mock_api_response.mock_api_id,
+      );
 
       await ctx.db
         .updateTable("mock_api_responses")
@@ -299,11 +310,18 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         }
       });
     },
-    async restoreMockApiResponse(user: AuthenticatedUser, id: string): Promise<void> {
+    async restoreMockApiResponse(
+      user: AuthenticatedUser,
+      id: string,
+    ): Promise<void> {
       await ctx.db.transaction().execute(async (trx) => {
         const mock_api_response = await trx
           .selectFrom("mock_api_responses")
-          .innerJoin("mock_apis", "mock_apis.id", "mock_api_responses.mock_api_id")
+          .innerJoin(
+            "mock_apis",
+            "mock_apis.id",
+            "mock_api_responses.mock_api_id",
+          )
           .innerJoin("projects", "projects.id", "mock_apis.project_id")
           .select([
             "mock_api_responses.id",
@@ -323,7 +341,10 @@ export const MockApiResponsesUsecase = (ctx: AppContext) => {
         }
 
         const mockApis = MockApisUsecase(ctx);
-        await mockApis.assertMockApiWriteAccess(user, mock_api_response.mock_api_id);
+        await mockApis.assertMockApiWriteAccess(
+          user,
+          mock_api_response.mock_api_id,
+        );
 
         if (mock_api_response.is_default) {
           await trx

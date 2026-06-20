@@ -345,11 +345,11 @@ export async function executePublicMockApi(
   for (const response of mock_api_responses) {
     if (response.is_default) {
       default_mock_api_response ??= response;
-      continue;
     }
 
     if (!response.rule_tree?.predicates) {
-      continue;
+      mock_api_response = response;
+      break;
     }
 
     const { result } = await executeRuleTree(

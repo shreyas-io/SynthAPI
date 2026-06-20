@@ -97,6 +97,7 @@ export type MockApiResponse = {
   mock_api_id: string;
   name: string;
   is_default: boolean;
+  execution_order: number;
   response: {
     status_code: number;
     headers: Record<string, unknown>;

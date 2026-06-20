@@ -48,6 +48,6 @@ export const listMockApiResponsesPaginationDto = z.object({
 });
 
 export const listMockApiResponsesSortDto = z.object({
-  by: z.enum(["name", "created_at"]),
+  by: z.enum(["name", "created_at", "execution_order"]),
   order: z.enum(["asc", "desc"]),
 });
