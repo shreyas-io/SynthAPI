@@ -73,7 +73,9 @@ export const mockApiResponseTools = {
           response: parsed.response as any,
           rule_tree: (parsed.rule_tree as any) ?? null,
           post_response_actions: (parsed.post_response_actions as any) ?? null,
-          execution_order: parsed.execution_order,
+          ...(parsed.execution_order !== undefined
+            ? { execution_order: parsed.execution_order }
+            : {}),
         }),
       );
     },

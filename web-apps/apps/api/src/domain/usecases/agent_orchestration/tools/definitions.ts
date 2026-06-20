@@ -216,7 +216,7 @@ export const toolDefinitions = {
         response_ids: {
           type: "array",
           description: "Array of response IDs in the new order",
-          items: { type: "string" },
+          items: { type: "string", description: "Response ID" },
         },
       },
       required: ["mock_api_id", "response_ids"],

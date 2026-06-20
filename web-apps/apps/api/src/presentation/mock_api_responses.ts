@@ -61,10 +61,10 @@ export const addMockApiResponseRoutes = (
     "/api/v1/mock-apis/:id/responses/reorder",
     asyncRoute(async (req, res) => {
       const user = getAuthenticatedUser(req.user);
-      const mock_api_id = req.params.id;
-      const { response_ids } = req.body;
+      const mock_api_id = getString(req.params.id);
+      const response_ids = getStringArray(req.body?.response_ids);
 
-      if (!mock_api_id || !Array.isArray(response_ids)) {
+      if (!mock_api_id || !response_ids) {
         throw new ApiGatewayException({
           public_message: "Invalid payload: mock_api_id and an array of response_ids are required",
           status_code: HttpStatusCode.BAD_REQUEST,
