@@ -326,12 +326,12 @@ return post_id not in posts
       headers: { "content-type": "application/json" },
       cookies: {},
       body: {
-        type: "json",
-        value: {
-          id: "{{request.path_params.id}}",
-          title: "Post {{request.path_params.id}}",
-          content: "Dynamically fetched post",
-        },
+        type: "json_script",
+        code: `
+posts_map = globals.get("posts", {})
+path_params = request.get("path_params", {})
+return posts_map.get(str(path_params.get("id")))
+`,
       },
     },
     rule_tree: null,
