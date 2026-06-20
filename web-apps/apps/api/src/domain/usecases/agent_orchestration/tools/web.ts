@@ -97,22 +97,34 @@ const assertPublicHttpUrl = async (rawUrl: string): Promise<URL> => {
   }
 
   if (net.isIP(hostname)) {
-    if (isPrivateIp(hostname)) throw new Error("Private IP URLs are not supported.");
+    if (isPrivateIp(hostname))
+      throw new Error("Private IP URLs are not supported.");
     return url;
   }
 
   const addresses = await lookup(hostname, { all: true, verbatim: true });
-  if (addresses.length === 0 || addresses.some((address) => isPrivateIp(address.address))) {
-    throw new Error("URLs resolving to private network addresses are not supported.");
+  if (
+    addresses.length === 0 ||
+    addresses.some((address) => isPrivateIp(address.address))
+  ) {
+    throw new Error(
+      "URLs resolving to private network addresses are not supported.",
+    );
   }
 
   return url;
 };
 
-const fetchText = async (rawUrl: string): Promise<{ url: string; html: string }> => {
+const fetchText = async (
+  rawUrl: string,
+): Promise<{ url: string; html: string }> => {
   let currentUrl = await assertPublicHttpUrl(rawUrl);
 
-  for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+  for (
+    let redirectCount = 0;
+    redirectCount <= MAX_REDIRECTS;
+    redirectCount += 1
+  ) {
     const response = await fetch(currentUrl, {
       headers: { "user-agent": USER_AGENT, accept: "text/html,*/*;q=0.8" },
       redirect: "manual",
@@ -121,8 +133,11 @@ const fetchText = async (rawUrl: string): Promise<{ url: string; html: string }>
 
     if ([301, 302, 303, 307, 308].includes(response.status)) {
       const location = response.headers.get("location");
-      if (!location) throw new Error("Redirect response did not include a location.");
-      currentUrl = await assertPublicHttpUrl(new URL(location, currentUrl).toString());
+      if (!location)
+        throw new Error("Redirect response did not include a location.");
+      currentUrl = await assertPublicHttpUrl(
+        new URL(location, currentUrl).toString(),
+      );
       continue;
     }
 
@@ -136,7 +151,10 @@ const fetchText = async (rawUrl: string): Promise<{ url: string; html: string }>
     }
 
     const contentType = response.headers.get("content-type") ?? "";
-    if (contentType && !/text\/html|text\/plain|application\/xhtml\+xml/i.test(contentType)) {
+    if (
+      contentType &&
+      !/text\/html|text\/plain|application\/xhtml\+xml/i.test(contentType)
+    ) {
       throw new Error(`Unsupported content type: ${contentType}.`);
     }
 
@@ -156,7 +174,10 @@ const htmlToMarkdown = (html: string, maxChars: number): string => {
   const body = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i)?.[1] ?? html;
   let markdown = body
     .replace(/<!--[\s\S]*?-->/g, "")
-    .replace(/<(script|style|noscript|svg|canvas|iframe)[^>]*>[\s\S]*?<\/\1>/gi, "")
+    .replace(
+      /<(script|style|noscript|svg|canvas|iframe)[^>]*>[\s\S]*?<\/\1>/gi,
+      "",
+    )
     .replace(/<h1[^>]*>([\s\S]*?)<\/h1>/gi, "\n# $1\n")
     .replace(/<h2[^>]*>([\s\S]*?)<\/h2>/gi, "\n## $1\n")
     .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/gi, "\n### $1\n")
@@ -165,11 +186,17 @@ const htmlToMarkdown = (html: string, maxChars: number): string => {
     .replace(/<h6[^>]*>([\s\S]*?)<\/h6>/gi, "\n###### $1\n")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<li[^>]*>([\s\S]*?)<\/li>/gi, "\n- $1")
-    .replace(/<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, text) => {
-      const label = stripTags(text);
-      return label ? `[${label}](${decodeHtml(href)})` : "";
-    })
-    .replace(/<\/(p|div|section|article|main|header|footer|blockquote|ul|ol|table|tr)>/gi, "\n")
+    .replace(
+      /<a[^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi,
+      (_, href, text) => {
+        const label = stripTags(text);
+        return label ? `[${label}](${decodeHtml(href)})` : "";
+      },
+    )
+    .replace(
+      /<\/(p|div|section|article|main|header|footer|blockquote|ul|ol|table|tr)>/gi,
+      "\n",
+    )
     .replace(/<[^>]*>/g, " ");
 
   markdown = decodeHtml(markdown)
@@ -197,9 +224,7 @@ export const webTools = {
       const parsed = webSearchToolInputDto.parse(input);
       const apiKey = ctx.env.TAVILY_API_KEY;
       if (!apiKey) {
-        throw new Error(
-          "TAVILY_API_KEY is required to use web_search. Create a Tavily API key and add it to the API environment.",
-        );
+        throw new Error("Web search is currently unavailable.");
       }
 
       const response = await fetch("https://api.tavily.com/search", {
@@ -233,7 +258,9 @@ export const webTools = {
               title: result.title,
               url: result.url,
               ...(result.content ? { snippet: result.content } : undefined),
-              ...(typeof result.score === "number" ? { score: result.score } : undefined),
+              ...(typeof result.score === "number"
+                ? { score: result.score }
+                : undefined),
             },
           ];
         });
