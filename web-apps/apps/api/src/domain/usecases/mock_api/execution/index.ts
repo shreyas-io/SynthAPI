@@ -250,6 +250,18 @@ const materializeResponseBody = async (
   body: MockApiResponseEt["response"]["body"],
   execution_context: ExecutionContextEt,
 ): Promise<MaterializedResponseBody> => {
+  if (body.type === "json_script") {
+    const { result } = await ctx.pyodide.execute({
+      code: body.code,
+      timeout_ms: 5000,
+      context: execution_context,
+    });
+    return {
+      type: "json",
+      value: result,
+    };
+  }
+
   if (body.type !== "sse") {
     return recursivelyMapTemplateParams(
       body,
@@ -334,7 +346,7 @@ export async function executePublicMockApi(
     .selectAll()
     .where("mock_api_id", "=", mock_api.id)
     .where("deleted_at", "is", null)
-    .orderBy("created_at", "desc")
+    .orderBy("execution_order", "asc")
     .execute()) as unknown as MockApiResponseEt[];
 
   let mock_api_response: (typeof mock_api_responses)[number] | undefined;
@@ -342,15 +354,14 @@ export async function executePublicMockApi(
     | (typeof mock_api_responses)[number]
     | undefined;
 
-  // TODO: run in parallel
   for (const response of mock_api_responses) {
     if (response.is_default) {
       default_mock_api_response ??= response;
-      continue;
     }
 
     if (!response.rule_tree?.predicates) {
-      continue;
+      mock_api_response = response;
+      break;
     }
 
     const { result } = await executeRuleTree(

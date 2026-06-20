@@ -24,9 +24,11 @@ export type RuleTreePreviewValue =
 
 export type RuleTreePreviewPredicate = {
   label?: string;
-  actual: string;
-  operator: string;
+  type?: "simple" | "custom";
+  actual?: string;
+  operator?: string;
   expected?: RuleTreePreviewValue;
+  script?: string;
 };
 
 export type RuleTreePreviewTree = {
@@ -52,6 +54,12 @@ type PredicateNodeData = {
   actual: string;
   operator: string;
   expected: string;
+  isSelected?: boolean;
+};
+
+type ScriptNodeData = {
+  label: string;
+  script: string;
   isSelected?: boolean;
 };
 
@@ -110,6 +118,7 @@ const operatorAliases: Record<string, string> = {
 const nodeTypes = {
   logic: LogicNode,
   predicate: PredicateNode,
+  script: ScriptNode,
 };
 
 const nodeWidth = 320;
@@ -193,6 +202,39 @@ function PredicateNode({ data }: { data: PredicateNodeData }) {
   );
 }
 
+function ScriptNode({ data }: { data: ScriptNodeData }) {
+  return (
+    <div
+      className={`sui-rf-node sui-rf-node-predicate${data.isSelected ? " is-selected" : ""}`}
+    >
+      <Handle type="target" position={Position.Top} />
+      <div className="sui-rf-node-header">
+        <span className="sui-eyebrow">PYTHON SCRIPT</span>
+      </div>
+      <div className="sui-rf-node-body">
+        <label>
+          Label
+          <input
+            value={data.label}
+            className="sui-rf-input"
+            disabled
+            aria-label="Script label"
+          />
+        </label>
+        <label>
+          Script Code
+          <textarea
+            value={data.script}
+            className="sui-rf-textarea"
+            disabled
+            aria-label="Script code"
+          />
+        </label>
+      </div>
+    </div>
+  );
+}
+
 const operatorNeedsExpected = (operator: string) =>
   (operatorsWithExpected as readonly string[]).includes(operator);
 
@@ -270,17 +312,30 @@ const treeToFlow = (
     current.predicates.forEach((predicate, index) => {
       const predicatePath = `${currentPath}.predicates.${index}`;
 
-      nodes.push({
-        id: predicatePath,
-        type: "predicate",
-        position: { x: 0, y: 0 },
-        data: {
-          actual: predicate.actual,
-          operator: predicate.operator,
-          expected: stringifyExpected(predicate.expected),
-          isSelected: selectedNodePath === predicatePath,
-        } satisfies PredicateNodeData,
-      });
+      if (predicate.type === "custom") {
+        nodes.push({
+          id: predicatePath,
+          type: "script",
+          position: { x: 0, y: 0 },
+          data: {
+            label: predicate.label || "Custom Script",
+            script: predicate.script || "",
+            isSelected: selectedNodePath === predicatePath,
+          } satisfies ScriptNodeData,
+        });
+      } else {
+        nodes.push({
+          id: predicatePath,
+          type: "predicate",
+          position: { x: 0, y: 0 },
+          data: {
+            actual: predicate.actual || "",
+            operator: predicate.operator || "equals",
+            expected: stringifyExpected(predicate.expected),
+            isSelected: selectedNodePath === predicatePath,
+          } satisfies PredicateNodeData,
+        });
+      }
 
       edges.push({
         id: `edge-${currentPath}-${predicatePath}`,

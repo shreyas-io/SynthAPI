@@ -9,7 +9,7 @@ export const listMockApiResponses = (
   ListResponse<
     Pick<
       MockApiResponse,
-      "id" | "mock_api_id" | "name" | "is_default" | "deleted_at"
+      "id" | "mock_api_id" | "name" | "is_default" | "execution_order" | "deleted_at"
     >
   >
 > => {
@@ -72,4 +72,14 @@ export const restoreMockApiResponse = (
       method: "POST",
     },
   );
+};
+
+export const reorderMockApiResponses = (
+  mockApiId: string,
+  responseIds: string[],
+): Promise<void> => {
+  return apiRequest(`/api/v1/mock-apis/${mockApiId}/responses/reorder`, {
+    method: "PATCH",
+    body: { response_ids: responseIds },
+  });
 };

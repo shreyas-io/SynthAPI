@@ -57,6 +57,25 @@ export const addMockApiResponseRoutes = (
     }),
   );
 
+  app.patch(
+    "/api/v1/mock-apis/:id/responses/reorder",
+    asyncRoute(async (req, res) => {
+      const user = getAuthenticatedUser(req.user);
+      const mock_api_id = req.params.id;
+      const { response_ids } = req.body;
+
+      if (!mock_api_id || !Array.isArray(response_ids)) {
+        throw new ApiGatewayException({
+          public_message: "Invalid payload: mock_api_id and an array of response_ids are required",
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
+      await mock_api_responses.reorderMockApiResponses(user, mock_api_id, response_ids);
+      res.status(200).json({ success: true });
+    }),
+  );
+
   app.get(
     "/api/v1/mock-apis/:id/responses",
     asyncRoute(async (req, res) => {
@@ -100,8 +119,8 @@ export const addMockApiResponseRoutes = (
       }
 
       const parsedSort = listMockApiResponsesSortDto.safeParse({
-        by: getString(req.query.sort_by) ?? "created_at",
-        order: getString(req.query.sort_order) ?? "desc",
+        by: getString(req.query.sort_by) ?? "execution_order",
+        order: getString(req.query.sort_order) ?? "asc",
       });
       if (!parsedSort.success) {
         throw new ApiGatewayException({

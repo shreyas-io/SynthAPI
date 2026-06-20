@@ -14,6 +14,7 @@ export type MockApiResponseEt = {
   mock_api_id: string;
   name: string;
   is_default: boolean;
+  execution_order: number;
   response: ApiResponseEt;
   rule_tree: MockApiRuleTreeEt | null;
   post_response_actions: PostResponseActionsEt | null;
