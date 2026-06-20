@@ -19,6 +19,8 @@ import {
 import "@xyflow/react/dist/style.css";
 import dagre from "dagre";
 
+import Editor from "@monaco-editor/react";
+
 import { JsonInput } from "../../../components/atoms/JsonInput";
 import { createId } from "../../../lib/id/create_id";
 import type {
@@ -228,9 +230,58 @@ function PredicateNode({ data }: { data: PredicateNodeData }) {
   );
 }
 
+type ScriptNodeData = {
+  label: string;
+  script: string;
+  onChange: (updates: Partial<ScriptNodeData>) => void;
+  onRemove: () => void;
+};
+
+function ScriptNode({ data }: { data: ScriptNodeData }) {
+  return (
+    <div className="rf-node rf-node-predicate" style={{ minWidth: 320 }}>
+      <Handle type="target" position={Position.Top} />
+      <div className="rf-node-header">
+        <span className="eyebrow">PYTHON SCRIPT</span>
+        <button
+          className="rf-node-remove"
+          onClick={data.onRemove}
+          title="Remove Script"
+        >
+          ×
+        </button>
+      </div>
+      <div className="rf-node-body">
+        <label>
+          Label
+          <input
+            placeholder="Validation Script"
+            value={data.label}
+            onChange={(e) => data.onChange({ label: e.target.value })}
+            className="rf-input"
+          />
+        </label>
+        <label>
+          Script Code
+          <div style={{ height: "180px", border: "1px solid var(--color-border)", borderRadius: "4px", overflow: "hidden" }}>
+            <Editor
+              defaultLanguage="python"
+              theme="vs-dark"
+              value={data.script}
+              onChange={(value) => data.onChange({ script: value || "" })}
+              options={{ minimap: { enabled: false }, scrollBeyondLastLine: false, fontSize: 12 }}
+            />
+          </div>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 const nodeTypes = {
   logic: LogicNode,
   predicate: PredicateNode,
+  script: ScriptNode,
 };
 
 // --- DATA MAPPING ---
@@ -279,16 +330,28 @@ function treeToFlow(tree: RuleTree) {
 
     node.predicates.forEach((pred) => {
       const predId = createId();
-      nodes.push({
-        id: predId,
-        type: "predicate",
-        position: { x: 0, y: 0 },
-        data: {
-          actual: pred.actual,
-          operator: pred.operator,
-          expected: stringifyExpected(pred.expected),
-        },
-      });
+      if (pred.type === "custom") {
+        nodes.push({
+          id: predId,
+          type: "script",
+          position: { x: 0, y: 0 },
+          data: {
+            label: pred.label || "Validation Script",
+            script: pred.script,
+          },
+        });
+      } else {
+        nodes.push({
+          id: predId,
+          type: "predicate",
+          position: { x: 0, y: 0 },
+          data: {
+            actual: pred.actual,
+            operator: pred.operator,
+            expected: stringifyExpected(pred.expected),
+          },
+        });
+      }
       edges.push({
         id: `e-${id}-${predId}`,
         source: id,
@@ -329,6 +392,14 @@ function flowToTree(nodes: Node[], edges: Edge[]): RuleTree | null {
         if (operatorNeedsExpected(d.operator)) {
           pred.expected = parseExpected(d.expected);
         }
+        predicates.push(pred);
+      } else if (child.type === "script") {
+        const d = child.data as unknown as ScriptNodeData;
+        const pred: RulePredicate = {
+          label: d.label || "Script",
+          type: "custom",
+          script: d.script || "",
+        };
         predicates.push(pred);
       } else if (child.type === "logic") {
         children.push(buildSubTree(child.id));
@@ -434,6 +505,22 @@ export function RuleTreeEditor({
     ]);
   };
 
+  const addScriptNode = () => {
+    const id = createId();
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "script",
+        position: { x: 50, y: 50 },
+        data: {
+          label: "Python Script",
+          script: 'return True\n',
+        },
+      },
+    ]);
+  };
+
   // Enhance nodes with up-to-date dispatch actions
   const enhancedNodes = useMemo(() => {
     return nodes.map((node) => {
@@ -479,6 +566,27 @@ export function RuleTreeEditor({
           },
         };
       }
+      if (node.type === "script") {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            onChange: (updates: Partial<ScriptNodeData>) => {
+              setNodes((nds) =>
+                nds.map((n) =>
+                  n.id === node.id
+                    ? { ...n, data: { ...n.data, ...updates } }
+                    : n,
+                ),
+              );
+            },
+            onRemove: () => {
+              setNodes((nds) => nds.filter((n) => n.id !== node.id));
+              setEdges((eds) => eds.filter((e) => e.target !== node.id));
+            },
+          },
+        };
+      }
       return node;
     });
   }, [nodes, setNodes, setEdges]);
@@ -492,6 +600,9 @@ export function RuleTreeEditor({
         <div className="rf-toolbar-actions">
           <button type="button" onClick={addPredicateNode} className="rf-btn">
             + Condition
+          </button>
+          <button type="button" onClick={addScriptNode} className="rf-btn">
+            + Python Script
           </button>
           <button type="button" onClick={addLogicNode} className="rf-btn">
             + Logic Group
