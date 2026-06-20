@@ -55,7 +55,7 @@ const heroFeatures = [
     id: "ai-setup",
     label: "Conversational Builder",
     title: "Conversational Builder",
-    text: "Just chat with your agent to instantly generate complex mock endpoints, payloads, and routing logic.",
+    text: "Just chat with your agent to instantly generate complex mock endpoints, and routing logic.",
     tags: ["Natural language", "Instant generation", "Context-aware"],
   },
   {
@@ -215,10 +215,10 @@ function FeatureDiagram({
             </p>
             <div className="agent-attachments">
               <div className="chat-file-attachment">
-                <span>rule_success_200.json</span>
+                <span>rule_success_200</span>
               </div>
               <div className="chat-file-attachment">
-                <span>rule_error_amount_exceeded_400.json</span>
+                <span>rule_error_amount_exceeded_400</span>
               </div>
             </div>
           </div>
@@ -254,10 +254,6 @@ function FeatureDiagram({
             Return <code>"Insufficient credits"</code>
           </div>
         </div>
-        <svg className="flowchart-svg-connectors">
-          <path d="M 50% 2.5rem V 6.5rem L 25% 10rem V 12rem" />
-          <path d="M 50% 6.5rem L 75% 10rem V 12rem" />
-        </svg>
       </div>
     );
   }
@@ -347,38 +343,40 @@ function RuleFlowPreview({
 export function LandingPage() {
   return (
     <main className="landing-page">
-      <header className="site-header">
-        <Logo />
-        <nav aria-label="Primary navigation"></nav>
-      </header>
+      <div className="hero-shell">
+        <header className="site-header">
+          <Logo />
+          <nav aria-label="Primary navigation"></nav>
+        </header>
 
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Next-Generation API Simulation</p>
-          <h1>Bring complex backend behaviors to life, instantly.</h1>
-          <p className="hero-text">
-            Standard mock servers fail when you need to test real-world state
-            and complex logic. SynthAPI combines generative AI with powerful
-            rule trees to build intelligent API replicas. Define your logic with
-            AI, and instantly generate production-ready mock APIs that keep your
-            teams moving.
-          </p>
-          <div className="hero-actions">
-            <a className="primary-action" href={signupUrl}>
-              Start building for free
-            </a>
+        <section className="hero">
+          <div className="hero-copy">
+            <p className="eyebrow">Next-Generation API Simulation</p>
+            <h1>Bring complex backend behaviors to life, instantly.</h1>
+            <p className="hero-text">
+              Standard mock servers fail when you need to test real-world state
+              and complex logic. SynthAPI combines generative AI with powerful
+              rule trees to build intelligent API replicas. Define your logic
+              with AI, and instantly generate production-ready mock APIs that
+              keep your teams moving.
+            </p>
+            <div className="hero-actions">
+              <a className="primary-action" href={signupUrl}>
+                Start building for free
+              </a>
+            </div>
+            <div className="hero-proof" aria-label="Product capabilities">
+              <span>Conditional responses</span>
+              <span>Live mock URLs</span>
+              <span>AI-assisted setup</span>
+            </div>
           </div>
-          <div className="hero-proof" aria-label="Product capabilities">
-            <span>Conditional responses</span>
-            <span>Live mock URLs</span>
-            <span>AI-assisted setup</span>
-          </div>
-        </div>
 
-        <div className="hero-divider" aria-hidden="true"></div>
+          <div className="hero-divider" aria-hidden="true"></div>
 
-        <FeatureStack />
-      </section>
+          <FeatureStack />
+        </section>
+      </div>
 
       <div className="detailed-features">
         {heroFeatures.map((feature, index) => (
