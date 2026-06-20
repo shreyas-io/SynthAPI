@@ -205,6 +205,23 @@ export const toolDefinitions = {
       required: ["response_id"],
     },
   ),
+  reorder_mock_api_responses: toolEntry(
+    "reorder_mock_api_responses",
+    "Reorder the execution order of mock API responses. The array of response IDs must contain all non-default responses for the given mock API in the new desired order.",
+    {
+      type: "object",
+      description: "Mock API response reorder input",
+      properties: {
+        mock_api_id: { type: "string", description: "Mock API ID" },
+        response_ids: {
+          type: "array",
+          description: "Array of response IDs in the new order",
+          items: { type: "string" },
+        },
+      },
+      required: ["mock_api_id", "response_ids"],
+    },
+  ),
   render_ui_form: toolEntry("render_ui_form", "Render a form on the UI to ask the user a question with multiple options.", {
     type: "object",
     description: "Form rendering input",

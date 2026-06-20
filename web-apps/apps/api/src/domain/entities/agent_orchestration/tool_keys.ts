@@ -11,6 +11,7 @@ export const toolKeys = [
   "get_mock_api_response",
   "create_mock_api_response",
   "update_mock_api_response",
+  "reorder_mock_api_responses",
   "render_ui_form",
   "web_search",
   "web_scrape",

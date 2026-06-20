@@ -70,6 +70,11 @@ export const updateMockApiResponseToolInputDto = createMockApiResponseDto
     response_id: z.uuidv7(),
   });
 
+export const reorderMockApiResponsesToolInputDto = z.object({
+  mock_api_id: z.uuidv7(),
+  response_ids: z.array(z.uuidv7()),
+});
+
 export const renderUiFormToolInputDto = z.object({
   question: z.string(),
   options: z.array(z.string()).max(5).optional(),

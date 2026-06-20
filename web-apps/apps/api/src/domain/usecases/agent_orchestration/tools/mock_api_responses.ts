@@ -6,6 +6,7 @@ import {
   getMockApiResponseToolInputDto,
   listMockApiResponsesToolInputDto,
   updateMockApiResponseToolInputDto,
+  reorderMockApiResponsesToolInputDto,
 } from "./schemas";
 import type { ITool } from "./types";
 import { assertMockApi, assertMockApiResponse, toJson } from "./utils";
@@ -48,7 +49,9 @@ export const mockApiResponseTools = {
       const mock_apis = MockApisUsecase(ctx);
       const mock_api = await mock_apis.getMockApi(response.mock_api_id);
 
-      return toJson(assertMockApiResponse(response, mock_api, workspace.project_id));
+      return toJson(
+        assertMockApiResponse(response, mock_api, workspace.project_id),
+      );
     },
   },
   create_mock_api_response: {
@@ -70,6 +73,7 @@ export const mockApiResponseTools = {
           response: parsed.response as any,
           rule_tree: (parsed.rule_tree as any) ?? null,
           post_response_actions: (parsed.post_response_actions as any) ?? null,
+          execution_order: parsed.execution_order,
         }),
       );
     },
@@ -98,9 +102,30 @@ export const mockApiResponseTools = {
         )
           ? ((parsed.post_response_actions as any) ?? null)
           : existing.post_response_actions,
+        execution_order: parsed.execution_order ?? existing.execution_order,
       });
 
       return toJson(await responses.getMockApiResponse(existing.id));
+    },
+  },
+  reorder_mock_api_responses: {
+    definition: toolDefinitions.reorder_mock_api_responses,
+    async execute(ctx, workspace, input) {
+      const parsed = reorderMockApiResponsesToolInputDto.parse(input);
+      const mock_apis = MockApisUsecase(ctx);
+      assertMockApi(
+        await mock_apis.getMockApi(parsed.mock_api_id),
+        workspace.project_id,
+      );
+
+      const responses = MockApiResponsesUsecase(ctx);
+      await responses.reorderMockApiResponses(
+        workspace.user,
+        parsed.mock_api_id,
+        parsed.response_ids,
+      );
+
+      return toJson({ success: true });
     },
   },
 } satisfies Pick<
@@ -109,4 +134,5 @@ export const mockApiResponseTools = {
   | "get_mock_api_response"
   | "create_mock_api_response"
   | "update_mock_api_response"
+  | "reorder_mock_api_responses"
 >;
