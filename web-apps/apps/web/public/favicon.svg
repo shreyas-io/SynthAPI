@@ -1,0 +1,41 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="40"
+  height="40"
+  viewBox="0 0 40 40"
+  role="img"
+  aria-label="SynthAPI logo mark"
+>
+  <path
+    stroke="#66d9ef"
+    stroke-width="2.3"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M16 10H11.5C9.6 10 8 11.6 8 13.5V26.5C8 28.4 9.6 30 11.5 30H16"
+  />
+  <path
+    stroke="#66d9ef"
+    stroke-width="2.3"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M24 10H28.5C30.4 10 32 11.6 32 13.5V26.5C32 28.4 30.4 30 28.5 30H24"
+  />
+  <path
+    stroke="rgba(248, 90, 155, 0.42)"
+    stroke-width="2.2"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M14.5 20.8H17.8L19.2 17.2L21.2 23L23 19H25.5"
+  />
+  <path
+    stroke="#66d9ef"
+    stroke-width="1.5"
+    fill="none"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M14.5 20H17.8L19.2 16.4L21.2 22.2L23 18.2H25.5"
+  />
+</svg>
