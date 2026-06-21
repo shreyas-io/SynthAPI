@@ -69,10 +69,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 40px;
-  padding: 0.45rem 0.85rem;
+  min-height: 32px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
   border: 1px solid var(--vp-c-brand-1);
-  border-radius: 8px;
+  border-radius: 6px;
   color: var(--vp-c-brand-1);
   font-weight: 400;
   text-decoration: none;
