@@ -2,7 +2,7 @@
 set -euo pipefail
 
 dnf update -y
-dnf install -y awscli nginx docker python3 python3-pip
+dnf install -y awscli nginx docker python3 openssl
 
 if ! swapon --show | grep -q '/swapfile'; then
   fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
@@ -15,14 +15,10 @@ if ! grep -q '^/swapfile ' /etc/fstab; then
   echo '/swapfile swap swap defaults 0 0' >> /etc/fstab
 fi
 
-python3 -m venv /opt/certbot
-/opt/certbot/bin/pip install --upgrade pip
-/opt/certbot/bin/pip install certbot certbot-dns-cloudflare
-ln -sf /opt/certbot/bin/certbot /usr/local/bin/certbot
-
 systemctl enable --now docker
 
 mkdir -p /opt/synthapi/bin
+mkdir -p /etc/synthapi/certs
 mkdir -p /etc/systemd/system
 
 cat >/etc/nginx/conf.d/synthapi.conf <<'NGINX'
@@ -111,13 +107,21 @@ cat >/opt/synthapi/bin/ensure-certs.sh <<'EOF'
 #!/bin/bash
 set -euo pipefail
 
-cert_path="/etc/letsencrypt/live/${api_domain}/fullchain.pem"
+cert_dir="/etc/synthapi/certs"
+cert_path="${cert_dir}/origin.crt"
+key_path="${cert_dir}/origin.key"
 desired_wildcard="*.${domain_name}"
+renew_window_seconds=$((30 * 24 * 60 * 60))
 
-if [[ -f /etc/letsencrypt/live/${api_domain}/fullchain.pem ]]; then
+mkdir -p "$cert_dir"
+chmod 700 "$cert_dir"
+
+if [[ -f "$cert_path" && -f "$key_path" ]]; then
   cert_sans="$(openssl x509 -in "$cert_path" -noout -ext subjectAltName 2>/dev/null || true)"
 
-  if grep -Fq "DNS:${api_domain}" <<<"$cert_sans" && grep -Fq "DNS:$desired_wildcard" <<<"$cert_sans"; then
+  if grep -Fq "DNS:${api_domain}" <<<"$cert_sans" \
+    && grep -Fq "DNS:$desired_wildcard" <<<"$cert_sans" \
+    && openssl x509 -checkend "$renew_window_seconds" -noout -in "$cert_path" >/dev/null 2>&1; then
     exit 0
   fi
 fi
@@ -129,8 +133,7 @@ secret_json="$(aws secretsmanager get-secret-value \
   --query SecretString \
   --output text)"
 
-mkdir -p /root/.secrets/certbot
-python3 - "$secret_json" <<'PY' >/root/.secrets/certbot/cloudflare.ini
+cf_api_token="$(python3 - "$secret_json" <<'PY'
 import json
 import sys
 
@@ -142,30 +145,77 @@ token = payload.get("CLOUDFLARE_API_TOKEN")
 if not token:
     raise SystemExit("missing bootstrap secret key: CLOUDFLARE_API_TOKEN")
 
-print(f"dns_cloudflare_api_token = {token}")
+print(token)
 PY
-chmod 600 /root/.secrets/certbot/cloudflare.ini
+)"
 
-certbot_args=(
-  certonly
-  --non-interactive
-  --agree-tos
-  --email ${acme_email}
-%{ if acme_staging ~}
-  --test-cert
-%{ endif ~}
-  --dns-cloudflare
-  --dns-cloudflare-credentials /root/.secrets/certbot/cloudflare.ini
-  --dns-cloudflare-propagation-seconds 120
-  -d ${api_domain}
-  -d "$desired_wildcard"
+tmpdir="$(mktemp -d)"
+trap 'rm -rf "$tmpdir"' EXIT
+
+openssl genrsa -out "$tmpdir/origin.key" 2048
+openssl req \
+  -new \
+  -sha256 \
+  -key "$tmpdir/origin.key" \
+  -subj "/CN=${api_domain}" \
+  -out "$tmpdir/origin.csr"
+
+python3 - "$tmpdir/origin.csr" "${api_domain}" "${domain_name}" <<'PY' >"$tmpdir/request.json"
+import json
+import sys
+from pathlib import Path
+
+csr = Path(sys.argv[1]).read_text()
+api_domain = sys.argv[2]
+domain_name = sys.argv[3]
+
+json.dump(
+    {
+        "csr": csr,
+        "hostnames": [api_domain, f"*.{domain_name}"],
+        "request_type": "origin-rsa",
+        "requested_validity": 5475,
+    },
+    sys.stdout,
 )
+PY
 
-if [[ -f "$cert_path" ]]; then
-  certbot_args+=(--cert-name ${api_domain} --expand)
+http_code="$(curl -sS \
+  -o "$tmpdir/response.json" \
+  -w "%{http_code}" \
+  "https://api.cloudflare.com/client/v4/certificates" \
+  -H "Authorization: Bearer $cf_api_token" \
+  -H "Content-Type: application/json" \
+  --data-binary @"$tmpdir/request.json")"
+
+python3 - "$tmpdir/response.json" "$tmpdir/origin.crt" "$http_code" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+response_path = Path(sys.argv[1])
+cert_path = Path(sys.argv[2])
+http_code = sys.argv[3]
+payload = json.loads(response_path.read_text())
+
+if http_code != "200" or not payload.get("success"):
+    errors = payload.get("errors") or payload.get("messages") or [{"message": "unknown Cloudflare Origin CA error"}]
+    formatted = "; ".join(str(item.get("message", item)) for item in errors)
+    raise SystemExit(f"Cloudflare Origin CA request failed ({http_code}): {formatted}")
+
+certificate = payload.get("result", {}).get("certificate")
+if not certificate:
+    raise SystemExit("Cloudflare Origin CA response did not include a certificate")
+
+cert_path.write_text(certificate)
+PY
+
+install -m 600 "$tmpdir/origin.key" "$key_path"
+install -m 600 "$tmpdir/origin.crt" "$cert_path"
+
+if systemctl is-active --quiet nginx; then
+  systemctl reload nginx
 fi
-
-certbot "${certbot_args[@]}"
 EOF
 
 chmod +x /opt/synthapi/bin/render-api-env.sh

@@ -61,8 +61,6 @@ jobs:
       TF_VAR_GITHUB_REPOSITORY: ${{ github.repository }}
       TF_VAR_TF_STATE_BUCKET: ${{ vars.TF_STATE_BUCKET }}
       TF_VAR_DOMAIN_NAME: ${{ vars.DOMAIN_NAME }}
-      TF_VAR_ACME_EMAIL: ${{ vars.ACME_EMAIL }}
-      TF_VAR_ACME_STAGING: ${{ vars.ACME_STAGING || 'false' }}
       TF_VAR_BOOTSTRAP_SECRET_ARN: ${{ vars.BOOTSTRAP_SECRET_ARN }}
       TF_VAR_DB_PASSWORD: ${{ secrets.TF_VAR_DB_PASSWORD }}
 
@@ -87,7 +85,6 @@ jobs:
       - name: Init prod
         run: |
           test -n "$TF_VAR_DOMAIN_NAME"
-          test -n "$TF_VAR_ACME_EMAIL"
           test -n "$TF_VAR_BOOTSTRAP_SECRET_ARN"
           test -n "$TF_VAR_DB_PASSWORD"
           test -n "$TF_VAR_TF_STATE_BUCKET"

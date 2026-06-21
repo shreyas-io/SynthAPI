@@ -110,7 +110,6 @@ Required GitHub repository variables:
 - `TF_STATE_LOCK_TABLE`
 - `DOMAIN_NAME`
 - `PLATFORM_PAGES_CNAME_TARGET`
-- `ACME_EMAIL`
 - `BOOTSTRAP_SECRET_ARN`
 - `API_ECR_REPOSITORY`
 - `API_INSTANCE_SERVICE_TAG`
@@ -130,7 +129,8 @@ The EC2 instance reads one AWS Secrets Manager JSON secret whose body must conta
   "INFISICAL_PROJECT_ID": "...",
   "INFISICAL_SECRET_PATH": "/synthapi/prod",
   "INFISICAL_CLIENT_ID": "...",
-  "INFISICAL_CLIENT_SECRET": "..."
+  "INFISICAL_CLIENT_SECRET": "...",
+  "CLOUDFLARE_API_TOKEN": "..."
 }
 ```
 

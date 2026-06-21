@@ -364,8 +364,6 @@ resource "aws_launch_template" "api" {
     region                 = var.AWS_REGION
     api_domain             = local.api_domain
     domain_name            = var.DOMAIN_NAME
-    acme_email             = var.ACME_EMAIL
-    acme_staging           = var.ACME_STAGING
     bootstrap_secret_arn   = var.BOOTSTRAP_SECRET_ARN
     bootstrap_secret_stage = var.BOOTSTRAP_SECRET_VERSION_STAGE
     ecr_registry           = local.ecr_registry

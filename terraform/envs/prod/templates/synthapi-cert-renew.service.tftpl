@@ -1,6 +1,6 @@
 [Unit]
-Description=Renew SynthAPI Let's Encrypt certificates
+Description=Ensure SynthAPI Cloudflare Origin CA certificate
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/certbot renew --quiet --deploy-hook "systemctl reload nginx"
+ExecStart=/opt/synthapi/bin/ensure-certs.sh

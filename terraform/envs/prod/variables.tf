@@ -21,17 +21,6 @@ variable "DOMAIN_NAME" {
   type        = string
 }
 
-variable "ACME_EMAIL" {
-  description = "Email used for Let's Encrypt registration."
-  type        = string
-}
-
-variable "ACME_STAGING" {
-  description = "Whether to use Let's Encrypt staging for certificate issuance."
-  type        = bool
-  default     = false
-}
-
 variable "INSTANCE_TYPE" {
   description = "EC2 instance type for the API host."
   type        = string
@@ -75,7 +64,7 @@ variable "API_IMAGE_TAG" {
 }
 
 variable "BOOTSTRAP_SECRET_ARN" {
-  description = "ARN of the AWS Secrets Manager JSON secret containing USE_VAULT_SECRETS and INFISICAL_*."
+  description = "ARN of the AWS Secrets Manager JSON secret containing USE_VAULT_SECRETS, INFISICAL_*, and CLOUDFLARE_API_TOKEN."
   type        = string
 }
 

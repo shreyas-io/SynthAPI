@@ -2,14 +2,12 @@
 
 This root creates the live AWS backend stack for SynthAPI.
 
-`ACME_STAGING` defaults to `false`, so first-boot certificate issuance uses the production Let's Encrypt CA. Set it to `true` only when testing certificate issuance or avoiding production rate limits during setup.
-
-DNS for `DOMAIN_NAME` is expected to be hosted in Cloudflare. The EC2 bootstrap uses the Cloudflare DNS Certbot plugin to create temporary `_acme-challenge` TXT records for Let's Encrypt.
+DNS for `DOMAIN_NAME` is expected to be hosted in Cloudflare. The EC2 bootstrap requests a Cloudflare Origin CA certificate for `api.<domain>` and `*.<domain>`, installs it on the instance, and serves it from nginx. This only works when the public DNS records stay proxied through Cloudflare and the zone SSL/TLS mode is `Full (strict)`.
 
 Create these Cloudflare DNS records manually:
 
-- `api.<domain>`: `A` record to the Terraform-created Elastic IP.
-- `*.<domain>`: `A` record to the same Elastic IP for public mock hosts like `<project-slug>-mock.<domain>`.
+- `api.<domain>`: proxied `A` record to the Terraform-created Elastic IP.
+- `*.<domain>`: proxied `A` record to the same Elastic IP for public mock hosts like `<project-slug>-mock.<domain>`.
 - `platform.<domain>`: `CNAME` record to the Cloudflare Pages target, if needed.
 
 ## Secrets Ownership
@@ -24,7 +22,7 @@ Create these Cloudflare DNS records manually:
   - `INFISICAL_CLIENT_SECRET`
   - `CLOUDFLARE_API_TOKEN`
 
-The Cloudflare token only needs DNS edit access for the `DOMAIN_NAME` zone.
+The Cloudflare token must be able to create Origin CA certificates for the account/zone that owns `DOMAIN_NAME`.
 
 - Infisical app/runtime values:
   - `DB_USER`

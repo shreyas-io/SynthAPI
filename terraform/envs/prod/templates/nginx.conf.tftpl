@@ -13,8 +13,8 @@ server {
     listen 443 ssl http2;
     server_name ${api_domain};
 
-    ssl_certificate /etc/letsencrypt/live/${api_domain}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${api_domain}/privkey.pem;
+    ssl_certificate /etc/synthapi/certs/origin.crt;
+    ssl_certificate_key /etc/synthapi/certs/origin.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
@@ -39,8 +39,8 @@ server {
     listen 443 ssl http2;
     server_name ~^(?<project_slug>[^.]+-mock)\.${domain_name}$;
 
-    ssl_certificate /etc/letsencrypt/live/${api_domain}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${api_domain}/privkey.pem;
+    ssl_certificate /etc/synthapi/certs/origin.crt;
+    ssl_certificate_key /etc/synthapi/certs/origin.key;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
 
