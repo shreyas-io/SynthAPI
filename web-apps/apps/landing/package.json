@@ -4,8 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --config vite.dev.config.ts --host 0.0.0.0 --port 5174",
-    "build": "XDG_CONFIG_HOME=../../.wrangler-state vite build",
+    "dev:landing": "vite dev --config vite.dev.config.ts --host 0.0.0.0 --port 5174",
+    "dev": "concurrently \"pnpm run dev:landing\" \"pnpm run docs:dev\"",
+    "build": "XDG_CONFIG_HOME=../../.wrangler-state vite build && pnpm run docs:build && cp -R docs/.vitepress/dist dist/docs",
+    "docs:dev": "vitepress dev docs --port 5175",
+    "docs:build": "vitepress build docs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "deploy": "pnpm run deploy:pages",
     "deploy:pages": "pnpm run build && sh -lc 'test -n \"$CLOUDFLARE_LANDING_PAGES_PROJECT_NAME\" && XDG_CONFIG_HOME=../../.wrangler-state wrangler pages deploy dist --project-name \"$CLOUDFLARE_LANDING_PAGES_PROJECT_NAME\"'"
@@ -25,6 +28,9 @@
   "devDependencies": {
     "@types/dagre": "^0.7.54",
     "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2"
+    "@types/react-dom": "^19.1.2",
+    "concurrently": "^10.0.3",
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.38"
   }
 }

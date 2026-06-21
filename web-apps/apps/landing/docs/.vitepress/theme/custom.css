@@ -1,0 +1,94 @@
+:root {
+  --vp-c-brand-1: #69d2e7;
+  --vp-c-brand-2: #8de6f7;
+  --vp-c-brand-3: #69d2e7;
+  --vp-c-brand-soft: rgba(105, 210, 231, 0.16);
+  --vp-c-bg: #060706;
+  --vp-c-bg-alt: #0e100f;
+  --vp-c-bg-elv: #161a18;
+  --vp-c-bg-soft: #0e100f;
+  --vp-c-text-1: #f4f7f1;
+  --vp-c-text-2: #a8b4aa;
+  --vp-c-text-3: #76847a;
+  --vp-c-border: #26302b;
+  --vp-c-divider: #26302b;
+  --vp-c-gutter: #26302b;
+
+  --vp-font-family-base:
+    "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    sans-serif;
+  --vp-font-family-mono:
+    "JetBrains Mono", "SFMono-Regular", "Cascadia Code", "Liberation Mono",
+    monospace;
+}
+
+/* Hide the appearance toggle in the nav bar */
+.VPSwitchAppearance {
+  display: none !important;
+}
+
+.VPNavBarTitle .title {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.VPNavBarTitle .logo {
+  width: 28px;
+  height: 28px;
+  margin-right: 0;
+}
+
+.VPNavBarTitle .title span:last-child {
+  display: inline-flex;
+  align-items: center;
+}
+
+.VPNavBarTitle .title span:last-child::after {
+  content: "ALPHA";
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  color: #ae81ff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-left: 0.5rem;
+}
+
+.VPNavBarTitle .title:hover {
+  color: var(--vp-c-brand-1);
+}
+
+.docs-platform-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 8px;
+  color: var(--vp-c-brand-1);
+  font-weight: 400;
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
+}
+
+.docs-platform-link:hover {
+  border-color: var(--vp-c-brand-2);
+  color: var(--vp-c-brand-2);
+  background: rgba(105, 210, 231, 0.08);
+}
+
+.VPNavBarExtra {
+  display: flex;
+  align-items: center;
+}

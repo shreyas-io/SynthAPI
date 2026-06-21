@@ -6,6 +6,7 @@ import "@xyflow/react/dist/style.css";
 const platformBaseUrl =
   import.meta.env.VITE_PLATFORM_BASE_URL?.replace(/\/$/, "") ?? "/platform";
 
+const docsUrl = "/docs/";
 const signupUrl = `${platformBaseUrl}/signup`;
 const signinUrl = `${platformBaseUrl}/signin`;
 
@@ -720,7 +721,11 @@ export function LandingPage() {
       <div className="hero-shell">
         <header className="site-header">
           <Logo />
-          <nav aria-label="Primary navigation"></nav>
+          <nav aria-label="Primary navigation">
+            <a className="header-docs-link" href={docsUrl}>
+              Docs
+            </a>
+          </nav>
         </header>
 
         <section className="hero">

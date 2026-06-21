@@ -24,7 +24,7 @@ services:
       - "9229:9229"
     volumes:
       - .:/repo
-      - node-modules:/repo/web-apps/node_modules
+      - api-root-node-modules:/repo/web-apps/node_modules
       - api-node-modules:/repo/web-apps/apps/api/node_modules
       - web-node-modules:/repo/web-apps/apps/web/node_modules
 
@@ -47,7 +47,7 @@ services:
       - "5173:5173"
     volumes:
       - .:/repo
-      - node-modules:/repo/web-apps/node_modules
+      - web-root-node-modules:/repo/web-apps/node_modules
       - api-node-modules:/repo/web-apps/apps/api/node_modules
       - web-node-modules:/repo/web-apps/apps/web/node_modules
 
@@ -67,7 +67,7 @@ services:
       - "5174:5174"
     volumes:
       - .:/repo
-      - node-modules:/repo/web-apps/node_modules
+      - landing-root-node-modules:/repo/web-apps/node_modules
       - landing-node-modules:/repo/web-apps/apps/landing/node_modules
 
   gateway:
@@ -127,7 +127,9 @@ services:
       - "8081:8081"
 
 volumes:
-  node-modules:
+  api-root-node-modules:
+  web-root-node-modules:
+  landing-root-node-modules:
   api-node-modules:
   web-node-modules:
   landing-node-modules:

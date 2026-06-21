@@ -15,5 +15,12 @@ export default defineConfig({
   },
   server: {
     allowedHosts: ["localhost"],
+    proxy: {
+      "/docs": {
+        target: "http://localhost:5175",
+        changeOrigin: true,
+        ws: true,
+      },
+    },
   },
 });

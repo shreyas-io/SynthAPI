@@ -475,20 +475,20 @@ textarea {
 
 .synth-logo-wordmark {
   color: currentColor;
-  font-size: 0.98rem;
-  font-weight: 700;
+  font-size: 0.85rem;
+  font-weight: 500;
   line-height: 1;
 }
 
 .synth-logo-alpha {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
   font-style: normal;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: #ae81ff;
   line-height: 1;
-  margin-left: 0.25rem;
+  margin-left: 0.5rem;
   align-self: center;
 }
 
