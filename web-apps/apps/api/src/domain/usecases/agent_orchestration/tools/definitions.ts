@@ -28,7 +28,13 @@ const responseSchema = {
   properties: {
     status_code: { type: "number", description: "HTTP response status code" },
     headers: { type: "object", description: "Response headers", properties: {}, required: [] },
-    body: { type: "object", description: "Response body", properties: {}, required: [] },
+    body: {
+      type: "object",
+      description:
+        "Response body. Supported types: json, text, empty, json_script, and sse.",
+      properties: {},
+      required: [],
+    },
     cookies: { type: "object", description: "Response cookies", properties: {}, required: [] },
   },
   required: ["status_code", "headers", "body", "cookies"],
