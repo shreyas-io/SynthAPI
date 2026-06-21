@@ -10,7 +10,7 @@ output "api_public_ip" {
 
 output "mock_base_url_template" {
   description = "Public mock API URL template."
-  value       = "https://{projectSlug}.${local.mock_domain}"
+  value       = "https://{projectSlug}.${var.DOMAIN_NAME}"
 }
 
 output "ecr_repository_url" {

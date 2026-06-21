@@ -111,8 +111,15 @@ cat >/opt/synthapi/bin/ensure-certs.sh <<'EOF'
 #!/bin/bash
 set -euo pipefail
 
+cert_path="/etc/letsencrypt/live/${api_domain}/fullchain.pem"
+desired_wildcard="*.${domain_name}"
+
 if [[ -f /etc/letsencrypt/live/${api_domain}/fullchain.pem ]]; then
-  exit 0
+  cert_sans="$(openssl x509 -in "$cert_path" -noout -ext subjectAltName 2>/dev/null || true)"
+
+  if grep -Fq "DNS:${api_domain}" <<<"$cert_sans" && grep -Fq "DNS:$desired_wildcard" <<<"$cert_sans"; then
+    exit 0
+  fi
 fi
 
 secret_json="$(aws secretsmanager get-secret-value \
@@ -139,18 +146,26 @@ print(f"dns_cloudflare_api_token = {token}")
 PY
 chmod 600 /root/.secrets/certbot/cloudflare.ini
 
-certbot certonly \
-  --non-interactive \
-  --agree-tos \
-  --email ${acme_email} \
+certbot_args=(
+  certonly
+  --non-interactive
+  --agree-tos
+  --email ${acme_email}
 %{ if acme_staging ~}
-  --test-cert \
+  --test-cert
 %{ endif ~}
-  --dns-cloudflare \
-  --dns-cloudflare-credentials /root/.secrets/certbot/cloudflare.ini \
-  --dns-cloudflare-propagation-seconds 120 \
-  -d ${api_domain} \
-  -d "*.${mock_domain}"
+  --dns-cloudflare
+  --dns-cloudflare-credentials /root/.secrets/certbot/cloudflare.ini
+  --dns-cloudflare-propagation-seconds 120
+  -d ${api_domain}
+  -d "$desired_wildcard"
+)
+
+if [[ -f "$cert_path" ]]; then
+  certbot_args+=(--cert-name ${api_domain} --expand)
+fi
+
+certbot "${certbot_args[@]}"
 EOF
 
 chmod +x /opt/synthapi/bin/render-api-env.sh

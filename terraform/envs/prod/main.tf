@@ -13,7 +13,6 @@ data "aws_ssm_parameter" "al2023_arm64_ami" {
 locals {
   name_prefix             = "${var.PROJECT_NAME}-${var.ENVIRONMENT}"
   api_domain              = "api.${var.DOMAIN_NAME}"
-  mock_domain             = "mock.${var.DOMAIN_NAME}"
   ecr_registry            = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.AWS_REGION}.amazonaws.com"
   api_image               = "${aws_ecr_repository.api.repository_url}:${var.API_IMAGE_TAG}"
   public_subnet_primary   = "10.0.1.0/24"
@@ -364,7 +363,7 @@ resource "aws_launch_template" "api" {
   user_data = base64encode(templatefile("${path.module}/templates/user-data.sh.tftpl", {
     region                 = var.AWS_REGION
     api_domain             = local.api_domain
-    mock_domain            = local.mock_domain
+    domain_name            = var.DOMAIN_NAME
     acme_email             = var.ACME_EMAIL
     acme_staging           = var.ACME_STAGING
     bootstrap_secret_arn   = var.BOOTSTRAP_SECRET_ARN
@@ -374,7 +373,7 @@ resource "aws_launch_template" "api" {
     eip_allocation_id      = aws_eip.api.allocation_id
     nginx_config = templatefile("${path.module}/templates/nginx.conf.tftpl", {
       api_domain  = local.api_domain
-      mock_domain = local.mock_domain
+      domain_name = var.DOMAIN_NAME
     })
     api_service_unit = templatefile("${path.module}/templates/synthapi-api.service.tftpl", {
       api_image = local.api_image

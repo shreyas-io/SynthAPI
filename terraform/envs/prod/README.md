@@ -9,7 +9,7 @@ DNS for `DOMAIN_NAME` is expected to be hosted in Cloudflare. The EC2 bootstrap 
 Create these Cloudflare DNS records manually:
 
 - `api.<domain>`: `A` record to the Terraform-created Elastic IP.
-- `*.mock.<domain>`: `A` record to the same Elastic IP.
+- `*.<domain>`: `A` record to the same Elastic IP for public mock hosts like `<project-slug>-mock.<domain>`.
 - `platform.<domain>`: `CNAME` record to the Cloudflare Pages target, if needed.
 
 ## Secrets Ownership
