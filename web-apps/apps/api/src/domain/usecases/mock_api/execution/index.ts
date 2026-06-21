@@ -20,6 +20,8 @@ import type {
 import type { MockApiEt } from "../../../entities/mock_api";
 import type { MockApiResponseEt } from "../../../entities/mock_api_response/mock_api_response";
 import { z } from "zod";
+import { logger } from "../../../../infrastructure/logger";
+import { ProjectsUsecase } from "../projects";
 
 type PublicMockApiRequest = {
   project_slug: string;
@@ -296,6 +298,7 @@ export async function executePublicMockApi(
     .executeTakeFirst();
 
   if (!project) {
+    logger.error(`Project not found with ID: ${request_data.project_slug}`);
     throw new MockApiException({
       public_message: "Project not found.",
       status_code: HttpStatusCode.NOT_FOUND,
