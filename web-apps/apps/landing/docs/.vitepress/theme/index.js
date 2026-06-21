@@ -3,15 +3,15 @@ import { h } from 'vue'
 import './custom.css'
 
 const getPlatformHref = () => {
-  if (typeof window === 'undefined') {
-    return '/platform/'
-  }
-
   const configuredBaseUrl =
     import.meta.env.VITE_PLATFORM_BASE_URL?.replace(/\/$/, '')
 
   if (configuredBaseUrl) {
     return `${configuredBaseUrl}/`
+  }
+
+  if (typeof window === 'undefined') {
+    return '/platform/'
   }
 
   if (window.location.port === '5175') {
