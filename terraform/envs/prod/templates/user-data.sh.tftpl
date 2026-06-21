@@ -108,8 +108,8 @@ cat >/opt/synthapi/bin/ensure-certs.sh <<'EOF'
 set -euo pipefail
 
 cert_dir="/etc/synthapi/certs"
-cert_path="${cert_dir}/origin.crt"
-key_path="${cert_dir}/origin.key"
+cert_path="$${cert_dir}/origin.crt"
+key_path="$${cert_dir}/origin.key"
 desired_wildcard="*.${domain_name}"
 renew_window_seconds=$((30 * 24 * 60 * 60))
 
