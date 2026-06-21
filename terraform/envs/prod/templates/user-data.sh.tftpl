@@ -85,8 +85,18 @@ cat >/opt/synthapi/bin/pull-api-image.sh <<'EOF'
 #!/bin/bash
 set -euo pipefail
 
-aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ecr_registry}
-docker pull ${api_image}
+for attempt in {1..5}; do
+  if aws ecr get-login-password --region ${region} \
+    | docker login --username AWS --password-stdin ${ecr_registry} \
+    && docker pull ${api_image}; then
+    exit 0
+  fi
+
+  sleep "$((attempt * 10))"
+done
+
+echo "failed to pull API image after retries" >&2
+exit 1
 EOF
 
 cat >/opt/synthapi/bin/associate-eip.sh <<'EOF'
@@ -224,7 +234,6 @@ chmod +x /opt/synthapi/bin/associate-eip.sh
 chmod +x /opt/synthapi/bin/ensure-certs.sh
 
 /opt/synthapi/bin/associate-eip.sh
-/opt/synthapi/bin/pull-api-image.sh
 /opt/synthapi/bin/ensure-certs.sh
 
 nginx -t
