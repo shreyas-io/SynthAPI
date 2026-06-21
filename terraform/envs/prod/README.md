@@ -10,6 +10,27 @@ Create these Cloudflare DNS records manually:
 - `*.<domain>`: proxied `A` record to the same Elastic IP for public mock hosts like `<project-slug>-mock.<domain>`.
 - `platform.<domain>`: `CNAME` record to the Cloudflare Pages target, if needed.
 
+## Pritunl VPN
+
+The stack creates a persistent spot `t3.nano` Pritunl host in a public subnet. It installs Pritunl, MongoDB, OpenVPN, and WireGuard on Amazon Linux 2023, disables source/destination checks, and allows the Pritunl security group to reach RDS on `5432`.
+
+Restrict `PRITUNL_ALLOWED_CIDRS` in Terraform variables before production use. The default allows `443/tcp` and `1194/udp` from anywhere.
+
+After apply, open the `pritunl_console_url` output, complete Pritunl setup, and create a server with:
+
+- Virtual network: a CIDR outside the VPC, for example `10.30.0.0/24`.
+- Route: `10.0.0.0/16`.
+- NAT route: enabled.
+
+Use SSM Session Manager to get initial Pritunl setup values from the instance:
+
+```bash
+sudo pritunl setup-key
+sudo pritunl default-password
+```
+
+Then connect to the VPN and point TablePlus directly at the full RDS endpoint with SSL mode `VERIFY-FULL` and the AWS RDS `global-bundle.pem` as the CA cert.
+
 ## Secrets Ownership
 
 - AWS Secrets Manager bootstrap secret JSON:

@@ -10,6 +10,10 @@ data "aws_ssm_parameter" "al2023_arm64_ami" {
   name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-arm64"
 }
 
+data "aws_ssm_parameter" "al2023_x86_64_ami" {
+  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+}
+
 locals {
   name_prefix             = "${var.PROJECT_NAME}-${var.ENVIRONMENT}"
   api_domain              = "api.${var.DOMAIN_NAME}"
@@ -155,6 +159,39 @@ resource "aws_security_group" "ec2" {
   })
 }
 
+resource "aws_security_group" "pritunl" {
+  name        = "${local.name_prefix}-pritunl"
+  description = "Public access to the SynthAPI Pritunl VPN host"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    description = "Pritunl web console"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = var.PRITUNL_ALLOWED_CIDRS
+  }
+
+  ingress {
+    description = "Pritunl OpenVPN"
+    from_port   = 1194
+    to_port     = 1194
+    protocol    = "udp"
+    cidr_blocks = var.PRITUNL_ALLOWED_CIDRS
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.name_prefix}-pritunl"
+  })
+}
+
 resource "aws_security_group" "rds" {
   name        = "${local.name_prefix}-rds"
   description = "PostgreSQL access from the SynthAPI EC2 instance"
@@ -166,6 +203,14 @@ resource "aws_security_group" "rds" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [aws_security_group.ec2.id]
+  }
+
+  ingress {
+    description     = "PostgreSQL from Pritunl VPN host"
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.pritunl.id]
   }
 
   egress {
@@ -310,6 +355,23 @@ resource "aws_iam_instance_profile" "ec2" {
   role = aws_iam_role.ec2.name
 }
 
+resource "aws_iam_role" "pritunl" {
+  name               = "${local.name_prefix}-pritunl"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_role_policy_attachment" "pritunl_ssm" {
+  role       = aws_iam_role.pritunl.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+resource "aws_iam_instance_profile" "pritunl" {
+  name = "${local.name_prefix}-pritunl"
+  role = aws_iam_role.pritunl.name
+}
+
 resource "aws_launch_template" "api" {
   name_prefix   = "${local.name_prefix}-api-"
   image_id      = data.aws_ssm_parameter.al2023_arm64_ami.value
@@ -427,4 +489,41 @@ resource "aws_autoscaling_group" "api" {
     value               = "terraform"
     propagate_at_launch = true
   }
+}
+
+resource "aws_instance" "pritunl" {
+  ami                         = data.aws_ssm_parameter.al2023_x86_64_ami.value
+  instance_type               = var.PRITUNL_INSTANCE_TYPE
+  subnet_id                   = aws_subnet.public.id
+  vpc_security_group_ids      = [aws_security_group.pritunl.id]
+  associate_public_ip_address = true
+  iam_instance_profile        = aws_iam_instance_profile.pritunl.name
+  source_dest_check           = false
+
+  metadata_options {
+    http_tokens = "required"
+  }
+
+  instance_market_options {
+    market_type = "spot"
+
+    spot_options {
+      instance_interruption_behavior = "stop"
+      spot_instance_type             = "persistent"
+    }
+  }
+
+  root_block_device {
+    volume_size           = 12
+    volume_type           = "gp3"
+    encrypted             = true
+    delete_on_termination = true
+  }
+
+  user_data = templatefile("${path.module}/templates/pritunl-user-data.sh.tftpl", {})
+
+  tags = merge(local.common_tags, {
+    Name    = "${local.name_prefix}-pritunl"
+    Service = "${local.name_prefix}-pritunl"
+  })
 }

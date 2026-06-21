@@ -1,3 +1,4 @@
 DOMAIN_NAME                 = "example.com"
 DB_PASSWORD                 = "replace-me"
 BOOTSTRAP_SECRET_ARN        = "arn:aws:secretsmanager:us-east-1:123456789012:secret:synthapi-infisical-bootstrap"
+PRITUNL_ALLOWED_CIDRS       = ["203.0.113.10/32"]

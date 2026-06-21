@@ -19,6 +19,7 @@ Optional overrides:
 - `TERRAFORM_ROLE_NAME`
 - `API_DEPLOY_ROLE_NAME`
 - `ECR_REPOSITORY_NAME`
+- `LOCAL_POWER_USER_NAME`
 
 ## Apply
 
@@ -35,6 +36,23 @@ Use the outputs to configure:
 - `TF_STATE_BUCKET` in GitHub, using the prod state bucket managed by this stack
 - `AWS_TERRAFORM_ROLE_ARN` in GitHub
 - `AWS_API_DEPLOY_ROLE_ARN` in GitHub
+
+## Local Power User
+
+Bootstrap also creates `LOCAL_POWER_USER_NAME` with AWS managed `PowerUserAccess`.
+It does not create an access key because Terraform would store that secret in state.
+
+Create local credentials from an existing admin session:
+
+```bash
+aws iam create-access-key --user-name "$(terraform -chdir=terraform/bootstrap output -raw local_power_user_name)"
+```
+
+Then configure your local AWS profile:
+
+```bash
+aws configure --profile synthapi-power-user
+```
 
 ## Destroy
 

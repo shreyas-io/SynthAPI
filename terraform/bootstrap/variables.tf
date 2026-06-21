@@ -32,6 +32,12 @@ variable "API_DEPLOY_ROLE_NAME" {
   default     = "synthapi-api-deploy"
 }
 
+variable "LOCAL_POWER_USER_NAME" {
+  description = "IAM user name for local developer PowerUser access."
+  type        = string
+  default     = "shreyas"
+}
+
 variable "ECR_REPOSITORY_NAME" {
   description = "Name of the API ECR repository used by the deploy role."
   type        = string

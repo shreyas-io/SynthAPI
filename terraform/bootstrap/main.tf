@@ -153,3 +153,39 @@ resource "aws_iam_role_policy" "api_deploy" {
   role   = aws_iam_role.api_deploy.id
   policy = data.aws_iam_policy_document.api_deploy.json
 }
+
+resource "aws_iam_user" "local_power_user" {
+  name          = var.LOCAL_POWER_USER_NAME
+  force_destroy = false
+
+  tags = local.common_tags
+}
+
+resource "aws_iam_user_policy_attachment" "local_power_user" {
+  user       = aws_iam_user.local_power_user.name
+  policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/PowerUserAccess"
+}
+
+data "aws_iam_policy_document" "local_power_user_self_manage" {
+  statement {
+    effect = "Allow"
+
+    actions = [
+      "iam:ChangePassword",
+      "iam:CreateAccessKey",
+      "iam:DeleteAccessKey",
+      "iam:GetAccessKeyLastUsed",
+      "iam:GetUser",
+      "iam:ListAccessKeys",
+      "iam:UpdateAccessKey",
+    ]
+
+    resources = [aws_iam_user.local_power_user.arn]
+  }
+}
+
+resource "aws_iam_user_policy" "local_power_user_self_manage" {
+  name   = "${var.LOCAL_POWER_USER_NAME}-self-manage"
+  user   = aws_iam_user.local_power_user.name
+  policy = data.aws_iam_policy_document.local_power_user_self_manage.json
+}
