@@ -23,6 +23,34 @@ const getPlatformHref = () => {
 
 export default {
   extends: DefaultTheme,
+  enhanceApp({ router }) {
+    if (typeof window !== 'undefined') {
+      const patchLogoLink = () => {
+        setTimeout(() => {
+          const titleLink = document.querySelector('.VPNavBarTitle .title')
+          if (titleLink && titleLink.getAttribute('href') !== '/') {
+            titleLink.setAttribute('href', '/')
+          }
+        }, 50)
+      }
+
+      window.addEventListener('DOMContentLoaded', patchLogoLink)
+
+      const originalOnAfterRouteChanged = router.onAfterRouteChanged
+      router.onAfterRouteChanged = (to) => {
+        if (originalOnAfterRouteChanged) originalOnAfterRouteChanged(to)
+        patchLogoLink()
+      }
+
+      window.addEventListener('click', (e) => {
+        const titleLink = e.target.closest('.VPNavBarTitle .title')
+        if (titleLink) {
+          e.preventDefault()
+          window.location.href = '/'
+        }
+      })
+    }
+  },
   Layout: () =>
     h(DefaultTheme.Layout, null, {
       'nav-bar-content-after': () =>
