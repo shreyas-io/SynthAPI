@@ -182,7 +182,7 @@ PY
 
 http_code="$(curl -sS \
   -o "$tmpdir/response.json" \
-  -w "%{http_code}" \
+  -w "%%{http_code}" \
   "https://api.cloudflare.com/client/v4/certificates" \
   -H "Authorization: Bearer $cf_api_token" \
   -H "Content-Type: application/json" \
