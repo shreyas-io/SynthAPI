@@ -24,7 +24,7 @@ variable "DOMAIN_NAME" {
 variable "INSTANCE_TYPE" {
   description = "EC2 instance type for the API host."
   type        = string
-  default     = "t4g.nano"
+  default     = "t4g.micro"
 }
 
 variable "PRITUNL_INSTANCE_TYPE" {
