@@ -385,10 +385,6 @@ resource "aws_launch_template" "api" {
     http_tokens = "required"
   }
 
-  instance_market_options {
-    market_type = "spot"
-  }
-
   network_interfaces {
     associate_public_ip_address = true
     security_groups             = [aws_security_group.ec2.id]
