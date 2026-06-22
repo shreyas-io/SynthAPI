@@ -446,14 +446,25 @@ resource "aws_launch_template" "api" {
 resource "aws_autoscaling_group" "api" {
   name                = "${local.name_prefix}-api"
   min_size            = 1
-  max_size            = 1
+  max_size            = 2
   desired_capacity    = 1
   health_check_type   = "EC2"
   vpc_zone_identifier = [aws_subnet.public.id, aws_subnet.public_b.id]
 
   launch_template {
     id      = aws_launch_template.api.id
-    version = "$Latest"
+    version = aws_launch_template.api.latest_version
+  }
+
+  instance_refresh {
+    strategy = "Rolling"
+
+    preferences {
+      min_healthy_percentage = 100
+      max_healthy_percentage = 200
+      instance_warmup        = 300
+      skip_matching          = true
+    }
   }
 
   tag {

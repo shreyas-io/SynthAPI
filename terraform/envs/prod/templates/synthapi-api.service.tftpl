@@ -1,7 +1,9 @@
 [Unit]
 Description=SynthAPI API container
-After=network-online.target
+Requires=docker.service
+After=network-online.target docker.service
 Wants=network-online.target
+StartLimitIntervalSec=0
 
 [Service]
 Type=simple
