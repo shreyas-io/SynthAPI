@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://getsynthapi.com/</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/quickstart</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/platform-overview/</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/platform-overview/responses-and-ordering</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/platform-overview/rule-trees-and-post-actions</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/core-concepts/mock-apis</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/core-concepts/variables</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/agent/capabilities</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/examples/blog-crud-api</loc>
+  </url>
+  <url>
+    <loc>https://getsynthapi.com/docs/examples/llm-sse-events</loc>
+  </url>
+</urlset>
