@@ -8,6 +8,7 @@ import {
 } from "../../../../domain/exceptions/exception";
 import { streamTextViaPortkey } from "../hosts/portkey_stream";
 import { streamTextViaOpenRouter } from "../hosts/openrouter_stream";
+import { createPromptCacheOptions } from "../prompt_cache";
 import { toModelMessages } from "../to_model_messages";
 import { toToolSet } from "../to_tool_set";
 
@@ -52,7 +53,10 @@ export function streamTextViaOpenAI(ctx: AppContext) {
 
       const result =
         request.config.model_host === "portkey"
-          ? await streamTextViaPortkey(ctx, sharedInput)
+          ? await streamTextViaPortkey(ctx, {
+              ...sharedInput,
+              promptCache: createPromptCacheOptions(sharedInput),
+            })
           : await streamTextViaOpenRouter(ctx, sharedInput);
 
       return result;

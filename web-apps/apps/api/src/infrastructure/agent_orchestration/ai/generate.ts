@@ -10,6 +10,7 @@ import { generateTextViaCloudflareWorkersAi } from "./hosts/cloudflare";
 import { generateTextViaOllama } from "./hosts/ollama";
 import { generateTextViaOpenRouter } from "./hosts/openrouter";
 import { generateTextViaPortkey } from "./hosts/portkey";
+import { createPromptCacheOptions } from "./prompt_cache";
 import { toModelMessages } from "./to_model_messages";
 import { toToolSet } from "./to_tool_set";
 
@@ -43,9 +44,21 @@ export function generateText(ctx: AppContext) {
 
       switch (request.config.model_provider) {
         case "nvidia":
-        case "openai":
           if (request.config.model_host === "portkey") {
             return (await generateTextViaPortkey(ctx, input)).text;
+          }
+          if (request.config.model_host === "openrouter") {
+            return (await generateTextViaOpenRouter(ctx, input)).text;
+          }
+          break;
+        case "openai":
+          if (request.config.model_host === "portkey") {
+            return (
+              await generateTextViaPortkey(ctx, {
+                ...input,
+                promptCache: createPromptCacheOptions(input),
+              })
+            ).text;
           }
           if (request.config.model_host === "openrouter") {
             return (await generateTextViaOpenRouter(ctx, input)).text;

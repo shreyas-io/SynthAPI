@@ -3,6 +3,7 @@ import { generateText, type ModelMessage, type ToolSet } from "ai";
 
 import type { AppContext } from "../../../../server";
 import { AgentOrchestrationException } from "../../../../domain/exceptions/exception";
+import type { PromptCacheOptions } from "../prompt_cache";
 
 export type PortkeyInput = {
   model: string;
@@ -15,6 +16,7 @@ export type PortkeyInput = {
   thinking?: {
     effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
   };
+  promptCache?: PromptCacheOptions;
 };
 
 export async function generateTextViaPortkey(
@@ -44,12 +46,20 @@ export async function generateTextViaPortkey(
       ...(input.maxOutputTokens === undefined
         ? {}
         : { maxOutputTokens: input.maxOutputTokens }),
-      ...(input.thinking === undefined
+      ...(input.thinking === undefined && input.promptCache === undefined
         ? {}
         : {
             providerOptions: {
               openai: {
-                reasoningEffort: input.thinking.effort,
+                ...(input.thinking === undefined
+                  ? {}
+                  : { reasoningEffort: input.thinking.effort }),
+                ...(input.promptCache === undefined
+                  ? {}
+                  : {
+                      promptCacheKey: input.promptCache.key,
+                      promptCacheRetention: input.promptCache.retention,
+                    }),
               },
             },
           }),

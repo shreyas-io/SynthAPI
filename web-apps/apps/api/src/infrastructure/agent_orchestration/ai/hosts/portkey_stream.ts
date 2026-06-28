@@ -10,6 +10,7 @@ import {
 
 import type { AppContext } from "../../../../server";
 import { AgentOrchestrationException } from "../../../../domain/exceptions/exception";
+import type { PromptCacheOptions } from "../prompt_cache";
 
 export type PortkeyStreamInput = {
   model: string;
@@ -22,6 +23,7 @@ export type PortkeyStreamInput = {
   thinking?: {
     effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
   };
+  promptCache?: PromptCacheOptions;
 };
 
 function createStreamTextResult(
@@ -44,12 +46,20 @@ function createStreamTextResult(
     ...(input.maxOutputTokens === undefined
       ? {}
       : { maxOutputTokens: input.maxOutputTokens }),
-    ...(input.thinking === undefined
+    ...(input.thinking === undefined && input.promptCache === undefined
       ? {}
       : {
           providerOptions: {
             openai: {
-              reasoningEffort: input.thinking.effort,
+              ...(input.thinking === undefined
+                ? {}
+                : { reasoningEffort: input.thinking.effort }),
+              ...(input.promptCache === undefined
+                ? {}
+                : {
+                    promptCacheKey: input.promptCache.key,
+                    promptCacheRetention: input.promptCache.retention,
+                  }),
             },
           },
         }),
