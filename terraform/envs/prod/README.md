@@ -41,7 +41,7 @@ The Cloudflare token must be able to create Origin CA certificates for the accou
   - MailerSend and AI-provider values
 
 Terraform outputs `rds_endpoint`; copy that into Infisical as `DB_HOST` after the first apply.
-Set `REDIS_URL` in Infisical from your Upstash Redis database details. Use the `rediss://...` URL for TLS.
+Terraform outputs `valkey_endpoint`; set `REDIS_URL` in Infisical to `redis://<valkey_endpoint>:6379` after the first apply.
 
 ## Backend Init
 
