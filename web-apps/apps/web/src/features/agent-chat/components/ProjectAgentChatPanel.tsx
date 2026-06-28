@@ -46,6 +46,7 @@ type ProjectAgentChatPanelProps = {
 
 const EMPTY_FORM_PROMPTS: FormPrompt[] = [];
 const STREAM_RENDER_INTERVAL_MS = 80;
+const AUTO_SCROLL_BOTTOM_THRESHOLD_PX = 80;
 
 const THINKING_MESSAGES = [
   "Consulting the token committee",
@@ -408,6 +409,8 @@ export function ProjectAgentChatPanel({
   );
   const streamFlushTimeoutRef = useRef<number | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+  const shouldStickToBottomRef = useRef(true);
+  const forceNextTranscriptScrollRef = useRef(true);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   const setUrlChatId = (chatId: string | null) => {
@@ -492,13 +495,44 @@ export function ProjectAgentChatPanel({
     return THINKING_MESSAGES[index] ?? "Thinking";
   };
 
+  const isTranscriptNearBottom = (transcript: HTMLDivElement) =>
+    transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight <=
+    AUTO_SCROLL_BOTTOM_THRESHOLD_PX;
+
+  const scrollTranscriptToBottom = (transcript: HTMLDivElement) => {
+    transcript.scrollTop = transcript.scrollHeight;
+    shouldStickToBottomRef.current = true;
+  };
+
+  const forceNextTranscriptScroll = () => {
+    forceNextTranscriptScrollRef.current = true;
+    shouldStickToBottomRef.current = true;
+  };
+
+  const handleTranscriptScroll = () => {
+    const transcript = transcriptRef.current;
+    if (!transcript) {
+      return;
+    }
+
+    shouldStickToBottomRef.current = isTranscriptNearBottom(transcript);
+  };
+
   useLayoutEffect(() => {
     const transcript = transcriptRef.current;
     if (!transcript) {
       return;
     }
 
-    transcript.scrollTop = transcript.scrollHeight;
+    if (
+      forceNextTranscriptScrollRef.current ||
+      shouldStickToBottomRef.current ||
+      isTranscriptNearBottom(transcript)
+    ) {
+      scrollTranscriptToBottom(transcript);
+    }
+
+    forceNextTranscriptScrollRef.current = false;
   }, [
     selectedChatId,
     events.dataUpdatedAt,
@@ -571,6 +605,7 @@ export function ProjectAgentChatPanel({
         closeStream();
         setSelectedChatId(null);
         setIsDraftChat(true);
+        forceNextTranscriptScroll();
         setStreamMessagesSnapshot([]);
         setStreamError(null);
       }
@@ -584,6 +619,7 @@ export function ProjectAgentChatPanel({
     closeStream();
     setSelectedChatId(chatIdFromUrl);
     setIsDraftChat(false);
+    forceNextTranscriptScroll();
     setStreamMessagesSnapshot(streamMessagesRef.current);
     setStreamError(null);
   }, [
@@ -865,6 +901,7 @@ export function ProjectAgentChatPanel({
       setMessage("");
     }
     setPromptAnswers({});
+    forceNextTranscriptScroll();
     setStreamMessagesSnapshot([
       {
         id: `optimistic-user-${Date.now()}`,
@@ -919,6 +956,7 @@ export function ProjectAgentChatPanel({
     closeStream();
     setSelectedChatId(null);
     setIsDraftChat(true);
+    forceNextTranscriptScroll();
     setStreamMessagesSnapshot([]);
     setStreamError(null);
     setIsChatListOpen(false);
@@ -929,6 +967,7 @@ export function ProjectAgentChatPanel({
     closeStream();
     setSelectedChatId(chatId);
     setIsDraftChat(false);
+    forceNextTranscriptScroll();
     setStreamMessagesSnapshot([]);
     setStreamError(null);
     setIsChatListOpen(false);
@@ -1009,7 +1048,11 @@ export function ProjectAgentChatPanel({
         </div>
       </div>
 
-      <div className="agent-chat-transcript" ref={transcriptRef}>
+      <div
+        className="agent-chat-transcript"
+        onScroll={handleTranscriptScroll}
+        ref={transcriptRef}
+      >
         {!selectedChatId && !isDraftChat && (
           <p className="agent-placeholder">
             Start a new chat or select an existing chat to work with this
