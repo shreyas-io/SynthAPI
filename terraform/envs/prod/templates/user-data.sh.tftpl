@@ -2,7 +2,49 @@
 set -euo pipefail
 
 dnf update -y
-dnf install -y awscli nginx docker python3 openssl
+dnf install -y awscli nginx docker python3 openssl curl
+
+mkdir -p /opt/synthapi/bin
+mkdir -p /etc/synthapi/certs
+mkdir -p /etc/systemd/system
+
+cat >/opt/synthapi/bin/mark-asg-unhealthy.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+reason="$${1:-instance health check failed}"
+echo "$reason; marking instance unhealthy in Auto Scaling" >&2
+
+token="$(curl -fsS \
+  --connect-timeout 5 \
+  --max-time 10 \
+  -X PUT "http://169.254.169.254/latest/api/token" \
+  -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")"
+
+instance_id="$(curl -fsS \
+  --connect-timeout 5 \
+  --max-time 10 \
+  -H "X-aws-ec2-metadata-token: $${token}" \
+  "http://169.254.169.254/latest/meta-data/instance-id")"
+
+aws autoscaling set-instance-health \
+  --region ${region} \
+  --instance-id "$${instance_id}" \
+  --health-status Unhealthy \
+  --no-should-respect-grace-period
+EOF
+
+chmod +x /opt/synthapi/bin/mark-asg-unhealthy.sh
+
+mark_bootstrap_unhealthy() {
+  exit_code=$?
+  set +e
+
+  /opt/synthapi/bin/mark-asg-unhealthy.sh "bootstrap failed with exit code $exit_code"
+  exit "$exit_code"
+}
+
+trap mark_bootstrap_unhealthy ERR
 
 if ! swapon --show | grep -q '/swapfile'; then
   fallocate -l 2G /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=2048
@@ -16,10 +58,6 @@ if ! grep -q '^/swapfile ' /etc/fstab; then
 fi
 
 systemctl enable --now docker
-
-mkdir -p /opt/synthapi/bin
-mkdir -p /etc/synthapi/certs
-mkdir -p /etc/systemd/system
 
 cat >/etc/nginx/conf.d/synthapi.conf <<'NGINX'
 ${nginx_config}
@@ -36,6 +74,31 @@ CERTSERVICE
 cat >/etc/systemd/system/synthapi-cert-renew.timer <<'CERTTIMER'
 ${cert_renew_timer_unit}
 CERTTIMER
+
+cat >/etc/systemd/system/synthapi-api-health.service <<'HEALTHSERVICE'
+[Unit]
+Description=Check SynthAPI API health endpoint
+Wants=network-online.target synthapi-api.service
+After=network-online.target synthapi-api.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/synthapi/bin/check-api-health.sh
+HEALTHSERVICE
+
+cat >/etc/systemd/system/synthapi-api-health.timer <<'HEALTHTIMER'
+[Unit]
+Description=Periodic SynthAPI API health check
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+AccuracySec=15s
+Unit=synthapi-api-health.service
+
+[Install]
+WantedBy=timers.target
+HEALTHTIMER
 
 cat >/opt/synthapi/bin/render-api-env.sh <<'EOF'
 #!/bin/bash
@@ -96,6 +159,58 @@ for attempt in {1..5}; do
 done
 
 echo "failed to pull API image after retries" >&2
+exit 1
+EOF
+
+cat >/opt/synthapi/bin/check-api-health.sh <<'EOF'
+#!/bin/bash
+set -euo pipefail
+
+state_dir="/run/synthapi"
+failure_file="$state_dir/api-health.failures"
+failure_threshold=3
+
+mkdir -p "$state_dir"
+
+if health_json="$(curl -fsS \
+  --connect-timeout 5 \
+  --max-time 10 \
+  "http://127.0.0.1:3001/health")" \
+  && python3 - "$health_json" <<'PY'
+import json
+import sys
+
+payload = json.loads(sys.argv[1])
+if payload.get("app") != "ok":
+    raise SystemExit(1)
+
+db = payload.get("db") or {}
+if db.get("status") != "ok" or str(db.get("result")) != "1":
+    raise SystemExit(1)
+PY
+then
+  rm -f "$failure_file"
+  exit 0
+fi
+
+failures=0
+if [[ -f "$failure_file" ]]; then
+  failures="$(cat "$failure_file" 2>/dev/null || echo 0)"
+fi
+
+if ! [[ "$failures" =~ ^[0-9]+$ ]]; then
+  failures=0
+fi
+
+failures=$((failures + 1))
+printf '%s\n' "$failures" >"$failure_file"
+
+echo "API health check failed ($failures/$failure_threshold)" >&2
+
+if (( failures >= failure_threshold )); then
+  /opt/synthapi/bin/mark-asg-unhealthy.sh "API health check failed $failures consecutive times"
+fi
+
 exit 1
 EOF
 
@@ -235,6 +350,7 @@ EOF
 
 chmod +x /opt/synthapi/bin/render-api-env.sh
 chmod +x /opt/synthapi/bin/pull-api-image.sh
+chmod +x /opt/synthapi/bin/check-api-health.sh
 chmod +x /opt/synthapi/bin/associate-eip.sh
 chmod +x /opt/synthapi/bin/ensure-certs.sh
 
@@ -247,3 +363,6 @@ systemctl daemon-reload
 systemctl enable --now synthapi-api.service
 systemctl enable --now nginx
 systemctl enable --now synthapi-cert-renew.timer
+systemctl enable --now synthapi-api-health.timer
+
+trap - ERR

@@ -325,6 +325,16 @@ data "aws_iam_policy_document" "ec2_runtime" {
     effect = "Allow"
 
     actions = [
+      "autoscaling:SetInstanceHealth",
+    ]
+
+    resources = ["*"]
+  }
+
+  statement {
+    effect = "Allow"
+
+    actions = [
       "ec2:AssociateAddress",
       "ec2:DescribeAddresses",
       "ec2:DescribeInstances",
