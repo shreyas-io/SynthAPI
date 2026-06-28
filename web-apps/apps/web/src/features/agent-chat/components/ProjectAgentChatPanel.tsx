@@ -47,6 +47,7 @@ type ProjectAgentChatPanelProps = {
 const EMPTY_FORM_PROMPTS: FormPrompt[] = [];
 const STREAM_RENDER_INTERVAL_MS = 80;
 const AUTO_SCROLL_BOTTOM_THRESHOLD_PX = 80;
+const STREAM_IDLE_THINKING_DELAY_MS = 2000;
 
 const THINKING_MESSAGES = [
   "Consulting the token committee",
@@ -399,6 +400,7 @@ export function ProjectAgentChatPanel({
   const [streamMessages, setStreamMessages] = useState<ChatMessage[]>([]);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
+  const [isStreamIdle, setIsStreamIdle] = useState(false);
   const [thinkingMessage, setThinkingMessage] = useState(THINKING_MESSAGES[0]);
   const [thinkingDotCount, setThinkingDotCount] = useState(1);
   const [isChatListOpen, setIsChatListOpen] = useState(() => !chatIdFromUrl);
@@ -408,6 +410,7 @@ export function ProjectAgentChatPanel({
     null,
   );
   const streamFlushTimeoutRef = useRef<number | null>(null);
+  const streamIdleTimeoutRef = useRef<number | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const shouldStickToBottomRef = useRef(true);
   const forceNextTranscriptScrollRef = useRef(true);
@@ -489,6 +492,7 @@ export function ProjectAgentChatPanel({
     isSending &&
     streamMessages.length > 0 &&
     !streamMessages.some((message) => message.role !== "user");
+  const shouldShowThinking = isWaitingForStream || isStreamIdle;
 
   const randomThinkingMessage = () => {
     const index = Math.floor(Math.random() * THINKING_MESSAGES.length);
@@ -570,13 +574,14 @@ export function ProjectAgentChatPanel({
   useEffect(() => {
     return () => {
       clearStreamFlush();
+      clearStreamIdleTimer();
       pendingAssistantDeltaRef.current = null;
       streamRef.current?.close();
     };
   }, []);
 
   useEffect(() => {
-    if (!isWaitingForStream) {
+    if (!shouldShowThinking) {
       return;
     }
 
@@ -593,7 +598,7 @@ export function ProjectAgentChatPanel({
       window.clearInterval(intervalId);
       window.clearInterval(dotsIntervalId);
     };
-  }, [isWaitingForStream]);
+  }, [shouldShowThinking]);
 
   useEffect(() => {
     if (!chatIdFromUrl) {
@@ -632,6 +637,8 @@ export function ProjectAgentChatPanel({
 
   const closeStream = () => {
     clearStreamFlush();
+    clearStreamIdleTimer();
+    setIsStreamIdle(false);
     pendingAssistantDeltaRef.current = null;
     streamRef.current?.close();
     streamRef.current = null;
@@ -645,6 +652,24 @@ export function ProjectAgentChatPanel({
 
     window.clearTimeout(streamFlushTimeoutRef.current);
     streamFlushTimeoutRef.current = null;
+  };
+
+  const clearStreamIdleTimer = () => {
+    if (streamIdleTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(streamIdleTimeoutRef.current);
+    streamIdleTimeoutRef.current = null;
+  };
+
+  const markStreamActivity = () => {
+    clearStreamIdleTimer();
+    setIsStreamIdle(false);
+    streamIdleTimeoutRef.current = window.setTimeout(() => {
+      setIsStreamIdle(true);
+      streamIdleTimeoutRef.current = null;
+    }, STREAM_IDLE_THINKING_DELAY_MS);
   };
 
   const setStreamMessagesSnapshot = (messages: ChatMessage[]) => {
@@ -733,6 +758,8 @@ export function ProjectAgentChatPanel({
   const settleStream = async (chatId: string) => {
     streamRef.current?.close();
     streamRef.current = null;
+    clearStreamIdleTimer();
+    setIsStreamIdle(false);
     flushBufferedStreamMessages();
     await refetchTranscript(chatId);
     setStreamMessagesSnapshot([]);
@@ -742,6 +769,7 @@ export function ProjectAgentChatPanel({
   const startTurnStream = (chatId: string, turnId: string) => {
     streamRef.current?.close();
     setActiveTurnId(turnId);
+    markStreamActivity();
     setStreamError(null);
 
     const stream = new EventSource(
@@ -756,6 +784,7 @@ export function ProjectAgentChatPanel({
       const parsed = JSON.parse(event.data) as ChatStreamEvent;
       const payload = payloadFromStreamEvent(parsed);
       const assistantDeltaId = `stream-assistant-delta-${turnId}`;
+      markStreamActivity();
 
       switch (payload.type) {
         case "assistant-delta":
@@ -1116,9 +1145,7 @@ export function ProjectAgentChatPanel({
               </>
             ) : (
               <>
-                {message.role === "assistant" && message.transient ? (
-                  <p className="agent-streaming-text">{message.text}</p>
-                ) : message.role === "assistant" ? (
+                {message.role === "assistant" ? (
                   <MarkdownMessage markdown={message.text} />
                 ) : (
                   <p>{message.text}</p>
@@ -1127,11 +1154,11 @@ export function ProjectAgentChatPanel({
             )}
           </article>
         ))}
-        {isWaitingForStream && (
+        {shouldShowThinking && (
           <article className="agent-message agent-message-system agent-thinking-message">
             <span aria-hidden="true" className="agent-thinking-spinner" />
             <span>
-              {thinkingMessage}
+              {isStreamIdle ? "Thinking" : thinkingMessage}
               {".".repeat(thinkingDotCount)}
             </span>
           </article>
