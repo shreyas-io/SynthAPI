@@ -23,16 +23,6 @@ output "rds_endpoint" {
   value       = aws_db_instance.postgres.address
 }
 
-output "pritunl_public_ip" {
-  description = "Public IP address for the Pritunl VPN host."
-  value       = aws_instance.pritunl.public_ip
-}
-
-output "pritunl_console_url" {
-  description = "Pritunl web console URL."
-  value       = "https://${aws_instance.pritunl.public_dns}"
-}
-
 output "bootstrap_secret_arn" {
   description = "Secrets Manager secret ARN consumed by the EC2 bootstrap."
   value       = var.BOOTSTRAP_SECRET_ARN

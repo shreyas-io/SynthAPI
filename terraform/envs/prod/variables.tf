@@ -27,18 +27,6 @@ variable "INSTANCE_TYPE" {
   default     = "t4g.micro"
 }
 
-variable "PRITUNL_INSTANCE_TYPE" {
-  description = "EC2 instance type for the Pritunl VPN host."
-  type        = string
-  default     = "t3.nano"
-}
-
-variable "PRITUNL_ALLOWED_CIDRS" {
-  description = "CIDR ranges allowed to reach the Pritunl web console and VPN listener."
-  type        = list(string)
-  default     = ["0.0.0.0/0"]
-}
-
 variable "DB_INSTANCE_CLASS" {
   description = "RDS instance class."
   type        = string
