@@ -4,6 +4,8 @@ import type { getSecrets } from "../../config/secrets";
 
 type Secrets = Awaited<ReturnType<typeof getSecrets>>;
 
+const BULLMQ_KEY_PREFIX = "{synthapi}";
+
 export const createBullMqConnection = (
   secrets: Pick<Secrets, "REDIS_URL">,
 ): ConnectionOptions => {
@@ -29,6 +31,7 @@ export const createJobQueue = (
 ) =>
   new Queue(name, {
     connection,
+    prefix: BULLMQ_KEY_PREFIX,
     defaultJobOptions: {
       attempts: 3,
       backoff: {
@@ -47,5 +50,6 @@ export const createJobWorker = (
 ) =>
   new Worker(name, processor, {
     connection,
+    prefix: BULLMQ_KEY_PREFIX,
     concurrency: 1,
   });
