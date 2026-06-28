@@ -45,6 +45,7 @@ type ProjectAgentChatPanelProps = {
 };
 
 const EMPTY_FORM_PROMPTS: FormPrompt[] = [];
+const STREAM_RENDER_INTERVAL_MS = 80;
 
 const THINKING_MESSAGES = [
   "Consulting the token committee",
@@ -401,6 +402,11 @@ export function ProjectAgentChatPanel({
   const [thinkingDotCount, setThinkingDotCount] = useState(1);
   const [isChatListOpen, setIsChatListOpen] = useState(() => !chatIdFromUrl);
   const streamRef = useRef<EventSource | null>(null);
+  const streamMessagesRef = useRef<ChatMessage[]>([]);
+  const pendingAssistantDeltaRef = useRef<{ id: string; text: string } | null>(
+    null,
+  );
+  const streamFlushTimeoutRef = useRef<number | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -471,9 +477,7 @@ export function ProjectAgentChatPanel({
           ...(hasCanonicalActiveTurnSettled ? [] : streamMessages),
         ]
       : canonicalMessages;
-  const transcriptScrollKey = messages
-    .map((message) => `${message.id}:${message.text.length}`)
-    .join("|");
+  const lastMessage = messages.at(-1);
   const isSending =
     createChatMutation.isPending ||
     createTurnMutation.isPending ||
@@ -495,7 +499,13 @@ export function ProjectAgentChatPanel({
     }
 
     transcript.scrollTop = transcript.scrollHeight;
-  }, [selectedChatId, events.dataUpdatedAt, transcriptScrollKey]);
+  }, [
+    selectedChatId,
+    events.dataUpdatedAt,
+    messages.length,
+    lastMessage?.id,
+    lastMessage?.text.length,
+  ]);
 
   useLayoutEffect(() => {
     const input = messageInputRef.current;
@@ -525,6 +535,8 @@ export function ProjectAgentChatPanel({
 
   useEffect(() => {
     return () => {
+      clearStreamFlush();
+      pendingAssistantDeltaRef.current = null;
       streamRef.current?.close();
     };
   }, []);
@@ -559,7 +571,7 @@ export function ProjectAgentChatPanel({
         closeStream();
         setSelectedChatId(null);
         setIsDraftChat(true);
-        setStreamMessages([]);
+        setStreamMessagesSnapshot([]);
         setStreamError(null);
       }
       return;
@@ -572,7 +584,7 @@ export function ProjectAgentChatPanel({
     closeStream();
     setSelectedChatId(chatIdFromUrl);
     setIsDraftChat(false);
-    setStreamMessages((current) => (current.length > 0 ? current : []));
+    setStreamMessagesSnapshot(streamMessagesRef.current);
     setStreamError(null);
   }, [
     activeTurnId,
@@ -583,9 +595,99 @@ export function ProjectAgentChatPanel({
   ]);
 
   const closeStream = () => {
+    clearStreamFlush();
+    pendingAssistantDeltaRef.current = null;
     streamRef.current?.close();
     streamRef.current = null;
     setActiveTurnId(null);
+  };
+
+  const clearStreamFlush = () => {
+    if (streamFlushTimeoutRef.current === null) {
+      return;
+    }
+
+    window.clearTimeout(streamFlushTimeoutRef.current);
+    streamFlushTimeoutRef.current = null;
+  };
+
+  const setStreamMessagesSnapshot = (messages: ChatMessage[]) => {
+    pendingAssistantDeltaRef.current = null;
+    streamMessagesRef.current = messages;
+    setStreamMessages(messages);
+  };
+
+  const applyPendingAssistantDelta = () => {
+    const pending = pendingAssistantDeltaRef.current;
+    if (!pending) {
+      return;
+    }
+
+    pendingAssistantDeltaRef.current = null;
+    const existing = streamMessagesRef.current.find(
+      (message) => message.id === pending.id,
+    );
+
+    if (!existing) {
+      streamMessagesRef.current = [
+        ...streamMessagesRef.current,
+        {
+          id: pending.id,
+          role: "assistant",
+          text: pending.text,
+          transient: true,
+        },
+      ];
+      return;
+    }
+
+    streamMessagesRef.current = streamMessagesRef.current.map((message) =>
+      message.id === pending.id && message.role === "assistant"
+        ? { ...message, text: `${message.text}${pending.text}` }
+        : message,
+    );
+  };
+
+  const flushStreamMessages = () => {
+    streamFlushTimeoutRef.current = null;
+    applyPendingAssistantDelta();
+    setStreamMessages([...streamMessagesRef.current]);
+  };
+
+  const scheduleStreamFlush = () => {
+    if (streamFlushTimeoutRef.current !== null) {
+      return;
+    }
+
+    streamFlushTimeoutRef.current = window.setTimeout(
+      flushStreamMessages,
+      STREAM_RENDER_INTERVAL_MS,
+    );
+  };
+
+  const updateBufferedStreamMessages = (
+    updater: (messages: ChatMessage[]) => ChatMessage[],
+  ) => {
+    applyPendingAssistantDelta();
+    streamMessagesRef.current = updater(streamMessagesRef.current);
+    scheduleStreamFlush();
+  };
+
+  const bufferAssistantDelta = (id: string, text: string) => {
+    const pending = pendingAssistantDeltaRef.current;
+    if (pending?.id === id) {
+      pending.text += text;
+    } else {
+      applyPendingAssistantDelta();
+      pendingAssistantDeltaRef.current = { id, text };
+    }
+
+    scheduleStreamFlush();
+  };
+
+  const flushBufferedStreamMessages = () => {
+    clearStreamFlush();
+    flushStreamMessages();
   };
 
   const refetchTranscript = async (chatId: string) => {
@@ -595,8 +697,9 @@ export function ProjectAgentChatPanel({
   const settleStream = async (chatId: string) => {
     streamRef.current?.close();
     streamRef.current = null;
+    flushBufferedStreamMessages();
     await refetchTranscript(chatId);
-    setStreamMessages([]);
+    setStreamMessagesSnapshot([]);
     setActiveTurnId(null);
   };
 
@@ -620,32 +723,10 @@ export function ProjectAgentChatPanel({
 
       switch (payload.type) {
         case "assistant-delta":
-          setStreamMessages((current) => {
-            const existing = current.find(
-              (message) => message.id === assistantDeltaId,
-            );
-
-            if (!existing) {
-              return [
-                ...current,
-                {
-                  id: assistantDeltaId,
-                  role: "assistant",
-                  text: payload.text,
-                  transient: true,
-                },
-              ];
-            }
-
-            return current.map((message) =>
-              message.id === assistantDeltaId && message.role === "assistant"
-                ? { ...message, text: `${message.text}${payload.text}` }
-                : message,
-            );
-          });
+          bufferAssistantDelta(assistantDeltaId, payload.text);
           break;
         case "assistant-message":
-          setStreamMessages((current) => [
+          updateBufferedStreamMessages((current) => [
             ...current,
             {
               id: `stream-assistant-message-${turnId}`,
@@ -654,9 +735,10 @@ export function ProjectAgentChatPanel({
               transient: true,
             },
           ]);
+          flushBufferedStreamMessages();
           break;
         case "tool-input":
-          setStreamMessages((current) => [
+          updateBufferedStreamMessages((current) => [
             ...current,
             {
               id: `stream-tool-input-${turnId}-${current.length}`,
@@ -669,9 +751,10 @@ export function ProjectAgentChatPanel({
               transient: true,
             },
           ]);
+          flushBufferedStreamMessages();
           break;
         case "tool-result":
-          setStreamMessages((current) => [
+          updateBufferedStreamMessages((current) => [
             ...current.map((message) =>
               message.role === "tool" &&
               message.toolUseId === payload.output.tool_use_id
@@ -697,9 +780,10 @@ export function ProjectAgentChatPanel({
               transient: true,
             },
           ]);
+          flushBufferedStreamMessages();
           break;
         case "compaction-started":
-          setStreamMessages((current) => [
+          updateBufferedStreamMessages((current) => [
             ...current,
             {
               id: `stream-compaction-started-${turnId}-${current.length}`,
@@ -710,9 +794,10 @@ export function ProjectAgentChatPanel({
               transient: true,
             },
           ]);
+          flushBufferedStreamMessages();
           break;
         case "chat-compacted":
-          setStreamMessages((current) => [
+          updateBufferedStreamMessages((current) => [
             ...current,
             {
               id: `stream-chat-compacted-${turnId}-${current.length}`,
@@ -723,9 +808,10 @@ export function ProjectAgentChatPanel({
               transient: true,
             },
           ]);
+          flushBufferedStreamMessages();
           break;
         case "tool-input-start":
-          setStreamMessages((current) => [
+          updateBufferedStreamMessages((current) => [
             ...current,
             {
               id: `stream-tool-start-${turnId}-${current.length}`,
@@ -736,6 +822,7 @@ export function ProjectAgentChatPanel({
               transient: true,
             },
           ]);
+          flushBufferedStreamMessages();
           break;
         case "reasoning-delta":
           break;
@@ -778,7 +865,7 @@ export function ProjectAgentChatPanel({
       setMessage("");
     }
     setPromptAnswers({});
-    setStreamMessages([
+    setStreamMessagesSnapshot([
       {
         id: `optimistic-user-${Date.now()}`,
         role: "user",
@@ -803,7 +890,7 @@ export function ProjectAgentChatPanel({
 
       startTurnStream(chat.id, turn.id);
     } catch (error) {
-      setStreamMessages([]);
+      setStreamMessagesSnapshot([]);
       setStreamError(error instanceof Error ? error.message : String(error));
     }
   };
@@ -832,7 +919,7 @@ export function ProjectAgentChatPanel({
     closeStream();
     setSelectedChatId(null);
     setIsDraftChat(true);
-    setStreamMessages([]);
+    setStreamMessagesSnapshot([]);
     setStreamError(null);
     setIsChatListOpen(false);
     setUrlChatId(null);
@@ -842,7 +929,7 @@ export function ProjectAgentChatPanel({
     closeStream();
     setSelectedChatId(chatId);
     setIsDraftChat(false);
-    setStreamMessages([]);
+    setStreamMessagesSnapshot([]);
     setStreamError(null);
     setIsChatListOpen(false);
     setUrlChatId(chatId);
@@ -986,7 +1073,9 @@ export function ProjectAgentChatPanel({
               </>
             ) : (
               <>
-                {message.role === "assistant" ? (
+                {message.role === "assistant" && message.transient ? (
+                  <p className="agent-streaming-text">{message.text}</p>
+                ) : message.role === "assistant" ? (
                   <MarkdownMessage markdown={message.text} />
                 ) : (
                   <p>{message.text}</p>

@@ -2268,6 +2268,11 @@ h3 {
   opacity: 0.85;
 }
 
+.agent-streaming-text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .agent-message pre {
   overflow-x: auto;
   margin: 0;

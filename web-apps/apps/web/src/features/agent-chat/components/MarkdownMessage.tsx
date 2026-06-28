@@ -1,4 +1,5 @@
-import { Fragment, ReactNode } from "react";
+import { Fragment, memo, useMemo } from "react";
+import type { ReactNode } from "react";
 
 type Block =
   | { type: "heading"; level: 1 | 2 | 3; text: string }
@@ -180,10 +181,16 @@ const parseInline = (text: string): ReactNode[] => {
   return nodes;
 };
 
-export function MarkdownMessage({ markdown }: { markdown: string }) {
+export const MarkdownMessage = memo(function MarkdownMessage({
+  markdown,
+}: {
+  markdown: string;
+}) {
+  const blocks = useMemo(() => parseBlocks(markdown), [markdown]);
+
   return (
     <div className="agent-markdown">
-      {parseBlocks(markdown).map((block, index) => {
+      {blocks.map((block, index) => {
         switch (block.type) {
           case "heading": {
             const Heading = `h${block.level}` as const;
@@ -257,4 +264,4 @@ export function MarkdownMessage({ markdown }: { markdown: string }) {
       })}
     </div>
   );
-}
+});
