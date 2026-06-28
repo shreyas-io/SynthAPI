@@ -5,6 +5,7 @@ import type { ProjectEt } from "../domain/entities/project";
 import {
   ApiGatewayException,
   HttpStatusCode,
+  MockApiException,
 } from "../domain/exceptions/exception";
 import { AgentChatUsecase } from "../domain/usecases/agent_orchestration/agent_chat";
 import { ChatSessionsUsecase } from "../domain/usecases/agent_orchestration/chat_sessions";
@@ -234,14 +235,23 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
       await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(chat_sessions, project_id, chat_id);
 
+      const limit = getNumber(req.query.limit, 50);
+      if (limit > 100) {
+        throw new MockApiException({
+          public_message: `Limit should be less than or equal to 100`,
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+      const offset = getNumber(req.query.offset, 0);
+
       const [result, prompts] = await Promise.all([
         chat_turn_events.getChatTurnEvents(
           { chat_session_ids: [chat_id] },
           {
-            limit: getNumber(req.query.limit, 50),
-            offset: getNumber(req.query.offset, 0),
+            limit,
+            offset,
           },
-          { by: "sequence", order: "asc" },
+          { by: "id", order: "desc" },
         ),
         chat_turn_events.getUnansweredPrompts(chat_id),
       ]);

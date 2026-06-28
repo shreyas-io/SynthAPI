@@ -25,7 +25,7 @@ type ChatTurnEventPagination = {
   offset: number;
 };
 type ChatTurnEventSort = {
-  by: "sequence" | "created_at";
+  by: "id";
   order: "asc" | "desc";
 };
 
@@ -33,9 +33,9 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
   const hasFilters = (filters: ChatTurnEventFilters) =>
     Boolean(
       filters.ids?.length ||
-        filters.chat_turn_ids?.length ||
-        filters.chat_session_ids?.length ||
-        filters.event_types?.length,
+      filters.chat_turn_ids?.length ||
+      filters.chat_session_ids?.length ||
+      filters.event_types?.length,
     );
 
   const countChatTurnEvents = async (
@@ -153,9 +153,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
       }
 
       if (filters.chat_session_ids?.length) {
-        recordsQuery = recordsQuery
-          .orderBy(sql`chat_session_turns.created_at`, "asc")
-          .selectAll("chat_turn_events");
+        recordsQuery = recordsQuery.selectAll("chat_turn_events");
       } else {
         recordsQuery = recordsQuery.selectAll();
       }
