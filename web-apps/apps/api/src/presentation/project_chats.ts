@@ -283,7 +283,7 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
       const existingEvents = await chat_turn_events.getChatTurnEvents(
         { chat_turn_ids: [turn_id] },
         { limit: 100, offset: 0 },
-        { by: "sequence", order: "asc" },
+        { by: "id", order: "desc" },
       );
 
       for (const event of existingEvents.records) {
