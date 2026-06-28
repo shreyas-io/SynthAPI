@@ -1,0 +1,4 @@
+interface:
+  display_name: "SynthAPI API Analysis"
+  short_description: "Analyze SynthAPI API structure and data flow"
+  default_prompt: "Use $synthapi-api-analysis to explain the API functionality and update the Mermaid data-flow diagram."
