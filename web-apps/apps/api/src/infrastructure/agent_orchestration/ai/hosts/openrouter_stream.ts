@@ -150,6 +150,9 @@ function createAsyncIterableStream<T>(
         await cleanup(true);
         throw error;
       },
+      [Symbol.asyncIterator]() {
+        return this;
+      },
     };
   };
 
