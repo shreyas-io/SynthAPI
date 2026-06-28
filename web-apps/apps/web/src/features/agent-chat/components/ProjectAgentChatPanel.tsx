@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 import { getChatTurnStreamUrl } from "../api/agent_chat_api";
 import {
@@ -388,6 +388,7 @@ export function ProjectAgentChatPanel({
   projectId,
 }: ProjectAgentChatPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const chatIdFromUrl = searchParams.get("chat_id");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(
     chatIdFromUrl,
@@ -412,6 +413,7 @@ export function ProjectAgentChatPanel({
   const streamFlushTimeoutRef = useRef<number | null>(null);
   const streamIdleTimeoutRef = useRef<number | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
+  const prevScrollHeightRef = useRef<number | null>(null);
   const shouldStickToBottomRef = useRef(true);
   const forceNextTranscriptScrollRef = useRef(true);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -451,19 +453,24 @@ export function ProjectAgentChatPanel({
 
   const createTurnMutation = useCreateChatTurn(projectId);
 
+  const rawRecords = useMemo(
+    () => events.data?.pages.flatMap((page) => page.records) ?? [],
+    [events.data?.pages],
+  );
+
   const canonicalMessages = useMemo(
-    () => messagesFromEvents(events.data?.records ?? []),
-    [events.data?.records],
+    () => messagesFromEvents([...rawRecords].reverse()),
+    [rawRecords],
   );
   const hasCanonicalActiveTurnSettled = Boolean(
     activeTurnId &&
-      events.data?.records.some(
+      rawRecords.some(
         (event) =>
           event.chat_turn_id === activeTurnId &&
           event.payload.type === "turn-settled",
       ),
   );
-  const activePrompts = events.data?.prompts ?? EMPTY_FORM_PROMPTS;
+  const activePrompts = events.data?.pages[0]?.prompts ?? EMPTY_FORM_PROMPTS;
   const promptSignature = useMemo(
     () =>
       activePrompts.map((prompt, index) => promptKey(prompt, index)).join("|"),
@@ -519,12 +526,32 @@ export function ProjectAgentChatPanel({
       return;
     }
 
+    if (
+      transcript.scrollTop === 0 &&
+      events.hasNextPage &&
+      !events.isFetchingNextPage
+    ) {
+      prevScrollHeightRef.current = transcript.scrollHeight;
+      void events.fetchNextPage();
+    }
+
     shouldStickToBottomRef.current = isTranscriptNearBottom(transcript);
   };
 
   useLayoutEffect(() => {
     const transcript = transcriptRef.current;
     if (!transcript) {
+      return;
+    }
+
+    if (
+      prevScrollHeightRef.current !== null &&
+      events.isSuccess &&
+      !events.isFetchingNextPage
+    ) {
+      transcript.scrollTop =
+        transcript.scrollHeight - prevScrollHeightRef.current;
+      prevScrollHeightRef.current = null;
       return;
     }
 
@@ -543,6 +570,8 @@ export function ProjectAgentChatPanel({
     messages.length,
     lastMessage?.id,
     lastMessage?.text.length,
+    events.isSuccess,
+    events.isFetchingNextPage,
   ]);
 
   useLayoutEffect(() => {
@@ -818,7 +847,29 @@ export function ProjectAgentChatPanel({
           ]);
           flushBufferedStreamMessages();
           break;
-        case "tool-result":
+        case "tool-result": {
+          if (payload.output.status === "success") {
+            const label = payload.output.label;
+            const content = payload.output.content as Record<string, unknown>;
+            if (label === "create_mock_api" || label === "update_mock_api") {
+              if (typeof content.id === "string") {
+                navigate(`/projects/${projectId}/mock-apis/${content.id}`);
+              }
+            } else if (
+              label === "create_mock_api_response" ||
+              label === "update_mock_api_response"
+            ) {
+              if (
+                typeof content.id === "string" &&
+                typeof content.mock_api_id === "string"
+              ) {
+                navigate(
+                  `/projects/${projectId}/mock-apis/${content.mock_api_id}/responses/${content.id}`,
+                );
+              }
+            }
+          }
+
           updateBufferedStreamMessages((current) => [
             ...current.map((message) =>
               message.role === "tool" &&
@@ -847,6 +898,7 @@ export function ProjectAgentChatPanel({
           ]);
           flushBufferedStreamMessages();
           break;
+        }
         case "compaction-started":
           updateBufferedStreamMessages((current) => [
             ...current,

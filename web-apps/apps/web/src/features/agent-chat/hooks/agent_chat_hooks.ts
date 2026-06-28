@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "../../../lib/query/query_keys";
 import {
@@ -20,11 +20,18 @@ export const useProjectChatEvents = (
   chatId: string | null,
   enabled: boolean,
 ) => {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: chatId
       ? queryKeys.projectChatEvents(projectId, chatId)
       : ["projects", projectId, "chats", "none", "events"],
-    queryFn: () => listChatTurnEvents(projectId, chatId!),
+    queryFn: ({ pageParam }) =>
+      listChatTurnEvents(projectId, chatId!, { limit: 100, offset: pageParam as number }),
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      return lastPage.records.length === 100
+        ? allPages.length * 100
+        : undefined;
+    },
     enabled,
   });
 };
