@@ -741,7 +741,8 @@ export function LandingPage() {
             </p>
             <div className="hero-actions">
               <a className="primary-action" href={signupUrl}>
-                Start building for free
+                <span>Start building for free</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="primary-action-icon"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
               </a>
             </div>
             <div className="hero-proof" aria-label="Product capabilities">
@@ -796,7 +797,8 @@ export function LandingPage() {
         <h2>Give your frontend, QA, and partners an API that is ready now.</h2>
         <p className="cta-subtitle">Stop waiting on backend teams. Start simulating real APIs in minutes.</p>
         <a className="primary-action" href={signupUrl}>
-          Start building mocks
+          <span>Start building mocks</span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="1.2em" height="1.2em" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="primary-action-icon"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
         </a>
       </section>
     </main>

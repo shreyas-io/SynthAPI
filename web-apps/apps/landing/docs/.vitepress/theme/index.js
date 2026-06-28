@@ -62,7 +62,28 @@ export default {
             target: '_blank',
             rel: 'noreferrer',
           },
-          'Continue to platform',
+          [
+            h('span', 'Continue to platform'),
+            h(
+              'svg',
+              {
+                xmlns: 'http://www.w3.org/2000/svg',
+                width: '14',
+                height: '14',
+                viewBox: '0 0 24 24',
+                fill: 'none',
+                stroke: 'currentColor',
+                'stroke-width': '2.5',
+                'stroke-linecap': 'round',
+                'stroke-linejoin': 'round',
+                class: 'docs-platform-link-icon',
+              },
+              [
+                h('line', { x1: '5', y1: '12', x2: '19', y2: '12' }),
+                h('polyline', { points: '12 5 19 12 12 19' }),
+              ]
+            ),
+          ]
         ),
     }),
 }

@@ -249,7 +249,6 @@ h3 {
   gap: 0.75rem;
 }
 
-.primary-action,
 .secondary-action {
   display: inline-flex;
   align-items: center;
@@ -261,46 +260,74 @@ h3 {
 }
 
 .primary-action {
-  background: var(--cyan);
-  color: #11160f;
-  box-shadow:
-    0 0 32px rgba(105, 210, 231, 0.62),
-    0 0 18px rgba(105, 210, 231, 0.5),
-    0 0 6px rgba(255, 255, 255, 0.55) inset;
-  animation: primary-action-glow 2.8s ease-in-out infinite;
-  transition: all 0.2s ease-in-out;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 6px;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--cyan), #ae81ff);
+  background-size: 200% 200%;
+  color: var(--bg) !important;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 0 10px var(--cyan-dim);
+  overflow: hidden;
+  z-index: 1;
 }
 
-@keyframes primary-action-glow {
-  0%,
-  100% {
-    box-shadow:
-      0 0 22px rgba(105, 210, 231, 0.46),
-      0 0 12px rgba(105, 210, 231, 0.36),
-      0 0 5px rgba(255, 255, 255, 0.45) inset;
-  }
-
-  50% {
-    box-shadow:
-      0 0 38px rgba(105, 210, 231, 0.72),
-      0 0 24px rgba(105, 210, 231, 0.58),
-      0 0 8px rgba(255, 255, 255, 0.62) inset;
-  }
+.hero-actions .primary-action {
+  min-height: 42px;
+  padding: 0.6rem 1.5rem;
+  font-size: 1.05rem;
+  border-radius: 8px;
+  gap: 8px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .primary-action,
-  .nav-point {
-    animation: none;
-  }
+.primary-action::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transition: left 0.5s ease;
+  z-index: -1;
 }
 
 .primary-action:hover {
-  background: var(--cyan-soft);
-  box-shadow:
-    0 0 32px rgba(105, 210, 231, 0.6),
-    0 0 16px rgba(105, 210, 231, 0.5);
+  background-position: 100% 50%;
+  box-shadow: 0 0 16px rgba(174, 129, 255, 0.5), 0 0 8px rgba(105, 210, 231, 0.5);
   transform: translateY(-1px);
+}
+
+.primary-action:hover::before {
+  left: 100%;
+}
+
+.primary-action-icon {
+  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.primary-action:hover .primary-action-icon {
+  transform: translateX(3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-point {
+    animation: none;
+  }
 }
 
 .secondary-action {
