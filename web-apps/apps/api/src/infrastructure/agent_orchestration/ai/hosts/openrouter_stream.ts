@@ -163,6 +163,16 @@ function withoutFreeSuffix(model: string): string {
   return model.endsWith(":free") ? model.slice(0, -":free".length) : model;
 }
 
+function isUserVisibleStreamPart(part: TextStreamPart<any>): boolean {
+  return (
+    part.type === "text-delta" ||
+    part.type === "reasoning-delta" ||
+    part.type === "tool-input-start" ||
+    part.type === "tool-call" ||
+    part.type === "tool-result"
+  );
+}
+
 function withFreeModelFallback(
   ctx: AppContext,
   input: OpenRouterStreamInput,
@@ -184,15 +194,26 @@ function withFreeModelFallback(
   }
 
   async function* fullStreamWithFallback(): AsyncIterable<TextStreamPart<any>> {
-    let yieldedPart = false;
+    let yieldedVisiblePart = false;
 
     try {
       for await (const part of primaryResult.fullStream) {
-        yieldedPart = true;
+        if (part.type === "error" && !yieldedVisiblePart) {
+          const fallback = getFallbackResult();
+          for await (const fallbackPart of fallback.fullStream) {
+            yield fallbackPart;
+          }
+          return;
+        }
+
+        if (isUserVisibleStreamPart(part)) {
+          yieldedVisiblePart = true;
+        }
+
         yield part;
       }
     } catch (error) {
-      if (yieldedPart) {
+      if (yieldedVisiblePart) {
         throw error;
       }
 
