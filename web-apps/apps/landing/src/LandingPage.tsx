@@ -902,9 +902,7 @@ export function LandingPage() {
 
       <section className="cta-section">
         <h2>
-          <span className="hash" aria-hidden="true">
-            #
-          </span>
+          <span className="hash" aria-hidden="true"></span>
           Reach out
         </h2>
         <p className="cta-subtitle">
