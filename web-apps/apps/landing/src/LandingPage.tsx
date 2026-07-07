@@ -306,7 +306,7 @@ const heroFeatures = [
       ],
     },
   },
-] as const satisfies readonly LandingFeature[];
+] satisfies readonly LandingFeature[];
 
 function LogoIcon() {
   return (
