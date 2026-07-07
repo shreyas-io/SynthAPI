@@ -38,7 +38,7 @@ export const ContactUsecase = (ctx: AppContext) => {
   const createContactMessage = async (input: {
     name: string;
     email: string;
-    company?: string;
+    company?: string | undefined;
     message: string;
   }): Promise<ContactMessage> => {
     await assertRateLimit();
