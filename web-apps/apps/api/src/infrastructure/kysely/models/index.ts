@@ -5,6 +5,7 @@ import type { ChatSessionTurnsTable } from "./agent_orchestration/chat_session_t
 import type { ChatSessionsTable } from "./agent_orchestration/chat_sessions";
 import type { ChatTurnBlobsTable } from "./agent_orchestration/chat_turn_blobs";
 import type { ChatTurnEventsTable } from "./agent_orchestration/chat_turn_events";
+import type { ContactMessagesTable } from "./contact_messages";
 import type { MockApiResponsesTable } from "./mock_api_responses";
 import type { MockApisTable } from "./mock_apis";
 import type {
@@ -68,4 +69,5 @@ export type Database = {
   chat_turn_blobs: ChatTurnBlobsTable;
   chat_session_turns: ChatSessionTurnsTable;
   chat_turn_events: ChatTurnEventsTable;
+  contact_messages: ContactMessagesTable;
 };
