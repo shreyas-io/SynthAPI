@@ -10,16 +10,19 @@
   --vp-c-text-1: #f4f7f1;
   --vp-c-text-2: #a8b4aa;
   --vp-c-text-3: #76847a;
-  --vp-c-border: #26302b;
-  --vp-c-divider: #26302b;
-  --vp-c-gutter: #26302b;
+  --vp-c-border: #1e2a23;
+  --vp-c-divider: #161d19;
+  --vp-c-gutter: #161d19;
 
   --vp-font-family-base:
-    "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     sans-serif;
   --vp-font-family-mono:
     "JetBrains Mono", "SFMono-Regular", "Cascadia Code", "Liberation Mono",
     monospace;
+
+  --vp-sidebar-width: 260px;
+  --vp-layout-max-width: 1400px;
 }
 
 /* Hide the appearance toggle in the nav bar */
@@ -65,53 +68,62 @@
   color: var(--vp-c-brand-1);
 }
 
+/* Minimal doc typography tweaks */
+.VPDoc {
+  line-height: 1.65;
+}
+
+.VPDoc h1 {
+  letter-spacing: -0.02em;
+}
+
+.VPDoc h2 {
+  letter-spacing: -0.01em;
+  border-top: 1px solid var(--vp-c-divider);
+  padding-top: 1.25rem;
+}
+
+.VPSidebarItem .text {
+  font-size: 0.92rem;
+}
+
+.VPSidebarItem .VPLink {
+  border-radius: 6px;
+}
+
+.VPSidebarItem .VPLink.active {
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-2);
+}
+
+.VPNav {
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
 .docs-platform-link {
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0.3rem 0.75rem;
+  gap: 0.35rem;
+  min-height: 2rem;
+  padding: 0 0.75rem;
   font-size: 0.85rem;
-  border: none;
-  border-radius: 6px;
-  gap: 6px;
-  background: linear-gradient(135deg, var(--vp-c-brand-1), #ae81ff);
-  background-size: 200% 200%;
-  color: var(--vp-c-bg) !important;
   font-weight: 600;
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 8px;
+  background: rgba(105, 210, 231, 0.08);
+  color: var(--vp-c-brand-2) !important;
   text-decoration: none;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  box-shadow: 0 0 10px var(--vp-c-brand-soft);
-  overflow: hidden;
-  z-index: 1;
-}
-
-.docs-platform-link::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(255, 255, 255, 0.4),
-    transparent
-  );
-  transition: left 0.5s ease;
-  z-index: -1;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .docs-platform-link:hover {
-  background-position: 100% 50%;
-  box-shadow: 0 0 16px rgba(174, 129, 255, 0.5), 0 0 8px rgba(105, 210, 231, 0.5);
+  background: rgba(105, 210, 231, 0.18);
+  border-color: var(--vp-c-brand-2);
   transform: translateY(-1px);
-}
-
-.docs-platform-link:hover::before {
-  left: 100%;
 }
 
 .VPNavBarExtra {
@@ -120,8 +132,8 @@
 }
 
 .docs-platform-link-icon {
-  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: transform 0.18s ease;
 }
 .docs-platform-link:hover .docs-platform-link-icon {
-  transform: translateX(3px);
+  transform: translateX(2px);
 }

@@ -6,6 +6,11 @@ export default defineConfig({
   base: '/docs/',
   appearance: 'force-dark', // Force dark mode matching the landing page
   srcDir: '.', // Source directory is docs
+  head: [
+    ['link', { rel: 'preconnect', href: 'https://fonts.googleapis.com' }],
+    ['link', { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' }],
+    ['link', { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500;600&display=swap' }],
+  ],
   themeConfig: {
     logo: '/favicon.svg',
     colorModeSwitch: false, // Hide the dark mode toggle
