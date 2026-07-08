@@ -1,10 +1,10 @@
 import type React from "react";
 import { useState } from "react";
-
 const platformBaseUrl =
   import.meta.env.VITE_PLATFORM_BASE_URL?.replace(/\/$/, "") ?? "/platform";
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "";
+const apiBaseUrl =
+  import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") ?? "https://api.getsynthapi.com";
 
 const docsUrl = "/docs/";
 const signupUrl = `${platformBaseUrl}/signup`;
