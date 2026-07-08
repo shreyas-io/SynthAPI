@@ -13,6 +13,7 @@ import {
 import { Avatar } from "../../components/atoms/Avatar";
 import { SynthLogo } from "../../components/atoms/SynthLogo";
 import { useSelectedOrganization } from "../context/OrganizationContext";
+import { AgentChatProvider } from "../../features/agent-chat/context/AgentChatContext";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -159,9 +160,11 @@ export function AppLayout() {
         </div>
       </header>
       <div className="app-main">
-        <div className="app-content-wrapper">
-          <Outlet />
-        </div>
+        <AgentChatProvider>
+          <div className="app-content-wrapper">
+            <Outlet />
+          </div>
+        </AgentChatProvider>
       </div>
     </div>
   );

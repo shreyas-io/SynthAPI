@@ -3,6 +3,7 @@ import { Save, Trash2 } from "lucide-react";
 
 import { Button } from "../../../components/atoms/Button";
 import { JsonInput } from "../../../components/atoms/JsonInput";
+import { RequestTemplatePicker } from "../../../components/molecules/RequestTemplatePicker";
 import { createId } from "../../../lib/id/create_id";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
 import type {
@@ -340,19 +341,31 @@ function PostActionForm({
               />
             </label>
           ) : action.type === "unset" ? null : (
-            <label>
-              Value
-              <input
-                placeholder="e.g. {{request.body.id}}"
-                value={String((action as any).value ?? "")}
-                onChange={(e) =>
+            <>
+              <label>
+                Value
+                <input
+                  placeholder="e.g. {{request.body.value.email}}"
+                  value={String((action as any).value ?? "")}
+                  onChange={(e) =>
+                    onChange({
+                      ...action,
+                      value: e.target.value,
+                    } as PostResponseAction)
+                  }
+                />
+              </label>
+              <RequestTemplatePicker
+                label="Action value template"
+                insertLabel="Append"
+                onInsert={(template) =>
                   onChange({
                     ...action,
-                    value: e.target.value,
+                    value: `${String((action as any).value ?? "")}${template}`,
                   } as PostResponseAction)
                 }
               />
-            </label>
+            </>
           )}
         </div>
       )}
@@ -734,15 +747,18 @@ export function MockApiResponseEditor({
               </div>
               {bodyType !== "empty" &&
                 (bodyType === "json" ? (
-                  <JsonInput
-                    label="Response body"
-                    value={bodyText}
-                    error={bodyJsonError}
-                    onChange={(value) => {
-                      setBodyText(value);
-                      setBodyJsonError(null);
-                    }}
-                  />
+                  <>
+                    <RequestTemplatePicker label="Response body templates" />
+                    <JsonInput
+                      label="Response body"
+                      value={bodyText}
+                      error={bodyJsonError}
+                      onChange={(value) => {
+                        setBodyText(value);
+                        setBodyJsonError(null);
+                      }}
+                    />
+                  </>
                 ) : bodyType === "json_script" ? (
                   <JsonInput
                     label="Python JSON builder script"
@@ -871,13 +887,22 @@ export function MockApiResponseEditor({
                     )}
                   </div>
                 ) : (
-                  <label>
-                    Response body
-                    <textarea
-                      value={bodyText}
-                      onChange={(e) => setBodyText(e.target.value)}
+                  <>
+                    <RequestTemplatePicker
+                      label="Response body templates"
+                      insertLabel="Append"
+                      onInsert={(template) =>
+                        setBodyText((current) => `${current}${template}`)
+                      }
                     />
-                  </label>
+                    <label>
+                      Response body
+                      <textarea
+                        value={bodyText}
+                        onChange={(e) => setBodyText(e.target.value)}
+                      />
+                    </label>
+                  </>
                 ))}
               <KeyValueRows
                 label="Headers"

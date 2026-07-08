@@ -407,6 +407,14 @@ describe("App", () => {
     );
     render(<App />);
 
+    fireEvent.change(await screen.findByLabelText("Body type"), {
+      target: { value: "text" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Append" }));
+    expect(screen.getByLabelText("Response body")).toHaveValue(
+      "{{request.body.value.email}}",
+    );
+
     fireEvent.click(await screen.findByRole("button", { name: /Save/i }));
 
     await waitFor(() => {
@@ -415,6 +423,22 @@ describe("App", () => {
         expect.objectContaining({ method: "PUT" }),
       );
     });
+    const updateCall = fetchMock.mock.calls.find(
+      ([url, init]) =>
+        String(url).endsWith(
+          "/api/v1/mock-apis/api-1/responses/response-1",
+        ) && init?.method === "PUT",
+    );
+    expect(JSON.parse(String(updateCall?.[1]?.body))).toEqual(
+      expect.objectContaining({
+        response: expect.objectContaining({
+          body: {
+            type: "text",
+            value: "{{request.body.value.email}}",
+          },
+        }),
+      }),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 

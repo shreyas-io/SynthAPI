@@ -22,6 +22,7 @@ import dagre from "dagre";
 import Editor from "@monaco-editor/react";
 
 import { JsonInput } from "../../../components/atoms/JsonInput";
+import { RequestTemplatePicker } from "../../../components/molecules/RequestTemplatePicker";
 import { createId } from "../../../lib/id/create_id";
 import type {
   PredicateValue,
@@ -190,12 +191,17 @@ function PredicateNode({ data }: { data: PredicateNodeData }) {
         <label>
           Actual Value
           <input
-            placeholder="{{request.body.id}}"
+            placeholder="{{request.body.value.email}}"
             value={data.actual}
             onChange={(e) => data.onChange({ actual: e.target.value })}
             className="rf-input"
           />
         </label>
+        <RequestTemplatePicker
+          label="Actual value template"
+          insertLabel="Use"
+          onInsert={(template) => data.onChange({ actual: template })}
+        />
         <label>
           Operator
           <select
@@ -505,6 +511,23 @@ export function RuleTreeEditor({
     ]);
   };
 
+  const addFormPredicateNode = () => {
+    const id = createId();
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "predicate",
+        position: { x: 50, y: 50 },
+        data: {
+          actual: "{{request.headers.content-type}}",
+          operator: "string_includes",
+          expected: "application/x-www-form-urlencoded",
+        },
+      },
+    ]);
+  };
+
   const addScriptNode = () => {
     const id = createId();
     setNodes((nds) => [
@@ -600,6 +623,13 @@ export function RuleTreeEditor({
         <div className="rf-toolbar-actions">
           <button type="button" onClick={addPredicateNode} className="rf-btn">
             + Condition
+          </button>
+          <button
+            type="button"
+            onClick={addFormPredicateNode}
+            className="rf-btn"
+          >
+            + Form Condition
           </button>
           <button type="button" onClick={addScriptNode} className="rf-btn">
             + Python Script

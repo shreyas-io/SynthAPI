@@ -1,52 +1,19 @@
 import { Outlet, useParams, useLocation } from "react-router";
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ChevronUp,
-  Terminal,
-  GripVertical,
-} from "lucide-react";
-import { useState, type PointerEvent } from "react";
+import { useEffect } from "react";
 
-import { ProjectAgentChatPanel } from "../../features/agent-chat/components/ProjectAgentChatPanel";
-
-const MIN_CHAT_WIDTH = 280;
-
-const clampChatWidth = (width: number) => {
-  const maxWidth = Math.min(window.innerWidth * 0.55, 620);
-  return Math.min(Math.max(width, MIN_CHAT_WIDTH), maxWidth);
-};
+import { FloatingAgentChat } from "../../features/agent-chat/components/FloatingAgentChat";
+import { useAgentChat } from "../../features/agent-chat/context/AgentChatContext";
 
 export function ProjectWorkspaceLayout() {
   const { projectId } = useParams();
   const location = useLocation();
-  const [chatOpen, setChatOpen] = useState(() =>
-    new URLSearchParams(location.search).has("chat_id"),
-  );
-  const [chatWidth, setChatWidth] = useState(() => clampChatWidth(620));
+  const { setIsOpen } = useAgentChat();
 
-  const startResize = (event: PointerEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const handleElement = event.currentTarget;
-    handleElement.setPointerCapture(event.pointerId);
-
-    const startX = event.clientX;
-    const startWidth = chatWidth;
-
-    const handlePointerMove = (moveEvent: globalThis.PointerEvent) => {
-      setChatWidth(clampChatWidth(startWidth + moveEvent.clientX - startX));
-    };
-
-    const stopResize = (moveEvent: globalThis.PointerEvent) => {
-      handleElement.releasePointerCapture(moveEvent.pointerId);
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", stopResize);
-    };
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", stopResize);
-  };
+  useEffect(() => {
+    if (new URLSearchParams(location.search).has("chat_id")) {
+      setIsOpen(true);
+    }
+  }, [location.search, setIsOpen]);
 
   if (!projectId) {
     return <main className="page">Missing project ID.</main>;
@@ -54,40 +21,7 @@ export function ProjectWorkspaceLayout() {
 
   return (
     <div className="project-workspace">
-      <div className="floating-chat-widget">
-        <div
-          className={`floating-chat-panel ${chatOpen ? "open" : ""}`}
-          style={chatOpen ? { flexBasis: `${chatWidth}px`, width: `${chatWidth}px` } : undefined}
-        >
-          <div
-            className="terminal-chat-resize-handle"
-            onPointerDown={startResize}
-            role="separator"
-            aria-orientation="vertical"
-            aria-label="Resize Ask AI panel"
-          >
-            <GripVertical size={14} />
-          </div>
-          <div className="terminal-chat-content">
-            <ProjectAgentChatPanel projectId={projectId} />
-          </div>
-        </div>
-        <button
-          type="button"
-          className="terminal-chat-bar"
-          onClick={() => setChatOpen((v) => !v)}
-          aria-label={chatOpen ? "Close AI Agent" : "Open AI Agent"}
-          aria-expanded={chatOpen}
-        >
-          <span className="terminal-chat-title">
-            <Terminal size={15} />
-            <span>Ask AI</span>
-          </span>
-          <span className="terminal-chat-status">
-            {chatOpen ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-          </span>
-        </button>
-      </div>
+      <FloatingAgentChat projectId={projectId} />
 
       <div className="project-main-content">
         <Outlet />
