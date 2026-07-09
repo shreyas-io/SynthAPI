@@ -17,11 +17,15 @@ import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import { generateText } from "../../../../infrastructure/agent_orchestration/ai/generate";
+import {
+  generateText,
+  type GenerateTextUsage,
+} from "../../../../infrastructure/agent_orchestration/ai/generate";
 import { createChatTurn } from "./create";
 import { AgentToolRegistry } from "../tools/registry";
 import type { ToolKey } from "../../../entities/agent_orchestration/tool_keys";
 import type { ToolWorkspaceContext } from "../tools/types";
+import type { AgentPricingConfig } from "../../../entities/agent_orchestration/agent_config";
 
 export const AgentChatUsecase = (ctx: AppContext) => {
   const llm = streamText(ctx);
@@ -29,6 +33,128 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   const eventBus = ctx.eventBus;
   const toolRegistry = AgentToolRegistry();
   const runningTurns = new Set<string>();
+
+  const credits_per_usd = 1000 / 0.5;
+  const min_credit_charge = 0.01;
+
+  type TokenUsage = {
+    input_tokens: number;
+    output_tokens: number;
+  };
+
+  const zeroUsage = (): TokenUsage => ({ input_tokens: 0, output_tokens: 0 });
+
+  const addUsage = (a: TokenUsage, b: TokenUsage): TokenUsage => ({
+    input_tokens: a.input_tokens + b.input_tokens,
+    output_tokens: a.output_tokens + b.output_tokens,
+  });
+
+  const usageFromGenerateText = (
+    usage: GenerateTextUsage | undefined,
+  ): TokenUsage => ({
+    input_tokens: usage?.input_tokens ?? 0,
+    output_tokens: usage?.output_tokens ?? 0,
+  });
+
+  const usageFromStreamResponse = (
+    usage:
+      | { inputTokens?: number | undefined; outputTokens?: number | undefined }
+      | undefined,
+  ): TokenUsage => ({
+    input_tokens: usage?.inputTokens ?? 0,
+    output_tokens: usage?.outputTokens ?? 0,
+  });
+
+  const calculateCost = (
+    chat_usage: TokenUsage,
+    compaction_usage: TokenUsage,
+    pricing: AgentPricingConfig,
+  ): number => {
+    const chat_input_price = pricing.chat_config.input_tokens ?? 0;
+    const chat_output_price = pricing.chat_config.output_tokens ?? 0;
+    const compaction_input_price = pricing.compaction_config.input_tokens ?? 0;
+    const compaction_output_price = pricing.compaction_config.output_tokens ?? 0;
+
+    const chat_cost =
+      chat_usage.input_tokens * chat_input_price +
+      chat_usage.output_tokens * chat_output_price;
+    const compaction_cost =
+      compaction_usage.input_tokens * compaction_input_price +
+      compaction_usage.output_tokens * compaction_output_price;
+
+    return chat_cost + compaction_cost;
+  };
+
+  const roundCredits = (credits: number): number => {
+    const rounded = Math.round(credits * 100) / 100;
+    return Math.max(rounded, min_credit_charge);
+  };
+
+  const getCreditGrantForUsage = async (organization_id: string) => {
+    const active_grant = await ctx.db
+      .selectFrom("organization_credit_grants")
+      .select("id")
+      .where("organization_id", "=", organization_id)
+      .where("grant_type", "=", "ai_credits")
+      .where("expires_at", ">", new Date())
+      .orderBy("created_at", "asc")
+      .executeTakeFirst();
+
+    if (active_grant) {
+      return active_grant.id;
+    }
+
+    const fallback_grant = await ctx.db
+      .selectFrom("organization_credit_grants")
+      .select("id")
+      .where("organization_id", "=", organization_id)
+      .where("grant_type", "=", "ai_credits")
+      .orderBy("created_at", "asc")
+      .executeTakeFirst();
+
+    return fallback_grant?.id ?? null;
+  };
+
+  const recordCreditUsage = async (input: {
+    organization_id: string;
+    user_id: string;
+    chat_turn_id: string;
+    chat_usage: TokenUsage;
+    compaction_usage: TokenUsage;
+    pricing: AgentPricingConfig;
+  }): Promise<void> => {
+    const cost_usd = calculateCost(
+      input.chat_usage,
+      input.compaction_usage,
+      input.pricing,
+    );
+    if (cost_usd <= 0) {
+      return;
+    }
+
+    const credits = roundCredits(cost_usd * credits_per_usd);
+    const credit_grant_id = await getCreditGrantForUsage(input.organization_id);
+
+    if (!credit_grant_id) {
+      logger.warn(
+        { organization_id: input.organization_id, chat_turn_id: input.chat_turn_id },
+        "No credit grant found for usage recording",
+      );
+      return;
+    }
+
+    await ctx.db
+      .insertInto("organization_credit_usages")
+      .values({
+        id: uuidv7(),
+        organization_id: input.organization_id,
+        credit_grant_id,
+        user_id: input.user_id,
+        amount: credits,
+        source_id: input.chat_turn_id,
+      })
+      .executeTakeFirstOrThrow();
+  };
 
   const createAndPublishEvent = async (input: {
     chat_turn_id: string;
@@ -103,6 +229,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           chat_config: unknown;
           compaction_config: unknown | null;
           compaction_threshold_tokens: number | null;
+          pricing_config: AgentPricingConfig;
         }
       | undefined;
     if (!config) {
@@ -177,7 +304,11 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     sequence: number;
     raw_messages: unknown[];
     compaction_config: LLMConfig;
-  }): Promise<{ raw_messages: unknown[]; sequence: number }> => {
+  }): Promise<{
+    raw_messages: unknown[];
+    sequence: number;
+    usage: TokenUsage;
+  }> => {
     let sequence = input.sequence;
 
     await createAndPublishEvent({
@@ -189,7 +320,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       },
     });
 
-    const compactedText = await textGenerator.generateText({
+    const compacted = await textGenerator.generateText({
       config: {
         ...input.compaction_config,
         input_messages: [
@@ -209,7 +340,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     const compactedRawMessages = [
       {
         role: "user" as const,
-        content: compactedText,
+        content: compacted.text,
       },
     ];
 
@@ -222,12 +353,18 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       },
     });
 
-    return { raw_messages: compactedRawMessages, sequence };
+    return {
+      raw_messages: compactedRawMessages,
+      sequence,
+      usage: usageFromGenerateText(compacted.usage),
+    };
   };
 
   const executeChatTurnInternal = async (
     chat_session_id: string,
     turn_id: string,
+    organization_id: string,
+    user_id: string,
     workspace?: ToolWorkspaceContext,
   ): Promise<void> => {
     const sessionCount = await ctx.db
@@ -266,6 +403,9 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     }
 
     let sequence = await getNextSequence(turn_id);
+    let agentConfig: Awaited<ReturnType<typeof getAgentConfig>> | null = null;
+    let totalChatUsage = zeroUsage();
+    let totalCompactionUsage = zeroUsage();
 
     try {
       const previousTurn = (await ctx.db
@@ -294,7 +434,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         });
       }
 
-      const agentConfig = await getAgentConfig(chatSession.agent_config_id);
+      agentConfig = await getAgentConfig(chatSession.agent_config_id);
 
       const llmConfig = agentConfig.chat_config as unknown as LLMConfig;
       const compactionConfig =
@@ -348,6 +488,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             compaction_config: compactionConfig,
           });
           sequence = compacted.sequence;
+          totalCompactionUsage = addUsage(totalCompactionUsage, compacted.usage);
           currentRequest = {
             ...currentRequest,
             raw: compacted.raw_messages,
@@ -409,6 +550,11 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         }
 
         const response = await result.response;
+        const streamUsage = await result.totalUsage;
+        totalChatUsage = addUsage(
+          totalChatUsage,
+          usageFromStreamResponse(streamUsage),
+        );
         const rawMessages = response.messages;
         const toolCalls = await result.toolCalls;
 
@@ -541,6 +687,24 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       });
 
       throw error;
+    } finally {
+      if (agentConfig) {
+        try {
+          await recordCreditUsage({
+            organization_id,
+            user_id,
+            chat_turn_id: turn_id,
+            chat_usage: totalChatUsage,
+            compaction_usage: totalCompactionUsage,
+            pricing: agentConfig.pricing_config,
+          });
+        } catch (error) {
+          logger.error(
+            { err: error, chat_turn_id: turn_id },
+            "Failed to record credit usage",
+          );
+        }
+      }
     }
   };
 
@@ -554,6 +718,8 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     executeChatTurn: (
       chat_session_id: string,
       turn_id: string,
+      organization_id: string,
+      user_id: string,
       workspace?: ToolWorkspaceContext,
     ): void => {
       if (runningTurns.has(turn_id)) {
@@ -561,7 +727,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       }
 
       runningTurns.add(turn_id);
-      executeChatTurnInternal(chat_session_id, turn_id, workspace)
+      executeChatTurnInternal(chat_session_id, turn_id, organization_id, user_id, workspace)
         .catch((error) => {
           logger.error(
             { err: error, chat_session_id, turn_id },

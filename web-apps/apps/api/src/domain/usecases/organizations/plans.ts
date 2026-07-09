@@ -173,7 +173,7 @@ export const getOrganizationAiCreditBalance = async (
   return {
     granted,
     used,
-    remaining: Math.max(granted - used, 0),
+    remaining: Math.round(Math.max(granted - used, 0) * 100) / 100,
   };
 };
 

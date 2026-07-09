@@ -4,8 +4,14 @@
     "name": "Local Default Agent",
     "description": "Default agent config for local development with exhaustive backend-aligned mock API guidance",
     "pricing_config": {
-      "chat_config": {},
-      "compaction_config": {}
+      "chat_config": {
+        "input_tokens": 0.00000003,
+        "output_tokens": 0.00000015
+      },
+      "compaction_config": {
+        "input_tokens": 0.00000003,
+        "output_tokens": 0.00000015
+      }
     },
     "chat_config": {
       "model_host": "portkey",
@@ -55,6 +61,6 @@
     },
     "compaction_threshold_tokens": 64000,
     "enabled": true,
-    "version": 23
+    "version": 26
   }
 ]

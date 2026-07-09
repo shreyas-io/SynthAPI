@@ -269,7 +269,7 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
       const turn_id = req.params.turn_id as string;
       const user = getAuthenticatedUser(req.user);
 
-      await validateProjectAccess(projects, user, project_id);
+      const project = await validateProjectAccess(projects, user, project_id);
       await validateChatOwnership(chat_sessions, project_id, chat_id);
       await validateTurnOwnership(agent_chat, chat_id, turn_id);
 
@@ -313,7 +313,13 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
           }
         });
 
-        agent_chat.executeChatTurn(chat_id, turn_id, { project_id, user });
+        agent_chat.executeChatTurn(
+          chat_id,
+          turn_id,
+          project.organization_id,
+          user.id,
+          { project_id, user },
+        );
 
         req.on("close", () => {
           unsubscribe();

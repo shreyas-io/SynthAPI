@@ -84,6 +84,7 @@ export type OrganizationCreditUsagesTable = {
   id: GeneratedUuid;
   organization_id: string;
   credit_grant_id: string;
+  user_id: string | null;
   amount: number;
   source_id: string | null;
   created_at: Timestamp;

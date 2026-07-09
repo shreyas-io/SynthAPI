@@ -1,4 +1,4 @@
-import { type ModelMessage } from "ai";
+import { generateText as generateTextAi, type ModelMessage } from "ai";
 
 import type { AppContext } from "../../../server";
 import type { GenerationRequest } from "../../../domain/entities/agent_orchestration/generation";
@@ -14,6 +14,28 @@ import { createPromptCacheOptions } from "./prompt_cache";
 import { toModelMessages } from "./to_model_messages";
 import { toToolSet } from "./to_tool_set";
 
+export type GenerateTextUsage = {
+  input_tokens: number;
+  output_tokens: number;
+  total_tokens: number;
+};
+
+export type GenerateTextResult = {
+  text: string;
+  usage: GenerateTextUsage;
+};
+
+const toGenerateTextResult = (
+  result: Awaited<ReturnType<typeof generateTextAi>>,
+): GenerateTextResult => ({
+  text: result.text,
+  usage: {
+    input_tokens: result.usage.inputTokens ?? 0,
+    output_tokens: result.usage.outputTokens ?? 0,
+    total_tokens: result.usage.totalTokens ?? 0,
+  },
+});
+
 const getRawMessages = (request: GenerationRequest): ModelMessage[] => {
   if (request.raw === null) return [];
   if (Array.isArray(request.raw)) return request.raw as ModelMessage[];
@@ -26,7 +48,7 @@ const getRawMessages = (request: GenerationRequest): ModelMessage[] => {
 
 export function generateText(ctx: AppContext) {
   return {
-    generateText: async (request: GenerationRequest): Promise<string> => {
+    generateText: async (request: GenerationRequest): Promise<GenerateTextResult> => {
       const inputMessages = toModelMessages(request);
       const toolSet = toToolSet(request.config.custom_tools);
       const input = {
@@ -45,39 +67,39 @@ export function generateText(ctx: AppContext) {
       switch (request.config.model_provider) {
         case "nvidia":
           if (request.config.model_host === "portkey") {
-            return (await generateTextViaPortkey(ctx, input)).text;
+            return toGenerateTextResult(await generateTextViaPortkey(ctx, input));
           }
           if (request.config.model_host === "openrouter") {
-            return (await generateTextViaOpenRouter(ctx, input)).text;
+            return toGenerateTextResult(await generateTextViaOpenRouter(ctx, input));
           }
           break;
         case "openai":
           if (request.config.model_host === "portkey") {
-            return (
+            return toGenerateTextResult(
               await generateTextViaPortkey(ctx, {
                 ...input,
                 promptCache: createPromptCacheOptions(input),
-              })
-            ).text;
+              }),
+            );
           }
           if (request.config.model_host === "openrouter") {
-            return (await generateTextViaOpenRouter(ctx, input)).text;
+            return toGenerateTextResult(await generateTextViaOpenRouter(ctx, input));
           }
           break;
         case "google":
           if (request.config.model_host === "workers_ai") {
-            return (await generateTextViaCloudflareWorkersAi(ctx, input)).text;
+            return toGenerateTextResult(await generateTextViaCloudflareWorkersAi(ctx, input));
           }
           if (request.config.model_host === "portkey") {
-            return (await generateTextViaPortkey(ctx, input)).text;
+            return toGenerateTextResult(await generateTextViaPortkey(ctx, input));
           }
           if (request.config.model_host === "openrouter") {
-            return (await generateTextViaOpenRouter(ctx, input)).text;
+            return toGenerateTextResult(await generateTextViaOpenRouter(ctx, input));
           }
           break;
         case "meta":
           if (request.config.model_host === "ollama") {
-            return (await generateTextViaOllama(ctx, input)).text;
+            return toGenerateTextResult(await generateTextViaOllama(ctx, input));
           }
           break;
         default:
