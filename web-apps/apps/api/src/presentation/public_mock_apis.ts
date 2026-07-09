@@ -37,6 +37,30 @@ const parseCookies = (header: string | undefined): Record<string, string> => {
 const getRequestBody = (req: Request): RequestBodyEt => {
   const content_type = req.headers["content-type"]?.toLowerCase() ?? "";
 
+  if (
+    content_type.includes("multipart/form-data") &&
+    req.body &&
+    typeof req.body === "object" &&
+    "type" in req.body &&
+    req.body.type === "multipart"
+  ) {
+    return req.body as RequestBodyEt;
+  }
+
+  if (content_type.includes("application/octet-stream")) {
+    if (Buffer.isBuffer(req.body)) {
+      return {
+        type: "binary",
+        value: {
+          mime_type: content_type,
+          size_bytes: req.body.length,
+          content_base64: req.body.toString("base64"),
+        },
+      };
+    }
+    return { type: "empty" };
+  }
+
   if (req.body === undefined || req.body === null) {
     return { type: "empty" };
   }

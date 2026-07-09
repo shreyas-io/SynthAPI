@@ -11,6 +11,21 @@ export const httpMethodDto = z.enum([
   "OPTIONS",
 ]);
 
+const multipartFieldDto = z.discriminatedUnion("field_type", [
+  z.object({
+    field_type: z.literal("text"),
+    value: z.string(),
+  }),
+  z.object({
+    field_type: z.literal("file"),
+    filename: z.string(),
+    mime_type: z.string(),
+    encoding: z.string(),
+    size_bytes: z.number(),
+    content_base64: z.string(),
+  }),
+]);
+
 const requestBodyDto = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("json"),
@@ -23,6 +38,21 @@ const requestBodyDto = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("form_urlencoded"),
     value: z.record(z.string(), z.union([z.string(), z.string().array()])),
+  }),
+  z.object({
+    type: z.literal("multipart"),
+    value: z.record(
+      z.string(),
+      z.union([multipartFieldDto, multipartFieldDto.array()]),
+    ),
+  }),
+  z.object({
+    type: z.literal("binary"),
+    value: z.object({
+      mime_type: z.string(),
+      size_bytes: z.number(),
+      content_base64: z.string(),
+    }),
   }),
   z.object({
     type: z.literal("empty"),

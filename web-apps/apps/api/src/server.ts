@@ -25,6 +25,7 @@ import { MailerSendEmailService } from "./infrastructure/email/mailersend_email_
 import { asyncRoute } from "./middleware/async_route";
 import { logger } from "./infrastructure/logger";
 import { requestLoggerMiddleware } from "./middleware/request_logger";
+import { parseMultipartRequest } from "./middleware/multipart";
 
 type ApiApp = {
   app: Express;
@@ -89,6 +90,8 @@ export const createApiApp = async (): Promise<ApiApp> => {
   app.use(express.json({ limit: "1mb" }));
   app.use(express.text({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+  app.use(express.raw({ type: "application/octet-stream", limit: "10mb" }));
+  app.use(parseMultipartRequest);
 
   app.get(
     "/health",

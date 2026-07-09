@@ -28,10 +28,42 @@ export type JsonScriptBody = {
   code: string;
 };
 
+export type MultipartFileField = {
+  field_type: "file";
+  filename: string;
+  mime_type: string;
+  encoding: string;
+  size_bytes: number;
+  content_base64: string;
+};
+
+export type MultipartTextField = {
+  field_type: "text";
+  value: string;
+};
+
+export type MultipartField = MultipartFileField | MultipartTextField;
+
+export type MultipartBody = {
+  type: "multipart";
+  value: Record<string, MultipartField | MultipartField[]>;
+};
+
+export type BinaryBody = {
+  type: "binary";
+  value: {
+    mime_type: string;
+    size_bytes: number;
+    content_base64: string;
+  };
+};
+
 export type RequestBodyEt =
   | JsonBody
   | TextBody
   | FormUrlEncodedBody
+  | MultipartBody
+  | BinaryBody
   | EmptyBody;
 
 export type ResponseBodyEt = JsonBody | TextBody | EmptyBody;
