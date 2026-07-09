@@ -747,18 +747,15 @@ export function MockApiResponseEditor({
               </div>
               {bodyType !== "empty" &&
                 (bodyType === "json" ? (
-                  <>
-                    <RequestTemplatePicker label="Response body templates" />
-                    <JsonInput
-                      label="Response body"
-                      value={bodyText}
-                      error={bodyJsonError}
-                      onChange={(value) => {
-                        setBodyText(value);
-                        setBodyJsonError(null);
-                      }}
-                    />
-                  </>
+                  <JsonInput
+                    label="Response body"
+                    value={bodyText}
+                    error={bodyJsonError}
+                    onChange={(value) => {
+                      setBodyText(value);
+                      setBodyJsonError(null);
+                    }}
+                  />
                 ) : bodyType === "json_script" ? (
                   <JsonInput
                     label="Python JSON builder script"
@@ -887,22 +884,13 @@ export function MockApiResponseEditor({
                     )}
                   </div>
                 ) : (
-                  <>
-                    <RequestTemplatePicker
-                      label="Response body templates"
-                      insertLabel="Append"
-                      onInsert={(template) =>
-                        setBodyText((current) => `${current}${template}`)
-                      }
+                  <label>
+                    Response body
+                    <textarea
+                      value={bodyText}
+                      onChange={(e) => setBodyText(e.target.value)}
                     />
-                    <label>
-                      Response body
-                      <textarea
-                        value={bodyText}
-                        onChange={(e) => setBodyText(e.target.value)}
-                      />
-                    </label>
-                  </>
+                  </label>
                 ))}
               <KeyValueRows
                 label="Headers"
