@@ -21,13 +21,14 @@ import type { MockApiEt } from "../../../entities/mock_api";
 import type { MockApiResponseEt } from "../../../entities/mock_api_response/mock_api_response";
 import { z } from "zod";
 import { logger } from "../../../../infrastructure/logger";
-import { ProjectsUsecase } from "../projects";
+import { ProjectApiKeysUsecase } from "../project_api_keys";
 
 type PublicMockApiRequest = {
   project_slug: string;
   method: string;
   url: string;
   headers: Record<string, any>;
+  project_key?: string | undefined;
   body: RequestBodyEt;
   cookies: Record<string, any>;
 };
@@ -302,6 +303,20 @@ export async function executePublicMockApi(
     throw new MockApiException({
       public_message: "Project not found.",
       status_code: HttpStatusCode.NOT_FOUND,
+    });
+  }
+
+  const apiKeyValidation = await ProjectApiKeysUsecase(ctx).validateProjectApiKey(
+    project.id,
+    request_data.project_key,
+  );
+
+  if (!apiKeyValidation.valid) {
+    throw new MockApiException({
+      public_message: apiKeyValidation.required
+        ? "Invalid or missing project API key."
+        : "Project API key rejected.",
+      status_code: HttpStatusCode.UNAUTHORIZED,
     });
   }
 

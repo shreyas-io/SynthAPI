@@ -32,6 +32,22 @@ export type ProjectInput = {
   constants?: Variable[];
 };
 
+export type ProjectApiKey = {
+  id: string;
+  project_id: string;
+  name: string;
+  key_prefix: string;
+  key_suffix: string;
+  created_by_user_id: string | null;
+  deleted_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreatedProjectApiKey = ProjectApiKey & {
+  api_key: string;
+};
+
 export type ListResponse<T> = {
   total: number;
   records: T[];

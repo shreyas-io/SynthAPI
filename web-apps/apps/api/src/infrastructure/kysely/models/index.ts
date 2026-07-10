@@ -17,6 +17,11 @@ import type {
   OrganizationsTable,
   PlanTypesTable,
 } from "./organizations";
+import type {
+  DataEncryptionKeysTable,
+  KeyEncryptionKeysTable,
+  ProjectApiKeysTable,
+} from "./project_api_keys";
 import type { ProjectsTable } from "./projects";
 
 type Timestamp = ColumnType<Date, Date | string | undefined, Date | string>;
@@ -62,6 +67,9 @@ export type Database = {
   organization_credit_grants: OrganizationCreditGrantsTable;
   organization_credit_usages: OrganizationCreditUsagesTable;
   projects: ProjectsTable;
+  key_encryption_keys: KeyEncryptionKeysTable;
+  data_encryption_keys: DataEncryptionKeysTable;
+  project_api_keys: ProjectApiKeysTable;
   mock_apis: MockApisTable;
   mock_api_responses: MockApiResponsesTable;
   agent_configs: AgentConfigsTable;

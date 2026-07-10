@@ -14,6 +14,7 @@ export const queryKeys = {
     params?: Record<string, string | number | boolean | undefined>,
   ) => ["projects", organizationId, params ?? {}] as const,
   project: (id: string) => ["projects", "detail", id] as const,
+  projectApiKeys: (id: string) => ["projects", "detail", id, "api-keys"] as const,
   projectChats: (projectId: string) => ["projects", projectId, "chats"] as const,
   projectChatEvents: (projectId: string, chatId: string) =>
     ["projects", projectId, "chats", chatId, "events"] as const,
