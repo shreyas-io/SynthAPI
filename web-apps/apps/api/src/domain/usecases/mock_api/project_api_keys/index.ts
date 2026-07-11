@@ -23,6 +23,7 @@ import { ProjectsUsecase } from "../projects";
 const DEK_LENGTH_BYTES = 32;
 const API_KEY_LENGTH_BYTES = 32;
 const API_KEY_PREFIX = "synthapi_pk_";
+const MAX_API_KEYS_PER_PROJECT = 15;
 
 type ActiveKek = {
   id: string;
@@ -118,6 +119,20 @@ export const ProjectApiKeysUsecase = (ctx: AppContext) => {
         user,
         project.organization_id,
       );
+
+      const activeKeys = await ctx.db
+        .selectFrom("project_api_keys")
+        .select((eb) => eb.fn.count<number>("id").as("count"))
+        .where("project_id", "=", projectId)
+        .where("deleted_at", "is", null)
+        .executeTakeFirstOrThrow();
+
+      if (Number(activeKeys.count) >= MAX_API_KEYS_PER_PROJECT) {
+        throw new MockApiException({
+          public_message: `Maximum limit of ${MAX_API_KEYS_PER_PROJECT} API keys per project reached.`,
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
 
       const activeKek = await getActiveKek(ctx);
       const apiKey = createApiKey();
