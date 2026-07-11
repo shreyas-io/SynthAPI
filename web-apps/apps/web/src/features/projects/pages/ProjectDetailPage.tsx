@@ -8,6 +8,7 @@ import {
   Settings2,
   Trash2,
 } from "lucide-react";
+import { ImportOpenApiModal } from "../components/ImportOpenApiModal";
 import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useEffect, useState } from "react";
 
@@ -37,6 +38,7 @@ export function ProjectDetailPage() {
   const [constants, setConstants] = useState<Variable[]>([]);
   const [variablesOpen, setVariablesOpen] = useState(false);
   const [apiKeysOpen, setApiKeysOpen] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
   const [newApiKeyName, setNewApiKeyName] = useState("");
   const [createdApiKey, setCreatedApiKey] =
     useState<CreatedProjectApiKey | null>(null);
@@ -183,6 +185,13 @@ export function ProjectDetailPage() {
                 >
                   <h2 style={{ color: "var(--color-text-muted)" }}>+ New API</h2>
                 </Link>
+                <button
+                  className="card link-card empty-card"
+                  onClick={() => setImportModalOpen(true)}
+                  style={{ background: "transparent", border: "1px dashed var(--color-border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                >
+                  <h2 style={{ color: "var(--color-text-muted)" }}>Import OpenAPI</h2>
+                </button>
               </section>
             )}
 
@@ -405,6 +414,13 @@ export function ProjectDetailPage() {
             </Button>
           </section>
         </div>
+      )}
+
+      {importModalOpen && (
+        <ImportOpenApiModal
+          projectId={projectId}
+          onClose={() => setImportModalOpen(false)}
+        />
       )}
     </main>
   );

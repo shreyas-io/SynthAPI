@@ -12,6 +12,7 @@ import {
   restoreProject,
   updateProject,
   listProjectRequestLogs,
+  importOpenApi,
   type ListProjectsParams,
 } from "../api/projects_api";
 import type { ProjectInput } from "../types";
@@ -162,5 +163,18 @@ export const useProjectRequestLogs = (
     initialPageParam: null as string | null,
     getNextPageParam: (lastPage) => lastPage.next_cursor,
     enabled: Boolean(projectId),
+  });
+};
+
+export const useImportOpenApi = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ projectId, spec }: { projectId: string; spec: string }) => importOpenApi(projectId, spec),
+    onSuccess: (_, { projectId }) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.mockApis(projectId),
+      });
+    },
   });
 };

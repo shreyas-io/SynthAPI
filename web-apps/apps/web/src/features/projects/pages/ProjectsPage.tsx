@@ -7,6 +7,7 @@ import { FloatingAgentChat } from "../../agent-chat/components/FloatingAgentChat
 import { Avatar } from "../../../components/atoms/Avatar";
 import { Button, ButtonLink } from "../../../components/atoms/Button";
 import { ResourceCard } from "../../../components/molecules/ResourceCard";
+import { ImportOpenApiModal } from "../components/ImportOpenApiModal";
 import {
   useDeleteProject,
   useDeletedProjects,
@@ -50,6 +51,7 @@ export function ProjectsPage() {
   const deleteProject = useDeleteProject(selectedOrganizationId ?? undefined);
   const restoreProject = useRestoreProject(selectedOrganizationId ?? undefined);
   const [projectTab, setProjectTab] = useState<ProjectTab>("active");
+  const [importModalOpen, setImportModalOpen] = useState(false);
 
   const activeProjects = projects.data?.records ?? [];
   const deletedProjects = deletedProjectsQuery.data?.records ?? [];
@@ -70,9 +72,14 @@ export function ProjectsPage() {
             <p className="eyebrow">Projects</p>
             <h1>Mock API workspaces</h1>
           </div>
-          <ButtonLink to="/projects/new">
-            New project
-          </ButtonLink>
+          <div className="toolbar-actions">
+            <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
+              Import OpenAPI
+            </Button>
+            <ButtonLink to="/projects/new">
+              New project
+            </ButtonLink>
+          </div>
         </header>
 
         {currentData.isPending && <p>Loading projects...</p>}
@@ -123,7 +130,8 @@ export function ProjectsPage() {
           </div>
 
           {projectTab === "active" && (
-            <section className="grid project-grid">
+            <>
+              <section className="grid project-grid">
               {activeProjects.map((project) => (
                 <ResourceCard
                   key={project.id}
@@ -151,13 +159,25 @@ export function ProjectsPage() {
                   </div>
                 </ResourceCard>
               ))}
+            </section>
+            
+            <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
               <Link
                 className="card link-card empty-card"
                 to="/projects/new"
+                style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", minHeight: "150px" }}
               >
                 <h2 style={{ color: "var(--color-text-muted)" }}>+ New project</h2>
               </Link>
-            </section>
+              <button
+                className="card link-card empty-card"
+                onClick={() => setImportModalOpen(true)}
+                style={{ flex: 1, background: "transparent", border: "1px dashed var(--color-border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "150px" }}
+              >
+                <h2 style={{ color: "var(--color-text-muted)" }}>Import OpenAPI</h2>
+              </button>
+            </div>
+            </>
           )}
 
           {projectTab === "deleted" && (
@@ -248,6 +268,13 @@ export function ProjectsPage() {
           )}
         </>
       </main>
+
+      {importModalOpen && (
+        <ImportOpenApiModal
+          organizationId={selectedOrganizationId ?? undefined}
+          onClose={() => setImportModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

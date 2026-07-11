@@ -121,3 +121,13 @@ export const listProjectRequestLogs = (
     `/api/v1/projects/${projectId}/logs?${query.toString()}`,
   );
 };
+
+export const importOpenApi = (
+  projectId: string,
+  spec: string,
+): Promise<{ success: boolean; count: number }> => {
+  return apiRequest(`/api/v1/projects/${projectId}/import-openapi`, {
+    method: "POST",
+    body: { spec },
+  });
+};

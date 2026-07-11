@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import type { Express } from "express";
+import express, { type Express } from "express";
 
 import {
   ApiGatewayException,
@@ -9,6 +9,7 @@ import { asyncRoute } from "../middleware/async_route";
 import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
 import { ProjectApiKeysUsecase } from "../domain/usecases/mock_api/project_api_keys";
 import { RequestLogsUsecase } from "../domain/usecases/mock_api/request_logs";
+import { OpenApiUsecase } from "../domain/usecases/mock_api/openapi";
 import type { AppContext } from "../server";
 import {
   createProjectApiKeyDto,
@@ -16,6 +17,7 @@ import {
   listProjectsFilterDto,
   listProjectsPaginationDto,
   listProjectsSortDto,
+  importOpenApiDto,
 } from "./dtos/projects";
 import { getNumber, getString, getStringArray } from "./utils";
 
@@ -48,6 +50,7 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
   const projects = ProjectsUsecase(ctx);
   const projectApiKeys = ProjectApiKeysUsecase(ctx);
   const requestLogs = RequestLogsUsecase(ctx);
+  const openApiUsecase = OpenApiUsecase(ctx);
 
   app.post(
     "/api/v1/projects",
@@ -293,6 +296,28 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
           { limit, ...(cursor ? { cursor } : {}) },
         ),
       );
+    }),
+  );
+
+  app.post(
+    "/api/v1/projects/:id/import-openapi",
+    express.json({ limit: "5mb" }),
+    asyncRoute(async (req, res) => {
+      const parsedBody = importOpenApiDto.safeParse(req.body);
+      if (!parsedBody.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsedBody.error.issues),
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
+      const result = await openApiUsecase.importSpec(
+        getAuthenticatedUser(req.user),
+        req.params.id as string,
+        parsedBody.data.spec,
+      );
+
+      res.status(200).json(result);
     }),
   );
 };

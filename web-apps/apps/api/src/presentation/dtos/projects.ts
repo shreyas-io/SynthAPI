@@ -32,3 +32,7 @@ export const listProjectsSortDto = z.object({
   by: z.enum(["name", "created_at"]),
   order: z.enum(["asc", "desc"]),
 });
+
+export const importOpenApiDto = z.object({
+  spec: z.string().min(1),
+});
