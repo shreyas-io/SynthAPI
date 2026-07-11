@@ -26,6 +26,7 @@ import { asyncRoute } from "./middleware/async_route";
 import { logger } from "./infrastructure/logger";
 import { requestLoggerMiddleware } from "./middleware/request_logger";
 import { parseMultipartRequest } from "./middleware/multipart";
+import { createRateLimiter, type IRateLimiter } from "./infrastructure/rate_limiter";
 
 type ApiApp = {
   app: Express;
@@ -39,6 +40,7 @@ export type AppContext = {
   env: Awaited<ReturnType<typeof getSecrets>>;
   eventBus: IEventBus;
   emailService: IEmailService;
+  rateLimiter: IRateLimiter;
 };
 
 export const createApiApp = async (): Promise<ApiApp> => {
@@ -47,6 +49,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   await runMigrations(dbClient.db);
 
   const keyValueStore = RedisKeyValueStore(secrets.REDIS_URL);
+  const rateLimiter = createRateLimiter(secrets.REDIS_URL);
 
   const pyodide = createPyodideWorkerPool({
     size: 1,
@@ -64,6 +67,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
     env: secrets,
     eventBus: agentEventBus,
     emailService,
+    rateLimiter,
   };
   const domainJobs = await startDomainJobs({
     ctx: appContext,
@@ -115,6 +119,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
       await domainJobs.destroy();
       await dbClient.destroy();
       await keyValueStore.destroy();
+      await rateLimiter.destroy();
       await pyodide.destroy();
     },
   };

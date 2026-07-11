@@ -22,6 +22,7 @@ import type { MockApiResponseEt } from "../../../entities/mock_api_response/mock
 import { z } from "zod";
 import { logger } from "../../../../infrastructure/logger";
 import { ProjectApiKeysUsecase } from "../project_api_keys";
+import { getActiveOrganizationPlan } from "../../organizations/plans";
 
 type PublicMockApiRequest = {
   project_slug: string;
@@ -292,7 +293,12 @@ export async function executePublicMockApi(
   const project = await ctx.db
     .selectFrom("projects")
     .innerJoin("organizations", "organizations.id", "projects.organization_id")
-    .select(["projects.id", "projects.globals", "projects.constants"])
+    .select([
+      "projects.id",
+      "projects.globals",
+      "projects.constants",
+      "projects.organization_id",
+    ])
     .where("projects.slug", "=", request_data.project_slug)
     .where("projects.deleted_at", "is", null)
     .where("organizations.deleted_at", "is", null)
@@ -304,6 +310,21 @@ export async function executePublicMockApi(
       public_message: "Project not found.",
       status_code: HttpStatusCode.NOT_FOUND,
     });
+  }
+
+  const plan = await getActiveOrganizationPlan(ctx.db, project.organization_id);
+  const reqPerSec = plan?.rate_limit_req_per_sec ?? 10;
+
+  try {
+    await ctx.rateLimiter.checkLimit(project.id, reqPerSec);
+  } catch (err: any) {
+    if (err.message === "Rate limit exceeded") {
+      throw new MockApiException({
+        public_message: "Rate limit exceeded.",
+        status_code: HttpStatusCode.TOO_MANY_REQUESTS,
+      });
+    }
+    throw err;
   }
 
   const apiKeyValidation = await ProjectApiKeysUsecase(ctx).validateProjectApiKey(

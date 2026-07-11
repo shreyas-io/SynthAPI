@@ -55,6 +55,7 @@ export type PlanTypesTable = {
   max_org_members: number;
   default_ai_credits: number;
   credit_grant_duration_days: number;
+  rate_limit_req_per_sec: number;
   created_at: Timestamp;
   updated_at: Timestamp;
 };
