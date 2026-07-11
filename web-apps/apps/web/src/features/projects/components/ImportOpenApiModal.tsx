@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "../../../components/atoms/Button";
+import { X } from "lucide-react";
 import { useImportOpenApi, useCreateProject } from "../hooks/project_hooks";
 
 export function ImportOpenApiModal({
@@ -89,8 +90,13 @@ export function ImportOpenApiModal({
       <section className="variable-reference-modal card" style={{ maxWidth: 600, width: "100%" }}>
         <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h2>Import OpenAPI Spec</h2>
-          <button type="button" className="icon-btn" onClick={onClose}>
-            <span className="material-symbols-outlined">close</span>
+          <button 
+            type="button" 
+            className="icon-btn" 
+            onClick={onClose}
+            style={{ display: "flex", alignItems: "center", gap: "0.25rem", fontSize: "0.875rem", padding: "0.25rem 0.5rem" }}
+          >
+            <X size={16} /> Close
           </button>
         </header>
 

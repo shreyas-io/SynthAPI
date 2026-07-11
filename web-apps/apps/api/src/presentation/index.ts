@@ -10,6 +10,7 @@ import { addOrganizationRoutes } from "./organizations";
 import { addProjectChatRoutes } from "./project_chats";
 import { addProjectRoutes } from "./projects";
 import { addProfileRoutes } from "./profile";
+import { addTemplateRoutes } from "./templates";
 
 export const addRoutes = (app: Express, ctx: AppContext) => {
   addAuthRoutes(app, ctx);
@@ -22,4 +23,5 @@ export const addRoutes = (app: Express, ctx: AppContext) => {
   addMockApiRoutes(app, ctx);
   addMockApiResponseRoutes(app, ctx);
   addProjectChatRoutes(app, ctx);
+  addTemplateRoutes(app, ctx);
 };

@@ -13,6 +13,8 @@ import {
   updateProject,
   listProjectRequestLogs,
   importOpenApi,
+  getTemplates,
+  createProjectFromTemplate,
   type ListProjectsParams,
 } from "../api/projects_api";
 import type { ProjectInput } from "../types";
@@ -174,6 +176,28 @@ export const useImportOpenApi = () => {
     onSuccess: (_, { projectId }) => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.mockApis(projectId),
+      });
+    },
+  });
+};
+
+export const useTemplates = () => {
+  return useQuery({
+    queryKey: ["templates"],
+    queryFn: getTemplates,
+  });
+};
+
+export const useCreateProjectFromTemplate = (organizationId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (templateId: string) => createProjectFromTemplate(templateId, organizationId!),
+    async onSuccess() {
+      if (!organizationId) return;
+
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.projectListRoot(organizationId),
       });
     },
   });

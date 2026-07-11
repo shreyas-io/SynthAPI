@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router";
-import { AlertTriangle, RotateCcw, Search } from "lucide-react";
+import { AlertTriangle, RotateCcw, Search, LayoutTemplate } from "lucide-react";
 
 import { useSelectedOrganization } from "../../../app/context/OrganizationContext";
 import { FloatingAgentChat } from "../../agent-chat/components/FloatingAgentChat";
@@ -8,6 +8,7 @@ import { Avatar } from "../../../components/atoms/Avatar";
 import { Button, ButtonLink } from "../../../components/atoms/Button";
 import { ResourceCard } from "../../../components/molecules/ResourceCard";
 import { ImportOpenApiModal } from "../components/ImportOpenApiModal";
+import { ImportTemplateModal } from "../components/ImportTemplateModal";
 import {
   useDeleteProject,
   useDeletedProjects,
@@ -52,6 +53,7 @@ export function ProjectsPage() {
   const restoreProject = useRestoreProject(selectedOrganizationId ?? undefined);
   const [projectTab, setProjectTab] = useState<ProjectTab>("active");
   const [importModalOpen, setImportModalOpen] = useState(false);
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
 
   const activeProjects = projects.data?.records ?? [];
   const deletedProjects = deletedProjectsQuery.data?.records ?? [];
@@ -73,6 +75,9 @@ export function ProjectsPage() {
             <h1>Mock API workspaces</h1>
           </div>
           <div className="toolbar-actions">
+            <Button variant="secondary" onClick={() => setTemplateModalOpen(true)}>
+              Import Template
+            </Button>
             <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
               Import OpenAPI
             </Button>
@@ -176,6 +181,13 @@ export function ProjectsPage() {
               >
                 <h2 style={{ color: "var(--color-text-muted)" }}>Import OpenAPI</h2>
               </button>
+              <button
+                className="card link-card empty-card"
+                onClick={() => setTemplateModalOpen(true)}
+                style={{ flex: 1, background: "transparent", border: "1px dashed var(--color-border)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", minHeight: "150px" }}
+              >
+                <h2 style={{ color: "var(--color-text-muted)" }}>Import from Template</h2>
+              </button>
             </div>
             </>
           )}
@@ -273,6 +285,13 @@ export function ProjectsPage() {
         <ImportOpenApiModal
           organizationId={selectedOrganizationId ?? undefined}
           onClose={() => setImportModalOpen(false)}
+        />
+      )}
+
+      {templateModalOpen && (
+        <ImportTemplateModal
+          organizationId={selectedOrganizationId ?? undefined}
+          onClose={() => setTemplateModalOpen(false)}
         />
       )}
     </div>

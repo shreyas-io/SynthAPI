@@ -131,3 +131,24 @@ export const importOpenApi = (
     body: { spec },
   });
 };
+
+export type TemplateMetadata = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+};
+
+export const getTemplates = (): Promise<TemplateMetadata[]> => {
+  return apiRequest("/api/v1/templates");
+};
+
+export const createProjectFromTemplate = (
+  templateId: string,
+  organizationId: string,
+): Promise<Project> => {
+  return apiRequest("/api/v1/projects/from-template", {
+    method: "POST",
+    body: { template_id: templateId, organization_id: organizationId },
+  });
+};
