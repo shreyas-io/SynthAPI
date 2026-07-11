@@ -6,6 +6,7 @@ import {
 } from "../../../exceptions/exception";
 import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import type { ProjectEt } from "../../../entities/project";
+import { assertOrganizationCanAddProject } from "../../organizations/plans";
 
 type ProjectFilters = {
   ids?: string[] | undefined;
@@ -125,6 +126,8 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         user,
         organization_id,
       );
+
+      await assertOrganizationCanAddProject(ctx.db, validated_org_id);
 
       const project = await ctx.db
         .insertInto("projects")
@@ -432,6 +435,8 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       }
 
       await assertOrganizationWriteAccess(user, project.organization_id);
+      
+      await assertOrganizationCanAddProject(ctx.db, project.organization_id);
 
       await ctx.db
         .updateTable("projects")

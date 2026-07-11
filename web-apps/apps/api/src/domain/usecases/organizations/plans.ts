@@ -83,6 +83,7 @@ export const getActiveOrganizationPlan = async (
       "organization_plan_subscriptions.expires_at as expires_at",
       "plan_types.key as plan_key",
       "plan_types.max_org_members as max_org_members",
+      "plan_types.max_projects as max_projects",
       "plan_types.default_ai_credits as default_ai_credits",
       "plan_types.rate_limit_req_per_sec as rate_limit_req_per_sec",
     ])
@@ -122,6 +123,38 @@ export const assertOrganizationCanAddMember = async (
   if (Number(activeMembers.count) >= plan.max_org_members) {
     throw new MockApiException({
       public_message: "Organization member limit reached.",
+      status_code: HttpStatusCode.FORBIDDEN,
+    });
+  }
+};
+
+/**
+ * Checks if an organisation has an active plan and
+ * active projects count is less than allowed threshold
+ */
+export const assertOrganizationCanAddProject = async (
+  db: DatabaseExecutor,
+  organization_id: string,
+) => {
+  const plan = await getActiveOrganizationPlan(db, organization_id);
+
+  if (!plan) {
+    throw new MockApiException({
+      public_message: "Active organization plan is missing.",
+      status_code: HttpStatusCode.FORBIDDEN,
+    });
+  }
+
+  const activeProjects = await db
+    .selectFrom("projects")
+    .select((eb) => eb.fn.count<number>("id").as("count"))
+    .where("organization_id", "=", organization_id)
+    .where("deleted_at", "is", null)
+    .executeTakeFirstOrThrow();
+
+  if (Number(activeProjects.count) >= plan.max_projects) {
+    throw new MockApiException({
+      public_message: "Organization project limit reached.",
       status_code: HttpStatusCode.FORBIDDEN,
     });
   }
