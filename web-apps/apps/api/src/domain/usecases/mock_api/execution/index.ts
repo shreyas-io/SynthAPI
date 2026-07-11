@@ -427,6 +427,38 @@ export async function executePublicMockApi(
     execution_context,
   });
 
+  let request_body_str = null;
+  if (request_data.body.type === "json" || request_data.body.type === "form_urlencoded" || request_data.body.type === "multipart") {
+    request_body_str = JSON.stringify(request_data.body.value);
+  } else if (request_data.body.type === "text") {
+    request_body_str = request_data.body.value;
+  } else if (request_data.body.type === "binary") {
+    request_body_str = `[Binary Data: ${request_data.body.value.mime_type}]`;
+  }
+
+  let response_body_str = null;
+  if (body.type === "json") {
+    response_body_str = JSON.stringify(body.value);
+  } else if (body.type === "text") {
+    response_body_str = body.value;
+  } else if (body.type === "sse") {
+    response_body_str = "[SSE Stream]";
+  }
+
+  ctx.mockApiRequestLogger.logRequest({
+    project_id: project.id,
+    mock_api_id: mock_api.id,
+    method: request_data.method,
+    url: request_data.url,
+    request_headers: request_data.headers,
+    request_body: request_body_str,
+    response_status: mock_api_response.response.status_code,
+    response_headers: headers,
+    response_body: response_body_str,
+  }).catch((err) => {
+    logger.error({ err, project_id: project.id }, "Failed to enqueue request log");
+  });
+
   return {
     mock_api_id: mock_api.id,
     status_code: mock_api_response.response.status_code,

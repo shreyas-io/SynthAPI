@@ -23,6 +23,7 @@ import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bu
 import type { IEmailService } from "./domain/interfaces/email_service";
 import { MailerSendEmailService } from "./infrastructure/email/mailersend_email_service";
 import { asyncRoute } from "./middleware/async_route";
+import { createMockApiRequestLogger, type IMockApiRequestLogger } from "./infrastructure/request_logs";
 import { logger } from "./infrastructure/logger";
 import { requestLoggerMiddleware } from "./middleware/request_logger";
 import { parseMultipartRequest } from "./middleware/multipart";
@@ -39,6 +40,7 @@ export type AppContext = {
   env: Awaited<ReturnType<typeof getSecrets>>;
   eventBus: IEventBus;
   emailService: IEmailService;
+  mockApiRequestLogger: IMockApiRequestLogger;
 };
 
 export const createApiApp = async (): Promise<ApiApp> => {
@@ -57,6 +59,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
 
   const agentEventBus = InMemoryEventBus();
   const emailService = createEmailService(secrets);
+  const mockApiRequestLogger = createMockApiRequestLogger(secrets.REDIS_URL, dbClient.db);
   const appContext: AppContext = {
     db: dbClient.db,
     kvStore: keyValueStore,
@@ -64,6 +67,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
     env: secrets,
     eventBus: agentEventBus,
     emailService,
+    mockApiRequestLogger,
   };
   const domainJobs = await startDomainJobs({
     ctx: appContext,
@@ -116,6 +120,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
       await dbClient.destroy();
       await keyValueStore.destroy();
       await pyodide.destroy();
+      await mockApiRequestLogger.destroy();
     },
   };
 };

@@ -53,7 +53,10 @@ export type PlanTypesTable = {
   key: string;
   name: string;
   max_org_members: number;
+  max_projects: number;
+  max_request_logs: number;
   default_ai_credits: number;
+  rate_limit_req_per_sec: number;
   credit_grant_duration_days: number;
   created_at: Timestamp;
   updated_at: Timestamp;

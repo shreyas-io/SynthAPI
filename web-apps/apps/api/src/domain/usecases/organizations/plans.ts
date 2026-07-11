@@ -83,7 +83,10 @@ export const getActiveOrganizationPlan = async (
       "organization_plan_subscriptions.expires_at as expires_at",
       "plan_types.key as plan_key",
       "plan_types.max_org_members as max_org_members",
+      "plan_types.max_projects as max_projects",
+      "plan_types.max_request_logs as max_request_logs",
       "plan_types.default_ai_credits as default_ai_credits",
+      "plan_types.rate_limit_req_per_sec as rate_limit_req_per_sec",
     ])
     .where(
       "organization_plan_subscriptions.organization_id",
