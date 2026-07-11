@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 
 import { queryKeys } from "../../../lib/query/query_keys";
 import {
@@ -11,6 +11,7 @@ import {
   listProjects,
   restoreProject,
   updateProject,
+  listProjectRequestLogs,
   type ListProjectsParams,
 } from "../api/projects_api";
 import type { ProjectInput } from "../types";
@@ -141,5 +142,25 @@ export const useRestoreProject = (organizationId: string | undefined) => {
         queryKey: queryKeys.projectListRoot(organizationId),
       });
     },
+  });
+};
+
+export const useProjectRequestLogs = (
+  projectId: string | undefined,
+  mockApiId?: string,
+) => {
+  return useInfiniteQuery({
+    queryKey: projectId
+      ? ["projects", projectId, "logs", mockApiId ?? "all"]
+      : ["projects", "missing", "logs"],
+    queryFn: ({ pageParam }) =>
+      listProjectRequestLogs(projectId!, {
+        limit: 20,
+        ...(pageParam ? { cursor: pageParam } : {}),
+        ...(mockApiId ? { mock_api_id: mockApiId } : {}),
+      }),
+    initialPageParam: null as string | null,
+    getNextPageParam: (lastPage) => lastPage.next_cursor,
+    enabled: Boolean(projectId),
   });
 };

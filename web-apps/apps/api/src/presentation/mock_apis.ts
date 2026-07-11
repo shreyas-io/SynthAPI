@@ -110,8 +110,16 @@ export const addMockApiRoutes = (app: Express, ctx: AppContext) => {
         });
       }
 
+      const limitRaw = getNumber(req.query.limit, 100);
+      if (limitRaw > 100) {
+        throw new ApiGatewayException({
+          public_message: "Limit cannot exceed 100",
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
       const parsedPagination = listMockApisPaginationDto.safeParse({
-        limit: getNumber(req.query.limit, 20),
+        limit: limitRaw,
         offset: getNumber(req.query.offset, 0),
       });
       if (!parsedPagination.success) {

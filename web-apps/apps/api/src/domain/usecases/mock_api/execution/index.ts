@@ -442,7 +442,12 @@ export async function executePublicMockApi(
   } else if (body.type === "text") {
     response_body_str = body.value;
   } else if (body.type === "sse") {
-    response_body_str = "[SSE Stream]";
+    const sseBody = mock_api_response.response.body;
+    if (sseBody.type === "sse" && sseBody.mode === "events") {
+      response_body_str = JSON.stringify(sseBody.events);
+    } else {
+      response_body_str = "[SSE Script Stream]";
+    }
   }
 
   ctx.mockApiRequestLogger.logRequest({

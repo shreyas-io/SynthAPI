@@ -8,6 +8,7 @@ import {
 import { asyncRoute } from "../middleware/async_route";
 import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
 import { ProjectApiKeysUsecase } from "../domain/usecases/mock_api/project_api_keys";
+import { RequestLogsUsecase } from "../domain/usecases/mock_api/request_logs";
 import type { AppContext } from "../server";
 import {
   createProjectApiKeyDto,
@@ -46,6 +47,7 @@ const getProjectSlug = (name: string): string => {
 export const addProjectRoutes = (app: Express, ctx: AppContext) => {
   const projects = ProjectsUsecase(ctx);
   const projectApiKeys = ProjectApiKeysUsecase(ctx);
+  const requestLogs = RequestLogsUsecase(ctx);
 
   app.post(
     "/api/v1/projects",
@@ -128,8 +130,16 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
         });
       }
 
+      const limitRaw = getNumber(req.query.limit, 100);
+      if (limitRaw > 100) {
+        throw new ApiGatewayException({
+          public_message: "Limit cannot exceed 100",
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
       const parsedPagination = listProjectsPaginationDto.safeParse({
-        limit: getNumber(req.query.limit, 20),
+        limit: limitRaw,
         offset: getNumber(req.query.offset, 0),
       });
       if (!parsedPagination.success) {
@@ -259,6 +269,30 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
       );
 
       res.status(204).send();
+    }),
+  );
+
+  app.get(
+    "/api/v1/projects/:id/logs",
+    asyncRoute(async (req, res) => {
+      const mock_api_id = getString(req.query.mock_api_id);
+      const cursor = getString(req.query.cursor);
+      const limit = getNumber(req.query.limit, 20);
+      if (limit > 20) {
+        throw new ApiGatewayException({
+          public_message: "Limit cannot exceed 20",
+          status_code: HttpStatusCode.BAD_REQUEST,
+        });
+      }
+
+      res.json(
+        await requestLogs.listProjectRequestLogs(
+          getAuthenticatedUser(req.user),
+          req.params.id as string,
+          mock_api_id ? { mock_api_id } : {},
+          { limit, ...(cursor ? { cursor } : {}) },
+        ),
+      );
     }),
   );
 };

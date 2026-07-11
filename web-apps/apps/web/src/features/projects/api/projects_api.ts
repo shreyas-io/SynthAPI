@@ -5,6 +5,7 @@ import type {
   Project,
   ProjectApiKey,
   ProjectInput,
+  RequestLog,
 } from "../types";
 
 export type ListProjectsParams = {
@@ -93,4 +94,30 @@ export const revokeProjectApiKey = (
   return apiRequest(`/api/v1/projects/${projectId}/api-keys/${keyId}`, {
     method: "DELETE",
   });
+};
+
+export type ListProjectRequestLogsParams = {
+  limit: number;
+  cursor?: string;
+  mock_api_id?: string;
+};
+
+export const listProjectRequestLogs = (
+  projectId: string,
+  params: ListProjectRequestLogsParams,
+): Promise<{ records: RequestLog[]; next_cursor: string | null }> => {
+  const query = new URLSearchParams({
+    limit: String(params.limit),
+  });
+
+  if (params.cursor) {
+    query.set("cursor", params.cursor);
+  }
+  if (params.mock_api_id) {
+    query.set("mock_api_id", params.mock_api_id);
+  }
+
+  return apiRequest(
+    `/api/v1/projects/${projectId}/logs?${query.toString()}`,
+  );
 };

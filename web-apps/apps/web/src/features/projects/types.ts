@@ -52,3 +52,17 @@ export type ListResponse<T> = {
   total: number;
   records: T[];
 };
+
+export type RequestLog = {
+  id: string;
+  project_id: string;
+  mock_api_id: string | null;
+  method: string;
+  url: string;
+  request_headers: unknown;
+  request_body: unknown | null;
+  response_status: number;
+  response_headers: unknown;
+  response_body: unknown | null;
+  created_at: string;
+};
