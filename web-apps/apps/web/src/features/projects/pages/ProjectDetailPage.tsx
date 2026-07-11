@@ -1,5 +1,13 @@
 import { Link, useParams } from "react-router";
-import { AlertTriangle, RotateCcw, Settings2 } from "lucide-react";
+import {
+  AlertTriangle,
+  Copy,
+  KeyRound,
+  Plus,
+  RotateCcw,
+  Settings2,
+  Trash2,
+} from "lucide-react";
 import { MethodPill } from "../../../components/atoms/MethodPill";
 import { useEffect, useState } from "react";
 
@@ -12,8 +20,14 @@ import {
   useMockApis,
   useRestoreMockApi,
 } from "../../mock-apis/hooks/mock_api_hooks";
-import { useProject, useUpdateProject } from "../hooks/project_hooks";
-import type { Variable } from "../types";
+import {
+  useCreateProjectApiKey,
+  useProject,
+  useProjectApiKeys,
+  useRevokeProjectApiKey,
+  useUpdateProject,
+} from "../hooks/project_hooks";
+import type { CreatedProjectApiKey, Variable } from "../types";
 
 type ApiTab = "active" | "deleted";
 
@@ -22,6 +36,10 @@ export function ProjectDetailPage() {
   const [globals, setGlobals] = useState<Variable[]>([]);
   const [constants, setConstants] = useState<Variable[]>([]);
   const [variablesOpen, setVariablesOpen] = useState(false);
+  const [apiKeysOpen, setApiKeysOpen] = useState(false);
+  const [newApiKeyName, setNewApiKeyName] = useState("");
+  const [createdApiKey, setCreatedApiKey] =
+    useState<CreatedProjectApiKey | null>(null);
   const [apiTab, setApiTab] = useState<ApiTab>("active");
   const [variablesTab, setVariablesTab] = useState<"globals" | "constants">(
     "globals",
@@ -37,8 +55,12 @@ export function ProjectDetailPage() {
   const deleteMockApi = useDeleteMockApi(projectId);
   const restoreMockApi = useRestoreMockApi(projectId);
   const updateMutation = useUpdateProject(projectId);
+  const projectApiKeys = useProjectApiKeys(projectId);
+  const createProjectApiKey = useCreateProjectApiKey(projectId);
+  const revokeProjectApiKey = useRevokeProjectApiKey(projectId);
   const activeApis = mockApis.data?.records ?? [];
   const deletedApis = deletedMockApis.data?.records ?? [];
+  const apiKeys = projectApiKeys.data ?? [];
 
   const currentApis = apiTab === "active" ? mockApis : deletedMockApis;
 
@@ -55,6 +77,22 @@ export function ProjectDetailPage() {
       {
         onSuccess() {
           setVariablesOpen(false);
+        },
+      },
+    );
+  };
+
+  const createApiKey = () => {
+    const name = newApiKeyName.trim();
+
+    if (!name) return;
+
+    createProjectApiKey.mutate(
+      { name },
+      {
+        onSuccess(data) {
+          setCreatedApiKey(data);
+          setNewApiKeyName("");
         },
       },
     );
@@ -80,6 +118,14 @@ export function ProjectDetailPage() {
               )}
             </div>
             <div className="toolbar-actions">
+              <Button
+                variant="secondary"
+                size="compact"
+                onClick={() => setApiKeysOpen(true)}
+              >
+                <KeyRound size={14} />
+                Project API Keys
+              </Button>
               <Button
                 variant="secondary"
                 size="compact"
@@ -190,6 +236,119 @@ export function ProjectDetailPage() {
             <p className="error">Failed to restore mock API.</p>
           )}
         </>
+      )}
+
+      {apiKeysOpen && (
+        <div className="variable-reference-modal-backdrop">
+          <section className="variable-reference-modal project-api-keys-modal card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Access</p>
+                <h2>Project API keys</h2>
+                <p className="muted-text">
+                  {apiKeys.length > 0
+                    ? "Public mock routes require x-synthapi-project-key."
+                    : "No active keys. Public mock routes are currently unprotected."}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setApiKeysOpen(false);
+                  setCreatedApiKey(null);
+                }}
+              >
+                Close
+              </Button>
+            </div>
+
+            {createdApiKey && (
+              <div className="project-api-key-secret">
+                <div>
+                  <p className="eyebrow">New key</p>
+                  <p className="muted-text">
+                    This key is shown once. Store it before closing.
+                  </p>
+                </div>
+                <code>{createdApiKey.api_key}</code>
+                <Button
+                  variant="secondary"
+                  size="compact"
+                  onClick={() =>
+                    void navigator.clipboard?.writeText(createdApiKey.api_key)
+                  }
+                >
+                  <Copy size={14} />
+                  Copy
+                </Button>
+              </div>
+            )}
+
+            <div className="project-api-key-create">
+              <input
+                value={newApiKeyName}
+                onChange={(event) => setNewApiKeyName(event.target.value)}
+                placeholder="Key name"
+                maxLength={100}
+              />
+              <Button
+                variant="secondary"
+                onClick={createApiKey}
+                disabled={!newApiKeyName.trim() || createProjectApiKey.isPending}
+              >
+                <Plus size={14} />
+                Create key
+              </Button>
+            </div>
+
+            {createProjectApiKey.isError && (
+              <p className="error">{createProjectApiKey.error.message}</p>
+            )}
+            {revokeProjectApiKey.isError && (
+              <p className="error">{revokeProjectApiKey.error.message}</p>
+            )}
+
+            {projectApiKeys.isPending && <p>Loading API keys...</p>}
+            {projectApiKeys.isError && (
+              <p className="error">{projectApiKeys.error.message}</p>
+            )}
+
+            {!projectApiKeys.isPending && apiKeys.length === 0 && (
+              <p className="muted-text">Create a key to protect this project.</p>
+            )}
+
+            {apiKeys.length > 0 && (
+              <div className="project-api-key-list">
+                {apiKeys.map((key) => (
+                  <div className="project-api-key-row" key={key.id}>
+                    <div>
+                      <strong>{key.name}</strong>
+                      <p className="muted-text">
+                        {key.key_prefix}...{key.key_suffix}
+                      </p>
+                    </div>
+                    <span className="muted-text">
+                      {new Date(key.created_at).toLocaleString()}
+                    </span>
+                    <Button
+                      variant="danger"
+                      size="compact"
+                      onClick={() => {
+                        if (confirm(`Revoke API key "${key.name}"?`)) {
+                          revokeProjectApiKey.mutate(key.id);
+                        }
+                      }}
+                      disabled={revokeProjectApiKey.isPending}
+                    >
+                      <Trash2 size={14} />
+                      Revoke
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       )}
 
       {variablesOpen && (

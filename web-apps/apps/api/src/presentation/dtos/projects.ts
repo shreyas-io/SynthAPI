@@ -9,6 +9,10 @@ export const createProjectDto = z.object({
   constants: variableTypesDto.array().optional(),
 });
 
+export const createProjectApiKeyDto = z.object({
+  name: z.string().trim().min(1).max(100),
+});
+
 export const listProjectsFilterDto = z.object({
   ids: z.uuidv7().array().optional(),
   organization_id: z.uuidv7(),

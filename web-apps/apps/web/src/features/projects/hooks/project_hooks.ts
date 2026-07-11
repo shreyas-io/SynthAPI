@@ -2,9 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "../../../lib/query/query_keys";
 import {
+  createProjectApiKey,
   createProject,
   deleteProject,
   getProject,
+  listProjectApiKeys,
+  revokeProjectApiKey,
   listProjects,
   restoreProject,
   updateProject,
@@ -42,6 +45,16 @@ export const useProject = (projectId: string | undefined) => {
   });
 };
 
+export const useProjectApiKeys = (projectId: string | undefined) => {
+  return useQuery({
+    queryKey: projectId
+      ? queryKeys.projectApiKeys(projectId)
+      : ["projects", "missing", "api-keys"],
+    queryFn: () => listProjectApiKeys(projectId!),
+    enabled: Boolean(projectId),
+  });
+};
+
 export const useCreateProject = (organizationId: string) => {
   const queryClient = useQueryClient();
 
@@ -65,6 +78,37 @@ export const useUpdateProject = (projectId: string | undefined) => {
 
       await queryClient.invalidateQueries({
         queryKey: queryKeys.project(projectId),
+      });
+    },
+  });
+};
+
+export const useCreateProjectApiKey = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: { name: string }) =>
+      createProjectApiKey(projectId!, input),
+    async onSuccess() {
+      if (!projectId) return;
+
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.projectApiKeys(projectId),
+      });
+    },
+  });
+};
+
+export const useRevokeProjectApiKey = (projectId: string | undefined) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (keyId: string) => revokeProjectApiKey(projectId!, keyId),
+    async onSuccess() {
+      if (!projectId) return;
+
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.projectApiKeys(projectId),
       });
     },
   });

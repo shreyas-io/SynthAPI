@@ -15,12 +15,12 @@ const secretsSchema = z.object({
   CLOUDFLARE_AI_GATEWAY_ID: z.string(),
   CLOUDFLARE_AI_GATEWAY_TOKEN: z.string(),
   PORTKEY_API_KEY: z.string(),
-  OPENROUTER_API_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  OLLAMA_BASE_URL: z.string().optional(),
-  TAVILY_API_KEY: z.preprocess(
+  OPENROUTER_API_KEY: z.preprocess(
     emptyStringToUndefined,
     z.string().optional(),
   ),
+  OLLAMA_BASE_URL: z.string().optional(),
+  TAVILY_API_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
   GOOGLE_OAUTH_CLIENT_ID: z.string(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
   GOOGLE_OAUTH_REDIRECT_URI: z.string(),
@@ -44,6 +44,7 @@ const secretsSchema = z.object({
       return JSON.parse(v) as string[];
     }
   }),
+  ENCRYPTION_KEY_07_26: z.string(),
 });
 
 const vaultInputs = z.object({

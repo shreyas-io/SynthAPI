@@ -1,5 +1,11 @@
 import { apiRequest } from "../../../lib/api/client";
-import type { ListResponse, Project, ProjectInput } from "../types";
+import type {
+  CreatedProjectApiKey,
+  ListResponse,
+  Project,
+  ProjectApiKey,
+  ProjectInput,
+} from "../types";
 
 export type ListProjectsParams = {
   limit: number;
@@ -61,5 +67,30 @@ export const deleteProject = (id: string): Promise<void> => {
 export const restoreProject = (id: string): Promise<void> => {
   return apiRequest(`/api/v1/projects/${id}/restore`, {
     method: "POST",
+  });
+};
+
+export const listProjectApiKeys = (
+  projectId: string,
+): Promise<ProjectApiKey[]> => {
+  return apiRequest(`/api/v1/projects/${projectId}/api-keys`);
+};
+
+export const createProjectApiKey = (
+  projectId: string,
+  input: { name: string },
+): Promise<CreatedProjectApiKey> => {
+  return apiRequest(`/api/v1/projects/${projectId}/api-keys`, {
+    method: "POST",
+    body: input,
+  });
+};
+
+export const revokeProjectApiKey = (
+  projectId: string,
+  keyId: string,
+): Promise<void> => {
+  return apiRequest(`/api/v1/projects/${projectId}/api-keys/${keyId}`, {
+    method: "DELETE",
   });
 };

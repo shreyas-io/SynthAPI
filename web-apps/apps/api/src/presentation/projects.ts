@@ -7,8 +7,10 @@ import {
 } from "../domain/exceptions/exception";
 import { asyncRoute } from "../middleware/async_route";
 import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
+import { ProjectApiKeysUsecase } from "../domain/usecases/mock_api/project_api_keys";
 import type { AppContext } from "../server";
 import {
+  createProjectApiKeyDto,
   createProjectDto,
   listProjectsFilterDto,
   listProjectsPaginationDto,
@@ -43,6 +45,7 @@ const getProjectSlug = (name: string): string => {
 
 export const addProjectRoutes = (app: Express, ctx: AppContext) => {
   const projects = ProjectsUsecase(ctx);
+  const projectApiKeys = ProjectApiKeysUsecase(ctx);
 
   app.post(
     "/api/v1/projects",
@@ -211,6 +214,51 @@ export const addProjectRoutes = (app: Express, ctx: AppContext) => {
         req.params.id as string,
       );
       res.json({});
+    }),
+  );
+
+  app.get(
+    "/api/v1/projects/:id/api-keys",
+    asyncRoute(async (req, res) => {
+      res.json(
+        await projectApiKeys.listProjectApiKeys(
+          getAuthenticatedUser(req.user),
+          req.params.id as string,
+        ),
+      );
+    }),
+  );
+
+  app.post(
+    "/api/v1/projects/:id/api-keys",
+    asyncRoute(async (req, res) => {
+      const parsed = createProjectApiKeyDto.safeParse(req.body);
+      if (!parsed.success) {
+        throw new ApiGatewayException({
+          public_message: JSON.stringify(parsed.error.issues),
+        });
+      }
+
+      const apiKey = await projectApiKeys.createProjectApiKey(
+        getAuthenticatedUser(req.user),
+        req.params.id as string,
+        parsed.data,
+      );
+
+      res.status(201).json(apiKey);
+    }),
+  );
+
+  app.delete(
+    "/api/v1/projects/:id/api-keys/:keyId",
+    asyncRoute(async (req, res) => {
+      await projectApiKeys.revokeProjectApiKey(
+        getAuthenticatedUser(req.user),
+        req.params.id as string,
+        req.params.keyId as string,
+      );
+
+      res.status(204).send();
     }),
   );
 };

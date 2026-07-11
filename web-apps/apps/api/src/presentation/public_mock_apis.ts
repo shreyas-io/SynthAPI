@@ -81,7 +81,11 @@ const getRequestBody = (req: Request): RequestBodyEt => {
 };
 
 const getForwardedHeaders = (req: Request): Record<string, any> => {
-  const { "x-project-slug": _project_slug, ...headers } = req.headers;
+  const {
+    "x-project-slug": _project_slug,
+    "x-synthapi-project-key": _project_key,
+    ...headers
+  } = req.headers;
 
   return headers;
 };
@@ -181,6 +185,7 @@ export const addProjectSlugRouter = (app: Express, ctx: AppContext) => {
       method: req.method,
       url: req.originalUrl,
       headers: getForwardedHeaders(req),
+      project_key: req.get("x-synthapi-project-key"),
       body: getRequestBody(req),
       cookies: parseCookies(req.headers.cookie),
     })
