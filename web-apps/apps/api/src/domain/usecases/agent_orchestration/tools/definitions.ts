@@ -290,7 +290,7 @@ export const toolDefinitions = {
   ),
   web_search: toolEntry(
     "web_search",
-    "Search the public web for relevant pages using the configured Tavily API key.",
+    "Search the public web for relevant pages (maximum 5 calls per turn).",
     {
       type: "object",
       description: "Web search input",
