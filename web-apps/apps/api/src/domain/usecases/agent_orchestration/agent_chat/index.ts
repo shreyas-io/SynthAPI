@@ -36,6 +36,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
   const credits_per_usd = 1000 / 0.5;
   const min_credit_charge = 0.01;
+  const web_search_cost_usd = 0.008;
   const MAX_ITERATIONS = 30;
 
   type TokenUsage = {
@@ -70,6 +71,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     chat_usage: TokenUsage,
     compaction_usage: TokenUsage,
     pricing: AgentPricingConfig,
+    web_search_count: number,
   ): number => {
     const chat_input_price = pricing.chat_config.input_tokens ?? 0;
     const chat_output_price = pricing.chat_config.output_tokens ?? 0;
@@ -84,7 +86,9 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       compaction_usage.input_tokens * compaction_input_price +
       compaction_usage.output_tokens * compaction_output_price;
 
-    return chat_cost + compaction_cost;
+    const web_search_cost = web_search_count * web_search_cost_usd;
+
+    return chat_cost + compaction_cost + web_search_cost;
   };
 
   const roundCredits = (credits: number): number => {
@@ -124,11 +128,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     chat_usage: TokenUsage;
     compaction_usage: TokenUsage;
     pricing: AgentPricingConfig;
+    web_search_count: number;
   }): Promise<void> => {
     const cost_usd = calculateCost(
       input.chat_usage,
       input.compaction_usage,
       input.pricing,
+      input.web_search_count,
     );
     if (cost_usd <= 0) {
       return;
@@ -408,6 +414,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     let agentConfig: Awaited<ReturnType<typeof getAgentConfig>> | null = null;
     let totalChatUsage = zeroUsage();
     let totalCompactionUsage = zeroUsage();
+    let toolRunCounts = new Map<string, number>();
 
     try {
       const previousTurn = (await ctx.db
@@ -470,7 +477,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       let currentContextRaw = contextRawMessages;
 
       let iteration = 0;
-      const toolRunCounts = new Map<string, number>();
 
       let fullText = "";
 
@@ -710,6 +716,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             chat_usage: totalChatUsage,
             compaction_usage: totalCompactionUsage,
             pricing: agentConfig.pricing_config,
+            web_search_count: toolRunCounts.get('web_search') ?? 0,
           });
         } catch (error) {
           logger.error(
