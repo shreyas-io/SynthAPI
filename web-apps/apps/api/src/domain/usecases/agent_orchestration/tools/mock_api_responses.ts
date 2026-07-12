@@ -14,7 +14,8 @@ import { assertMockApi, assertMockApiResponse, toJson } from "./utils";
 export const mockApiResponseTools = {
   list_mock_api_responses: {
     definition: toolDefinitions.list_mock_api_responses,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "list_mock_api_responses" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = listMockApiResponsesToolInputDto.parse(input);
       const mock_apis = MockApisUsecase(ctx);
       assertMockApi(
@@ -42,7 +43,8 @@ export const mockApiResponseTools = {
   },
   get_mock_api_response: {
     definition: toolDefinitions.get_mock_api_response,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "get_mock_api_response" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = getMockApiResponseToolInputDto.parse(input);
       const responses = MockApiResponsesUsecase(ctx);
       const response = await responses.getMockApiResponse(parsed.response_id);
@@ -56,7 +58,8 @@ export const mockApiResponseTools = {
   },
   create_mock_api_response: {
     definition: toolDefinitions.create_mock_api_response,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "create_mock_api_response" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = createMockApiResponseToolInputDto.parse(input);
       const mock_apis = MockApisUsecase(ctx);
       assertMockApi(
@@ -82,7 +85,8 @@ export const mockApiResponseTools = {
   },
   update_mock_api_response: {
     definition: toolDefinitions.update_mock_api_response,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "update_mock_api_response" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = updateMockApiResponseToolInputDto.parse(input);
       const responses = MockApiResponsesUsecase(ctx);
       const existing = await responses.getMockApiResponse(parsed.response_id);
@@ -112,7 +116,8 @@ export const mockApiResponseTools = {
   },
   reorder_mock_api_responses: {
     definition: toolDefinitions.reorder_mock_api_responses,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "reorder_mock_api_responses" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = reorderMockApiResponsesToolInputDto.parse(input);
       const mock_apis = MockApisUsecase(ctx);
       assertMockApi(

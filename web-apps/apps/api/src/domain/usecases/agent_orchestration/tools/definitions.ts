@@ -27,7 +27,12 @@ const responseSchema = {
   description: "Mock API response payload",
   properties: {
     status_code: { type: "number", description: "HTTP response status code" },
-    headers: { type: "object", description: "Response headers", properties: {}, required: [] },
+    headers: {
+      type: "object",
+      description: "Response headers",
+      properties: {},
+      required: [],
+    },
     body: {
       type: "object",
       description:
@@ -35,7 +40,12 @@ const responseSchema = {
       properties: {},
       required: [],
     },
-    cookies: { type: "object", description: "Response cookies", properties: {}, required: [] },
+    cookies: {
+      type: "object",
+      description: "Response cookies",
+      properties: {},
+      required: [],
+    },
   },
   required: ["status_code", "headers", "body", "cookies"],
 } as const;
@@ -88,19 +98,23 @@ export const toolDefinitions = {
       required: ["constants"],
     },
   ),
-  list_mock_apis: toolEntry("list_mock_apis", "List mock APIs in the current project.", {
-    type: "object",
-    description: "Mock API filters",
-    properties: {
-      method: { type: "string", description: "HTTP method filter" },
-      path: { type: "string", description: "Path filter" },
-      name: { type: "string", description: "Name filter" },
-      description: { type: "string", description: "Description filter" },
-      limit: { type: "number", description: "Maximum number of results" },
-      offset: { type: "number", description: "Result offset" },
+  list_mock_apis: toolEntry(
+    "list_mock_apis",
+    "List mock APIs in the current project.",
+    {
+      type: "object",
+      description: "Mock API filters",
+      properties: {
+        method: { type: "string", description: "HTTP method filter" },
+        path: { type: "string", description: "Path filter" },
+        name: { type: "string", description: "Name filter" },
+        description: { type: "string", description: "Description filter" },
+        limit: { type: "number", description: "Maximum number of results" },
+        offset: { type: "number", description: "Result offset" },
+      },
+      required: [],
     },
-    required: [],
-  }),
+  ),
   get_mock_api: toolEntry("get_mock_api", "Get a mock API by ID.", {
     type: "object",
     description: "Mock API lookup input",
@@ -178,13 +192,26 @@ export const toolDefinitions = {
       properties: {
         mock_api_id: { type: "string", description: "Mock API ID" },
         name: { type: "string", description: "Response name" },
-        is_default: { type: "boolean", description: "Whether this is the default response" },
+        is_default: {
+          type: "boolean",
+          description: "Whether this is the default response",
+        },
         response: responseSchema,
-        rule_tree: { type: "object", description: "Rule tree", properties: {}, required: [] },
+        rule_tree: {
+          type: "object",
+          description: "Rule tree",
+          properties: {},
+          required: [],
+        },
         post_response_actions: {
           type: "array",
           description: "Post-response actions",
-          items: { type: "object", description: "Action", properties: {}, required: [] },
+          items: {
+            type: "object",
+            description: "Action",
+            properties: {},
+            required: [],
+          },
         },
       },
       required: ["mock_api_id", "name", "response"],
@@ -199,13 +226,26 @@ export const toolDefinitions = {
       properties: {
         response_id: { type: "string", description: "Response ID" },
         name: { type: "string", description: "Response name" },
-        is_default: { type: "boolean", description: "Whether this is the default response" },
+        is_default: {
+          type: "boolean",
+          description: "Whether this is the default response",
+        },
         response: responseSchema,
-        rule_tree: { type: "object", description: "Rule tree", properties: {}, required: [] },
+        rule_tree: {
+          type: "object",
+          description: "Rule tree",
+          properties: {},
+          required: [],
+        },
         post_response_actions: {
           type: "array",
           description: "Post-response actions",
-          items: { type: "object", description: "Action", properties: {}, required: [] },
+          items: {
+            type: "object",
+            description: "Action",
+            properties: {},
+            required: [],
+          },
         },
       },
       required: ["response_id"],
@@ -228,19 +268,26 @@ export const toolDefinitions = {
       required: ["mock_api_id", "response_ids"],
     },
   ),
-  render_ui_form: toolEntry("render_ui_form", "Render a form on the UI to ask the user a question with multiple options.", {
-    type: "object",
-    description: "Form rendering input",
-    properties: {
-      question: { type: "string", description: "The question to ask the user" },
-      options: {
-        type: "array",
-        description: "List of options (max 5)",
-        items: { type: "string", description: "Option label" },
+  render_ui_form: toolEntry(
+    "render_ui_form",
+    "Render a form on the UI to ask the user a question with multiple options.",
+    {
+      type: "object",
+      description: "Form rendering input",
+      properties: {
+        question: {
+          type: "string",
+          description: "The question to ask the user",
+        },
+        options: {
+          type: "array",
+          description: "List of options (max 5)",
+          items: { type: "string", description: "Option label" },
+        },
       },
+      required: ["question"],
     },
-    required: ["question"],
-  }),
+  ),
   web_search: toolEntry(
     "web_search",
     "Search the public web for relevant pages using the configured Tavily API key.",
@@ -251,19 +298,7 @@ export const toolDefinitions = {
         query: { type: "string", description: "Search query" },
         limit: {
           type: "number",
-          description: "Maximum number of results to return, from 1 to 10",
-        },
-        search_depth: {
-          type: "string",
-          description: "Tavily search depth: basic or advanced",
-        },
-        topic: {
-          type: "string",
-          description: "Tavily search topic: general, news, or finance",
-        },
-        include_answer: {
-          type: "boolean",
-          description: "Whether Tavily should include a generated answer summary",
+          description: "Maximum number of results to return, from 1 to 5",
         },
       },
       required: ["query"],
@@ -276,10 +311,14 @@ export const toolDefinitions = {
       type: "object",
       description: "Web scrape input",
       properties: {
-        url: { type: "string", description: "Public http or https URL to scrape" },
+        url: {
+          type: "string",
+          description: "Public http or https URL to scrape",
+        },
         max_chars: {
           type: "number",
-          description: "Maximum markdown characters to return, from 1000 to 50000",
+          description:
+            "Maximum markdown characters to return, from 1000 to 50000",
         },
       },
       required: ["url"],

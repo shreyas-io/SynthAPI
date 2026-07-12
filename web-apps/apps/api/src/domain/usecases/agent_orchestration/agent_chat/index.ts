@@ -470,6 +470,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       let currentContextRaw = contextRawMessages;
 
       let iteration = 0;
+      const toolRunCounts = new Map<string, number>();
 
       let fullText = "";
 
@@ -596,8 +597,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
           let toolResult: unknown;
           let toolStatus: "success" | "failed" = "success";
+          
+          const currentCount = toolRunCounts.get(toolName) ?? 0;
+          const nextCount = currentCount + 1;
+          toolRunCounts.set(toolName, nextCount);
+
           try {
-            toolResult = await tool.execute(ctx, workspace, toolArgs);
+            toolResult = await tool.execute(ctx, workspace, toolArgs, nextCount);
           } catch (error) {
             toolStatus = "failed";
             toolResult = { error: String(error) };

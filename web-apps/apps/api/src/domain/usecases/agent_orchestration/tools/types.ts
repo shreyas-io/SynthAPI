@@ -13,5 +13,6 @@ export interface ITool {
     ctx: AppContext,
     workspace: ToolWorkspaceContext,
     input: unknown,
+    runs_in_turn: number,
   ) => Promise<unknown>;
 }

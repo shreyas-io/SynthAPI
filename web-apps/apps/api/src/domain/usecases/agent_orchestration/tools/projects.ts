@@ -12,7 +12,8 @@ import { assertProject, toJson } from "./utils";
 export const projectTools = {
   list_projects: {
     definition: toolDefinitions.list_projects,
-    async execute(ctx, _workspace, input) {
+    async execute(ctx, _workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "list_projects" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = listProjectsToolInputDto.parse(input ?? {});
       const projects = ProjectsUsecase(ctx);
 
@@ -28,7 +29,8 @@ export const projectTools = {
   },
   get_project: {
     definition: toolDefinitions.get_project,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "get_project" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       emptyToolInputDto.parse(input ?? {});
       const projects = ProjectsUsecase(ctx);
 
@@ -42,7 +44,8 @@ export const projectTools = {
   },
   update_project_globals: {
     definition: toolDefinitions.update_project_globals,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "update_project_globals" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = updateProjectGlobalsToolInputDto.parse(input);
       const projects = ProjectsUsecase(ctx);
       const project = assertProject(
@@ -62,7 +65,8 @@ export const projectTools = {
   },
   update_project_constants: {
     definition: toolDefinitions.update_project_constants,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "update_project_constants" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = updateProjectConstantsToolInputDto.parse(input);
       const projects = ProjectsUsecase(ctx);
       const project = assertProject(

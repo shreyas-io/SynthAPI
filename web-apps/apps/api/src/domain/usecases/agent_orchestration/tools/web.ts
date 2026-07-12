@@ -208,15 +208,27 @@ const htmlToMarkdown = (html: string, maxChars: number): string => {
 export const webTools = {
   web_search: {
     definition: toolDefinitions.web_search,
-    async execute(ctx, _workspace, input) {
+    async execute(ctx, _workspace, input, runs_in_turn) {
+      if (runs_in_turn > 5)
+        return {
+          error:
+            'You have used the "web_search" tool for the max number of times in this turn. You can call this tool again after the user responds.',
+        };
       const parsed = webSearchToolInputDto.parse(input);
-      const response = await ctx.webSearchProvider.search(parsed.query, { limit: parsed.limit });
+      const response = await ctx.webSearchProvider.search(parsed.query, {
+        limit: parsed.limit,
+      });
       return response;
     },
   },
   web_scrape: {
     definition: toolDefinitions.web_scrape,
-    async execute(_ctx, _workspace, input) {
+    async execute(_ctx, _workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100)
+        return {
+          error:
+            'You have used the "web_scrape" tool for the max number of times in this turn. You can call this tool again after the user responds.',
+        };
       const parsed = webScrapeToolInputDto.parse(input);
       const { url, html } = await fetchText(parsed.url);
 

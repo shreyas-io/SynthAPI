@@ -12,7 +12,8 @@ import { assertMockApi, toJson } from "./utils";
 export const mockApiTools = {
   list_mock_apis: {
     definition: toolDefinitions.list_mock_apis,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "list_mock_apis" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = listMockApisToolInputDto.parse(input ?? {});
       const mock_apis = MockApisUsecase(ctx);
       const filters: {
@@ -42,7 +43,8 @@ export const mockApiTools = {
   },
   get_mock_api: {
     definition: toolDefinitions.get_mock_api,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "get_mock_api" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = getMockApiToolInputDto.parse(input);
       const mock_apis = MockApisUsecase(ctx);
 
@@ -56,7 +58,8 @@ export const mockApiTools = {
   },
   create_mock_api: {
     definition: toolDefinitions.create_mock_api,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "create_mock_api" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = createMockApiToolInputDto.parse(input);
       const mock_apis = MockApisUsecase(ctx);
 
@@ -74,7 +77,8 @@ export const mockApiTools = {
   },
   update_mock_api: {
     definition: toolDefinitions.update_mock_api,
-    async execute(ctx, workspace, input) {
+    async execute(ctx, workspace, input, runs_in_turn) {
+      if (runs_in_turn > 100) return { error: 'You have used the "update_mock_api" tool for the max number of times in this turn. You can call this tool again after the user responds.' };
       const parsed = updateMockApiToolInputDto.parse(input);
       const mock_apis = MockApisUsecase(ctx);
       const existing = assertMockApi(

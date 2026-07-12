@@ -83,9 +83,6 @@ export const renderUiFormToolInputDto = z.object({
 export const webSearchToolInputDto = z.object({
   query: z.string().min(1).max(500),
   limit: z.number().int().min(1).max(10).default(5),
-  search_depth: z.enum(["basic", "advanced"]).default("basic"),
-  topic: z.enum(["general", "news", "finance"]).default("general"),
-  include_answer: z.boolean().default(false),
 });
 
 export const webScrapeToolInputDto = z.object({
