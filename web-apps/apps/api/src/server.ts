@@ -27,6 +27,8 @@ import { createMockApiRequestLogger, type IMockApiRequestLogger } from "./infras
 import { logger } from "./infrastructure/logger";
 import { requestLoggerMiddleware } from "./middleware/request_logger";
 import { parseMultipartRequest } from "./middleware/multipart";
+import type { IWebSearchProvider } from "./domain/interfaces/agent_orchestration/web_search";
+import { ExaWebSearchProvider } from "./infrastructure/agent_orchestration/exa_web_search";
 
 type ApiApp = {
   app: Express;
@@ -41,6 +43,7 @@ export type AppContext = {
   eventBus: IEventBus;
   emailService: IEmailService;
   mockApiRequestLogger: IMockApiRequestLogger;
+  webSearchProvider: IWebSearchProvider;
 };
 
 export const createApiApp = async (): Promise<ApiApp> => {
@@ -60,6 +63,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   const agentEventBus = InMemoryEventBus();
   const emailService = createEmailService(secrets);
   const mockApiRequestLogger = createMockApiRequestLogger(secrets.REDIS_URL, dbClient.db);
+  const webSearchProvider = new ExaWebSearchProvider(secrets.EXA_API_KEY);
   const appContext: AppContext = {
     db: dbClient.db,
     kvStore: keyValueStore,
@@ -68,6 +72,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
     eventBus: agentEventBus,
     emailService,
     mockApiRequestLogger,
+    webSearchProvider,
   };
   const domainJobs = await startDomainJobs({
     ctx: appContext,

@@ -11,18 +11,6 @@ type SearchResult = {
   score?: number;
 };
 
-type TavilySearchResponse = {
-  query?: string;
-  answer?: string;
-  results?: Array<{
-    title?: string;
-    url?: string;
-    content?: string;
-    score?: number;
-  }>;
-  response_time?: number;
-};
-
 const USER_AGENT =
   "SynthAPI-Agent/1.0 (+https://synthapi.local; web search and scrape tool)";
 const MAX_HTML_BYTES = 2_000_000;
@@ -222,58 +210,8 @@ export const webTools = {
     definition: toolDefinitions.web_search,
     async execute(ctx, _workspace, input) {
       const parsed = webSearchToolInputDto.parse(input);
-      const apiKey = ctx.env.TAVILY_API_KEY;
-      if (!apiKey) {
-        throw new Error("Web search is currently unavailable.");
-      }
-
-      const response = await fetch("https://api.tavily.com/search", {
-        method: "POST",
-        headers: {
-          "user-agent": USER_AGENT,
-          "content-type": "application/json",
-          accept: "application/json",
-          authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          query: parsed.query,
-          max_results: parsed.limit,
-          search_depth: parsed.search_depth,
-          topic: parsed.topic,
-          include_answer: parsed.include_answer,
-        }),
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      if (!response.ok) {
-        throw new Error(`Search failed with HTTP ${response.status}.`);
-      }
-
-      const data = (await response.json()) as TavilySearchResponse;
-      const results: SearchResult[] = (data.results ?? [])
-        .slice(0, parsed.limit)
-        .flatMap((result) => {
-          if (!result.title || !result.url) return [];
-          return [
-            {
-              title: result.title,
-              url: result.url,
-              ...(result.content ? { snippet: result.content } : undefined),
-              ...(typeof result.score === "number"
-                ? { score: result.score }
-                : undefined),
-            },
-          ];
-        });
-
-      return {
-        query: data.query ?? parsed.query,
-        provider: "tavily",
-        ...(data.answer ? { answer: data.answer } : undefined),
-        ...(typeof data.response_time === "number"
-          ? { response_time: data.response_time }
-          : undefined),
-        results,
-      };
+      const response = await ctx.webSearchProvider.search(parsed.query, { limit: parsed.limit });
+      return response;
     },
   },
   web_scrape: {

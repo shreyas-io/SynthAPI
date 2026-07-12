@@ -20,7 +20,7 @@ const secretsSchema = z.object({
     z.string().optional(),
   ),
   OLLAMA_BASE_URL: z.string().optional(),
-  TAVILY_API_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
+  EXA_API_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
   GOOGLE_OAUTH_CLIENT_ID: z.string(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string(),
   GOOGLE_OAUTH_REDIRECT_URI: z.string(),
