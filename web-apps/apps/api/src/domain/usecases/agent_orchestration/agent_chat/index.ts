@@ -36,6 +36,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
   const credits_per_usd = 1000 / 0.5;
   const min_credit_charge = 0.01;
+  const MAX_ITERATIONS = 30;
 
   type TokenUsage = {
     input_tokens: number;
@@ -73,7 +74,8 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     const chat_input_price = pricing.chat_config.input_tokens ?? 0;
     const chat_output_price = pricing.chat_config.output_tokens ?? 0;
     const compaction_input_price = pricing.compaction_config.input_tokens ?? 0;
-    const compaction_output_price = pricing.compaction_config.output_tokens ?? 0;
+    const compaction_output_price =
+      pricing.compaction_config.output_tokens ?? 0;
 
     const chat_cost =
       chat_usage.input_tokens * chat_input_price +
@@ -137,7 +139,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
     if (!credit_grant_id) {
       logger.warn(
-        { organization_id: input.organization_id, chat_turn_id: input.chat_turn_id },
+        {
+          organization_id: input.organization_id,
+          chat_turn_id: input.chat_turn_id,
+        },
         "No credit grant found for usage recording",
       );
       return;
@@ -385,10 +390,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       .where("id", "=", turn_id)
       .where("chat_session_id", "=", chat_session_id)
       .executeTakeFirst()) as unknown as
-      | Pick<
-          ChatSessionTurnEt,
-          "status" | "chat_session_id" | "user_input"
-        >
+      | Pick<ChatSessionTurnEt, "status" | "chat_session_id" | "user_input">
       | undefined;
 
     if (!turn) {
@@ -446,8 +448,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         custom_tools: toolRegistry.getAllToolDefinitions(),
       };
 
-      const { requestMessage: userMessage, contextMessage: contextUserMessage } =
-        await buildUserMessages(turn.user_input);
+      const {
+        requestMessage: userMessage,
+        contextMessage: contextUserMessage,
+      } = await buildUserMessages(turn.user_input);
       const initialRawMessages = Array.isArray(initialRaw)
         ? [...initialRaw, userMessage]
         : [userMessage];
@@ -466,10 +470,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       let currentContextRaw = contextRawMessages;
 
       let iteration = 0;
-      const maxIterations = 20;
+
       let fullText = "";
 
-      while (iteration < maxIterations) {
+      while (iteration < MAX_ITERATIONS) {
         iteration++;
 
         const contextRawMessages = Array.isArray(currentRequest.raw)
@@ -488,7 +492,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             compaction_config: compactionConfig,
           });
           sequence = compacted.sequence;
-          totalCompactionUsage = addUsage(totalCompactionUsage, compacted.usage);
+          totalCompactionUsage = addUsage(
+            totalCompactionUsage,
+            compacted.usage,
+          );
           currentRequest = {
             ...currentRequest,
             raw: compacted.raw_messages,
@@ -727,7 +734,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       }
 
       runningTurns.add(turn_id);
-      executeChatTurnInternal(chat_session_id, turn_id, organization_id, user_id, workspace)
+      executeChatTurnInternal(
+        chat_session_id,
+        turn_id,
+        organization_id,
+        user_id,
+        workspace,
+      )
         .catch((error) => {
           logger.error(
             { err: error, chat_session_id, turn_id },
