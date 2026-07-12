@@ -35,7 +35,9 @@ export default defineConfig({
         text: 'Core Concepts',
         items: [
           { text: 'Mock APIs', link: '/core-concepts/mock-apis' },
-          { text: 'Variables', link: '/core-concepts/variables' }
+          { text: 'Variables', link: '/core-concepts/variables' },
+          { text: 'Imports & Templates', link: '/core-concepts/imports-and-templates' },
+          { text: 'Request Logs', link: '/core-concepts/request-logs' }
         ]
       },
       {

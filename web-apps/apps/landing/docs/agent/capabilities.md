@@ -11,6 +11,11 @@ SynthAPI features a built-in AI agent capable of orchestrating complex mock API 
 - **Manage Auth flows**: "Set up a login endpoint that returns a token, and a protected endpoint that checks for that token."
 - **Data Collections**: "Create endpoints to list, add, and delete items from an array."
 - **Rate Limiting**: "Create an endpoint that rate limits me to 5 requests."
+- **Web Search Integration**: "Search the web for the latest GitHub API schema and build a mock based on it."
+
+## Agent Safeguards & Limits
+
+To ensure stable performance and protect against infinite loops, the agent's tool execution is strictly bounded. The agent is permitted up to **5 web searches per turn**, and is capped at 100 tool executions for all other actions within a single chat response.
 
 ## Tips for Prompting
 
