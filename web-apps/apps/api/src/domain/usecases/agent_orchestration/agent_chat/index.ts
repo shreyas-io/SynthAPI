@@ -34,7 +34,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   const toolRegistry = AgentToolRegistry();
   const runningTurns = new Set<string>();
 
-  const credits_per_usd = 10000;
+  const credits_per_usd = 1000 / 0.5;
   const min_credit_charge = 0.01;
   const web_search_cost_usd = 0.008;
   const MAX_ITERATIONS = 30;
@@ -603,13 +603,18 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
           let toolResult: unknown;
           let toolStatus: "success" | "failed" = "success";
-          
+
           const currentCount = toolRunCounts.get(toolName) ?? 0;
           const nextCount = currentCount + 1;
           toolRunCounts.set(toolName, nextCount);
 
           try {
-            toolResult = await tool.execute(ctx, workspace, toolArgs, nextCount);
+            toolResult = await tool.execute(
+              ctx,
+              workspace,
+              toolArgs,
+              nextCount,
+            );
           } catch (error) {
             toolStatus = "failed";
             toolResult = { error: String(error) };
@@ -716,7 +721,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             chat_usage: totalChatUsage,
             compaction_usage: totalCompactionUsage,
             pricing: agentConfig.pricing_config,
-            web_search_count: toolRunCounts.get('web_search') ?? 0,
+            web_search_count: toolRunCounts.get("web_search") ?? 0,
           });
         } catch (error) {
           logger.error(
