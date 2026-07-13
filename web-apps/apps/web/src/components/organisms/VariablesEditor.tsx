@@ -161,11 +161,11 @@ export function VariablesEditor({
                   );
                 }}
               >
-                <option value="string">string</option>
-                <option value="number">number</option>
-                <option value="boolean">boolean</option>
-                <option value="array">array</option>
-                <option value="object">object</option>
+                <option value="string">String</option>
+                <option value="number">Number</option>
+                <option value="boolean">Boolean</option>
+                <option value="array">Array</option>
+                <option value="object">Object</option>
               </select>
             </label>
           </div>
@@ -184,8 +184,8 @@ export function VariablesEditor({
                   )
                 }
               >
-                <option value="true">true</option>
-                <option value="false">false</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
               </select>
             </label>
           ) : row.type === "array" || row.type === "object" ? (

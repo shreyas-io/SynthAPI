@@ -181,8 +181,8 @@ export function AppLayout() {
           </div>
         </AgentChatProvider>
       </div>
-      <footer style={{ borderTop: '1px solid var(--color-border)', padding: '1rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--color-text-muted)', background: 'var(--color-surface)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+      <footer style={{ borderTop: '1px solid var(--color-border)', padding: '1rem 2rem', fontSize: '0.85rem', color: 'var(--color-text-muted)', background: 'var(--color-surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '2rem' }}>
           <a href="/docs/" style={{ color: 'inherit', textDecoration: 'none' }}>Docs</a>
           <button 
             onClick={() => setContactModalOpen(true)}
@@ -192,7 +192,7 @@ export function AppLayout() {
           </button>
           <span style={{ cursor: 'help' }} title="No refunds allowed">Refund policy</span>
         </div>
-        <div style={{ opacity: 0.7 }}>
+        <div style={{ opacity: 0.7, fontWeight: 500 }}>
           SynthAPI
         </div>
       </footer>

@@ -73,6 +73,16 @@ const actionTypes = [
   "script",
 ] as const;
 
+const actionTypeLabels: Record<string, string> = {
+  set: "Set Variable",
+  unset: "Unset Variable",
+  increment: "Increment Number",
+  decrement: "Decrement Number",
+  append: "Append to List",
+  remove: "Remove from List",
+  script: "Run Python Script",
+};
+
 const stringifyValue = (value: unknown): string => {
   if (typeof value === "string") return value;
   return JSON.stringify(value);
@@ -292,10 +302,18 @@ function PostActionForm({
   action,
   onChange,
   onRemove,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast,
 }: {
   action: PostResponseAction;
   onChange: (action: PostResponseAction) => void;
   onRemove: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
 }) {
   const isValueAction =
     action.type === "set" ||
@@ -363,28 +381,49 @@ function PostActionForm({
 
   return (
     <div className="post-action-card form">
-      <div className="section-heading">
-        <select
-          value={action.type}
-          onChange={(e) => {
-            setDraftJson(null);
-            onChange(
-              createAction(
-                e.target.value as PostResponseAction["type"],
-                action.order,
-              ),
-            );
-          }}
-        >
-          {actionTypes.map((type) => (
-            <option key={type} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-        <Button variant="secondary" className="icon-btn" onClick={onRemove}>
-          ×
-        </Button>
+      <div className="section-heading" style={{ alignItems: "flex-end" }}>
+        <label style={{ flex: 1, maxWidth: "250px" }}>
+          Action
+          <select
+            value={action.type}
+            onChange={(e) => {
+              setDraftJson(null);
+              onChange(
+                createAction(
+                  e.target.value as PostResponseAction["type"],
+                  action.order,
+                ),
+              );
+            }}
+          >
+            {actionTypes.map((type) => (
+              <option key={type} value={type}>
+                {actionTypeLabels[type] || type}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div style={{ display: "flex", gap: "0.25rem" }}>
+          <Button
+            variant="secondary"
+            className="icon-btn"
+            onClick={onMoveUp}
+            disabled={isFirst}
+          >
+            ↑
+          </Button>
+          <Button
+            variant="secondary"
+            className="icon-btn"
+            onClick={onMoveDown}
+            disabled={isLast}
+          >
+            ↓
+          </Button>
+          <Button variant="secondary" className="icon-btn" onClick={onRemove}>
+            ×
+          </Button>
+        </div>
       </div>
 
       {action.type === "script" ? (
@@ -403,8 +442,8 @@ function PostActionForm({
                 onChange({ ...action, scope: e.target.value as VariableScope })
               }
             >
-              <option value="local">local</option>
-              <option value="global">global</option>
+              <option value="local">Local</option>
+              <option value="global">Global</option>
             </select>
           </label>
           <label>
@@ -434,34 +473,36 @@ function PostActionForm({
                   value={valueType}
                   onChange={(e) => handleTypeChange(e.target.value)}
                 >
-                  <option value="string">string</option>
-                  <option value="number">number</option>
-                  <option value="boolean">boolean</option>
-                  <option value="null">null</option>
-                  <option value="array">array</option>
-                  <option value="object">object</option>
+                  <option value="string">String</option>
+                  <option value="number">Number</option>
+                  <option value="boolean">Boolean</option>
+                  <option value="null">Null</option>
+                  <option value="array">Array</option>
+                  <option value="object">Object</option>
                 </select>
               </label>
               {valueType === "null" ? null : valueType === "boolean" ? (
-                <label>
+                <label className="full-width">
                   Value
                   <select
                     value={String(actionValue)}
                     onChange={(e) => handleValueChange(e.target.value)}
                   >
-                    <option value="true">true</option>
-                    <option value="false">false</option>
+                    <option value="true">True</option>
+                    <option value="false">False</option>
                   </select>
                 </label>
               ) : valueType === "array" || valueType === "object" ? (
-                <JsonInput
-                  label="Value"
-                  value={displayJson}
-                  error={jsonError}
-                  onChange={handleValueChange}
-                />
+                <div className="full-width">
+                  <JsonInput
+                    label="Value"
+                    value={displayJson}
+                    error={jsonError}
+                    onChange={handleValueChange}
+                  />
+                </div>
               ) : (
-                <label>
+                <label className="full-width">
                   Value
                   <input
                     type={valueType === "number" ? "number" : "text"}
@@ -570,8 +611,8 @@ function SseStreamItemForm({
               })
             }
           >
-            <option value="text">text</option>
-            <option value="json">json</option>
+            <option value="text">Plain Text</option>
+            <option value="json">JSON Object/Array</option>
           </select>
         </label>
       </div>
@@ -865,11 +906,13 @@ export function MockApiResponseEditor({
                       setBodyType(event.target.value as ResponseBody["type"])
                     }
                   >
-                    <option value="json">json</option>
-                    <option value="json_script">json_script</option>
-                    <option value="text">text</option>
-                    <option value="sse">sse</option>
-                    <option value="empty">empty</option>
+                    <option value="json">JSON Content</option>
+                    <option value="json_script">
+                      Python Script (Dynamic JSON)
+                    </option>
+                    <option value="text">Plain Text</option>
+                    <option value="sse">Server-Sent Events (SSE)</option>
+                    <option value="empty">Empty Body (No Content)</option>
                   </select>
                 </label>
               </div>
@@ -1054,8 +1097,8 @@ export function MockApiResponseEditor({
               </div>
               <p className="muted-text" style={{ marginBottom: "1rem" }}>
                 Execute state-changing actions immediately after this response
-                is served, such as incrementing a counter, or mutating a global
-                variable.
+                is served, such as incrementing a counter or mutating a global
+                variable. Actions are executed in order.
               </p>
               {!postActions.length && (
                 <p className="muted-text">
@@ -1066,6 +1109,28 @@ export function MockApiResponseEditor({
                 <PostActionForm
                   action={action}
                   key={index}
+                  isFirst={index === 0}
+                  isLast={index === postActions.length - 1}
+                  onMoveUp={() => {
+                    if (index === 0) return;
+                    const newActions = [...postActions];
+                    const temp = newActions[index - 1];
+                    newActions[index - 1] = newActions[index];
+                    newActions[index] = temp;
+                    newActions[index - 1].order = index;
+                    newActions[index].order = index + 1;
+                    setPostActions(newActions);
+                  }}
+                  onMoveDown={() => {
+                    if (index === postActions.length - 1) return;
+                    const newActions = [...postActions];
+                    const temp = newActions[index + 1];
+                    newActions[index + 1] = newActions[index];
+                    newActions[index] = temp;
+                    newActions[index + 1].order = index + 2;
+                    newActions[index].order = index + 1;
+                    setPostActions(newActions);
+                  }}
                   onChange={(nextAction) =>
                     setPostActions(
                       postActions.map((item, itemIndex) =>
