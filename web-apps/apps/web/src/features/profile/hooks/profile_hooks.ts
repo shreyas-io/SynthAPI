@@ -5,13 +5,16 @@ import {
   createOrganization,
   deleteOrganization,
   getOrganizationCredits,
+  getOrganizationPlan,
   getOrganizationInvites,
   getOrganizationMembers,
   getProfile,
   inviteOrganizationMember,
   leaveOrganization,
-  revokeOrganizationInvite,
+  removeOrganizationMember,
   restoreOrganization,
+  revokeOrganizationInvite,
+  updateOrganizationMemberStatus,
 } from "../api/profile_api";
 
 export const useProfile = () => {
@@ -25,6 +28,13 @@ export const useOrganizationCredits = (organizationId: string) => {
   return useQuery({
     queryKey: queryKeys.organizationCredits(organizationId),
     queryFn: () => getOrganizationCredits(organizationId),
+  });
+};
+
+export const useOrganizationPlan = (organizationId: string) => {
+  return useQuery({
+    queryKey: queryKeys.organizationPlan(organizationId),
+    queryFn: () => getOrganizationPlan(organizationId),
   });
 };
 
@@ -132,6 +142,27 @@ export const useRevokeOrganizationInvite = () => {
     async onSuccess(_, variables) {
       await queryClient.invalidateQueries({
         queryKey: queryKeys.organizationInvites(variables.organizationId),
+      });
+    },
+  });
+};
+
+export const useUpdateOrganizationMemberStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      organizationId,
+      userId,
+      status,
+    }: {
+      organizationId: string;
+      userId: string;
+      status: "active" | "stale";
+    }) => updateOrganizationMemberStatus(organizationId, userId, status),
+    async onSuccess(_, variables) {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.organizationMembers(variables.organizationId),
       });
     },
   });

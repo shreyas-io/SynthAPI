@@ -12,6 +12,7 @@ import { ProfilePage } from "../features/profile/pages/ProfilePage";
 import { NewProjectPage } from "../features/projects/pages/NewProjectPage";
 import { ProjectDetailPage } from "../features/projects/pages/ProjectDetailPage";
 import { ProjectsPage } from "../features/projects/pages/ProjectsPage";
+import { BillingPage } from "../features/billing/pages/BillingPage";
 import { AppLayout } from "./layouts/AppLayout";
 import { ProjectWorkspaceLayout } from "./layouts/ProjectWorkspaceLayout";
 
@@ -24,6 +25,7 @@ export function AppRoutes() {
         <Route element={<AppLayout />}>
           <Route path="/invites/:inviteId" element={<AcceptInvitePage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/billing" element={<BillingPage />} />
           <Route path="/projects" element={<ProjectsPage />} />
           <Route path="/projects/new" element={<NewProjectPage />} />
           

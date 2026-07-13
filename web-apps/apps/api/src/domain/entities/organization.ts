@@ -2,7 +2,7 @@ export type OrganizationMemberRole = "owner" | "admin" | "member" | "viewer";
 
 export type OrganizationMembershipStatus = "active" | "stale";
 
-export type PlanSubscriptionStatus = "active" | "cancelled" | "expired";
+export type PlanSubscriptionStatus = "active" | "cancelled" | "expired" | "queued";
 
 type OrganizationInviteStatus = "pending" | "accepted" | "expired" | "revoked";
 

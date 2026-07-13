@@ -3,6 +3,7 @@ import type {
   AiCredits,
   OrganizationInvite,
   OrganizationMember,
+  OrganizationPlan,
   Profile,
   ProfileOrganization,
 } from "../types";
@@ -15,6 +16,12 @@ export const getOrganizationCredits = (
   organizationId: string,
 ): Promise<AiCredits> => {
   return apiRequest(`/api/v1/organizations/${organizationId}/credits`);
+};
+
+export const getOrganizationPlan = (
+  organizationId: string,
+): Promise<OrganizationPlan> => {
+  return apiRequest(`/api/v1/organizations/${organizationId}/plan`);
 };
 
 export const createOrganization = (
@@ -87,6 +94,20 @@ export const revokeOrganizationInvite = (
     `/api/v1/organizations/${organizationId}/invites/${inviteId}`,
     {
       method: "DELETE",
+    },
+  );
+};
+
+export const updateOrganizationMemberStatus = (
+  organizationId: string,
+  userId: string,
+  status: "active" | "stale",
+): Promise<void> => {
+  return apiRequest(
+    `/api/v1/organizations/${organizationId}/members/${userId}`,
+    {
+      method: "PATCH",
+      body: { status },
     },
   );
 };

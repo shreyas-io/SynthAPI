@@ -11,10 +11,14 @@ import { addProjectChatRoutes } from "./project_chats";
 import { addProjectRoutes } from "./projects";
 import { addProfileRoutes } from "./profile";
 import { addTemplateRoutes } from "./templates";
+import { addBillingRoutes, addBillingWebhookRoutes } from "./billing";
 
 export const addRoutes = (app: Express, ctx: AppContext) => {
   addAuthRoutes(app, ctx);
   addContactRoutes(app, ctx);
+  
+  addBillingWebhookRoutes(app, ctx);
+  
   app.use("/api/v1", bearerAuthMiddleware(ctx));
 
   addOrganizationRoutes(app, ctx);
@@ -24,4 +28,5 @@ export const addRoutes = (app: Express, ctx: AppContext) => {
   addMockApiResponseRoutes(app, ctx);
   addProjectChatRoutes(app, ctx);
   addTemplateRoutes(app, ctx);
+  addBillingRoutes(app, ctx);
 };

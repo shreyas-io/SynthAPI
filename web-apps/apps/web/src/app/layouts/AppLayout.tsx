@@ -66,6 +66,12 @@ export function AppLayout() {
             <Folder size={14} />
             Projects
           </Link>
+          {(!selectedOrg?.plan || selectedOrg.plan.key === "basic") && (
+            <Link to="/billing">
+              <Sparkles size={14} />
+              Upgrade
+            </Link>
+          )}
         </nav>
         <div className="top-bar-actions">
           {selectedOrganizationId && credits.data && (
@@ -100,7 +106,14 @@ export function AppLayout() {
                     }}
                     role="menuitem"
                   >
-                    <span>{org.name}</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", alignItems: "flex-start" }}>
+                      <span>{org.name}</span>
+                      {org.plan && (
+                        <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                          {org.plan.name} • {org.plan.status === "active" ? `Expires ${new Date(org.plan.expires_at).toLocaleDateString()}` : org.plan.status}
+                        </span>
+                      )}
+                    </div>
                     {org.id === selectedOrganizationId && (
                       <span className="pill">active</span>
                     )}

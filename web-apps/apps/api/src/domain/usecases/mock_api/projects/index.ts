@@ -1,5 +1,6 @@
 import type { AppContext } from "../../../../server";
 import { sql } from "kysely";
+import { getActiveOrganizationPlan } from "../../organizations/plans";
 import {
   HttpStatusCode,
   MockApiException,
@@ -125,6 +126,28 @@ export const ProjectsUsecase = (ctx: AppContext) => {
         user,
         organization_id,
       );
+
+      const activePlan = await getActiveOrganizationPlan(ctx.db, validated_org_id);
+      if (!activePlan) {
+        throw new MockApiException({
+          public_message: "No active plan found for this organization.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+      
+      const projectsCount = await ctx.db
+        .selectFrom("projects")
+        .select((eb) => eb.fn.count<number>("id").as("count"))
+        .where("organization_id", "=", validated_org_id)
+        .where("deleted_at", "is", null)
+        .executeTakeFirstOrThrow();
+
+      if (Number(projectsCount.count) >= activePlan.max_projects) {
+        throw new MockApiException({
+          public_message: `Project limit reached. Your current plan allows up to ${activePlan.max_projects} projects. Please upgrade your plan to create more projects.`,
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
 
       const project = await ctx.db
         .insertInto("projects")
@@ -432,6 +455,28 @@ export const ProjectsUsecase = (ctx: AppContext) => {
       }
 
       await assertOrganizationWriteAccess(user, project.organization_id);
+
+      const activePlan = await getActiveOrganizationPlan(ctx.db, project.organization_id);
+      if (!activePlan) {
+        throw new MockApiException({
+          public_message: "No active plan found for this organization.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+      
+      const projectsCount = await ctx.db
+        .selectFrom("projects")
+        .select((eb) => eb.fn.count<number>("id").as("count"))
+        .where("organization_id", "=", project.organization_id)
+        .where("deleted_at", "is", null)
+        .executeTakeFirstOrThrow();
+
+      if (Number(projectsCount.count) >= activePlan.max_projects) {
+        throw new MockApiException({
+          public_message: `Project limit reached. Your current plan allows up to ${activePlan.max_projects} projects. Please upgrade your plan to restore this project.`,
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
 
       await ctx.db
         .updateTable("projects")

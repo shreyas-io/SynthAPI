@@ -34,7 +34,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   const toolRegistry = AgentToolRegistry();
   const runningTurns = new Set<string>();
 
-  const credits_per_usd = 1000 / 0.5;
+  const credits_per_usd = 4000; // denotes how much credit we charge the user for every usd
   const min_credit_charge = 0.01;
   const web_search_cost_usd = 0.008;
   const MAX_ITERATIONS = 30;
