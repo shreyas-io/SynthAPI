@@ -2,6 +2,7 @@ packages:
   - apps/*
   - packages/*
 allowBuilds:
+  '@sentry/node-cpu-profiler': true
   argon2: true
   esbuild: true
   msgpackr-extract: false

@@ -1,4 +1,7 @@
 import "dotenv/config";
+import "./instrument";
+
+import * as Sentry from "@sentry/node";
 
 import cors from "cors";
 import express, { type Express } from "express";
@@ -121,6 +124,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   app.use(responseMiddleware);
 
   addRoutes(app, appContext);
+  Sentry.setupExpressErrorHandler(app);
   app.use(errorMiddleware);
 
   return {
