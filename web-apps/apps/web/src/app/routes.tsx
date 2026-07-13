@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router";
 
 import { ProtectedRoute } from "../features/auth/components/ProtectedRoute";
+import { PublicOnlyRoute } from "../features/auth/components/PublicOnlyRoute";
 import { SigninPage } from "../features/auth/pages/SigninPage";
 import { SignupPage } from "../features/auth/pages/SignupPage";
 import { MockApiResponseDetailPage } from "../features/mock-api-responses/pages/MockApiResponseDetailPage";
@@ -19,8 +20,10 @@ import { ProjectWorkspaceLayout } from "./layouts/ProjectWorkspaceLayout";
 export function AppRoutes() {
   return (
     <Routes>
-      <Route path="/signin" element={<SigninPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+      <Route element={<PublicOnlyRoute />}>
+        <Route path="/signin" element={<SigninPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+      </Route>
       <Route element={<ProtectedRoute />}>
         <Route element={<AppLayout />}>
           <Route path="/invites/:inviteId" element={<AcceptInvitePage />} />
