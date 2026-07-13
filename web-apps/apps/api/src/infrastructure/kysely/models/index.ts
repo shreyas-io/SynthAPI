@@ -16,6 +16,7 @@ import type {
   OrganizationPlanSubscriptionsTable,
   OrganizationsTable,
   PlanTypesTable,
+  PaymentTransactionsTable,
 } from "./organizations";
 import type {
   DataEncryptionKeysTable,
@@ -79,4 +80,5 @@ export type Database = {
   chat_session_turns: ChatSessionTurnsTable;
   chat_turn_events: ChatTurnEventsTable;
   contact_messages: ContactMessagesTable;
+  payment_transactions: PaymentTransactionsTable;
 };

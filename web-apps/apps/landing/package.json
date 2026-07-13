@@ -19,6 +19,7 @@
     "@vitejs/plugin-react": "^6.0.1",
     "@xyflow/react": "^12.10.2",
     "dagre": "^0.8.5",
+    "lucide-react": "^1.17.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "typescript": "^5.8.3",

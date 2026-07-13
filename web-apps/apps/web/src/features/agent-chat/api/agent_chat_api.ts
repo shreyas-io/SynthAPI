@@ -68,3 +68,25 @@ export const getChatTurnStreamUrl = (
 ) => {
   return `${apiBaseUrl}/api/v1/projects/${projectId}/chats/${chatId}/turns/${turnId}/stream`;
 };
+
+export const deleteProjectChat = (
+  projectId: string,
+  chatId: string,
+): Promise<void> => {
+  return apiRequest(`/api/v1/projects/${projectId}/chats/${chatId}`, {
+    method: "DELETE",
+  });
+};
+
+export const cancelChatTurn = (
+  projectId: string,
+  chatId: string,
+  turnId: string,
+): Promise<void> => {
+  return apiRequest(
+    `/api/v1/projects/${projectId}/chats/${chatId}/turns/${turnId}/cancel`,
+    {
+      method: "POST",
+    },
+  );
+};

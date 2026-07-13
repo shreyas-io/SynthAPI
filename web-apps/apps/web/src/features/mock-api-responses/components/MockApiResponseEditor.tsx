@@ -1,9 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
-import { Save, Trash2 } from "lucide-react";
+import { Save, Trash2, Info } from "lucide-react";
 
 import { Button } from "../../../components/atoms/Button";
 import { JsonInput } from "../../../components/atoms/JsonInput";
-import { RequestTemplatePicker } from "../../../components/molecules/RequestTemplatePicker";
 import { createId } from "../../../lib/id/create_id";
 import { RuleTreeEditor } from "../../rule-tree-editor/components/RuleTreeEditor";
 import type {
@@ -21,6 +20,26 @@ type KeyValueRow = {
   key: string;
   value: string;
 };
+
+function TooltipLabel({
+  label,
+  tooltip,
+}: {
+  label: React.ReactNode;
+  tooltip: string;
+}) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "4px" }}>
+      {label}
+      <span
+        title={tooltip}
+        style={{ cursor: "help", display: "inline-flex", alignItems: "center" }}
+      >
+        <Info size={14} className="muted-text" />
+      </span>
+    </span>
+  );
+}
 
 type EditableSseStreamItem = {
   id: string;
@@ -113,7 +132,9 @@ const createEditableSseStreamItem = (
         : JSON.stringify(item.sse.data, null, 2),
 });
 
-const editableSseItemsFromResponse = (body: ResponseBody): EditableSseStreamItem[] =>
+const editableSseItemsFromResponse = (
+  body: ResponseBody,
+): EditableSseStreamItem[] =>
   body.type === "sse" && body.mode === "events"
     ? body.events.map((item) => createEditableSseStreamItem(item))
     : [];
@@ -146,8 +167,8 @@ const hasSseContentType = (rows: KeyValueRow[]): boolean =>
 const normalizeRuleTree = (ruleTree: RuleTree | null): RuleTree | null => {
   if (!ruleTree) return null;
 
-  const predicates = ruleTree.predicates.filter((pred) => 
-    pred.type === "custom" ? pred.script.trim() : pred.actual.trim()
+  const predicates = ruleTree.predicates.filter((pred) =>
+    pred.type === "custom" ? pred.script.trim() : pred.actual.trim(),
   );
   const predicateBranches = predicates.map((pred) => ({
     label: pred.label,
@@ -276,19 +297,84 @@ function PostActionForm({
   onChange: (action: PostResponseAction) => void;
   onRemove: () => void;
 }) {
+  const isValueAction =
+    action.type === "set" ||
+    action.type === "append" ||
+    action.type === "remove";
+  const actionValue = isValueAction ? (action as any).value : undefined;
+
+  const valueType =
+    actionValue === null
+      ? "null"
+      : Array.isArray(actionValue)
+        ? "array"
+        : typeof actionValue === "object" && actionValue !== null
+          ? "object"
+          : typeof actionValue === "boolean"
+            ? "boolean"
+            : typeof actionValue === "number"
+              ? "number"
+              : "string";
+
+  const [draftJson, setDraftJson] = useState<string | null>(null);
+
+  const handleTypeChange = (newType: string) => {
+    setDraftJson(null);
+    let newValue: any = "";
+    if (newType === "number") newValue = 0;
+    if (newType === "boolean") newValue = false;
+    if (newType === "null") newValue = null;
+    if (newType === "array") newValue = [];
+    if (newType === "object") newValue = {};
+    onChange({ ...action, value: newValue } as any);
+  };
+
+  const handleValueChange = (val: string) => {
+    if (valueType === "number") {
+      onChange({ ...action, value: Number(val) } as any);
+    } else if (valueType === "boolean") {
+      onChange({ ...action, value: val === "true" } as any);
+    } else if (valueType === "array" || valueType === "object") {
+      setDraftJson(val);
+      try {
+        const parsed = JSON.parse(val);
+        onChange({ ...action, value: parsed } as any);
+      } catch {
+        // Invalid JSON, keep draft JSON but do not propagate
+      }
+    } else {
+      onChange({ ...action, value: val } as any);
+    }
+  };
+
+  let displayJson = "";
+  let jsonError: string | null = null;
+  if (valueType === "array" || valueType === "object") {
+    displayJson =
+      draftJson !== null ? draftJson : JSON.stringify(actionValue, null, 2);
+    if (draftJson !== null) {
+      try {
+        JSON.parse(draftJson);
+      } catch {
+        jsonError = "Invalid JSON";
+      }
+    }
+  }
+
   return (
     <div className="post-action-card form">
       <div className="section-heading">
         <select
           value={action.type}
-          onChange={(e) =>
+          onChange={(e) => {
+            setDraftJson(null);
             onChange(
               createAction(
                 e.target.value as PostResponseAction["type"],
                 action.order,
               ),
-            )
-          }
+            );
+          }}
         >
           {actionTypes.map((type) => (
             <option key={type} value={type}>
@@ -343,28 +429,48 @@ function PostActionForm({
           ) : action.type === "unset" ? null : (
             <>
               <label>
-                Value
-                <input
-                  placeholder="e.g. {{request.body.value.email}}"
-                  value={String((action as any).value ?? "")}
-                  onChange={(e) =>
-                    onChange({
-                      ...action,
-                      value: e.target.value,
-                    } as PostResponseAction)
-                  }
-                />
+                Value type
+                <select
+                  value={valueType}
+                  onChange={(e) => handleTypeChange(e.target.value)}
+                >
+                  <option value="string">string</option>
+                  <option value="number">number</option>
+                  <option value="boolean">boolean</option>
+                  <option value="null">null</option>
+                  <option value="array">array</option>
+                  <option value="object">object</option>
+                </select>
               </label>
-              <RequestTemplatePicker
-                label="Action value template"
-                insertLabel="Append"
-                onInsert={(template) =>
-                  onChange({
-                    ...action,
-                    value: `${String((action as any).value ?? "")}${template}`,
-                  } as PostResponseAction)
-                }
-              />
+              {valueType === "null" ? null : valueType === "boolean" ? (
+                <label>
+                  Value
+                  <select
+                    value={String(actionValue)}
+                    onChange={(e) => handleValueChange(e.target.value)}
+                  >
+                    <option value="true">true</option>
+                    <option value="false">false</option>
+                  </select>
+                </label>
+              ) : valueType === "array" || valueType === "object" ? (
+                <JsonInput
+                  label="Value"
+                  value={displayJson}
+                  error={jsonError}
+                  onChange={handleValueChange}
+                />
+              ) : (
+                <label>
+                  Value
+                  <input
+                    type={valueType === "number" ? "number" : "text"}
+                    placeholder="e.g. {{request.body.value.email}}"
+                    value={String(actionValue ?? "")}
+                    onChange={(e) => handleValueChange(e.target.value)}
+                  />
+                </label>
+              )}
             </>
           )}
         </div>
@@ -649,8 +755,18 @@ export function MockApiResponseEditor({
     <form className="response-editor-shell flat-editor" onSubmit={submit}>
       <div className="workspace-row editor-toolbar dense-editor-toolbar">
         <div className="editor-title-row">
-          <div style={{ display: "flex", flex: 1, alignItems: "center", gap: "24px" }}>
-            <h2 title={initialResponse ? initialResponse.name : "Create response"} style={{ flex: "none", maxWidth: "400px" }}>
+          <div
+            style={{
+              display: "flex",
+              flex: 1,
+              alignItems: "center",
+              gap: "24px",
+            }}
+          >
+            <h2
+              title={initialResponse ? initialResponse.name : "Create response"}
+              style={{ flex: "none", maxWidth: "400px" }}
+            >
               {initialResponse ? initialResponse.name : "Create response"}
             </h2>
             <div className="editor-tabs compact-tabs inline-tabs">
@@ -669,8 +785,8 @@ export function MockApiResponseEditor({
                 Actions
               </button>
               <button
-                className={activeTab === "rules" ? "active" : ""}
                 type="button"
+                className={activeTab === "rules" ? "active" : ""}
                 onClick={() => setActiveTab("rules")}
               >
                 Rules
@@ -707,14 +823,20 @@ export function MockApiResponseEditor({
             <div className="editor-tab-panel form flat-panel">
               <div className="field-grid">
                 <label>
-                  Name
+                  <TooltipLabel
+                    label="Name"
+                    tooltip="A descriptive name for this response branch."
+                  />
                   <input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
                 </label>
                 <label>
-                  Status code
+                  <TooltipLabel
+                    label="Status code"
+                    tooltip="The HTTP status code to return when this response matches."
+                  />
                   <input
                     type="number"
                     value={statusCode}
@@ -722,7 +844,10 @@ export function MockApiResponseEditor({
                   />
                 </label>
                 <label>
-                  Set as Default Response
+                  <TooltipLabel
+                    label="Set as Default Response"
+                    tooltip="This response will be used as a fallback if no other response's rules match the incoming request."
+                  />
                   <input
                     type="checkbox"
                     checked={isDefault}
@@ -730,7 +855,10 @@ export function MockApiResponseEditor({
                   />
                 </label>
                 <label>
-                  Body type
+                  <TooltipLabel
+                    label="Body type"
+                    tooltip="The format of the response body. 'json_script' allows dynamic generation via Python."
+                  />
                   <select
                     value={bodyType}
                     onChange={(event) =>
@@ -924,6 +1052,11 @@ export function MockApiResponseEditor({
                   + Add
                 </Button>
               </div>
+              <p className="muted-text" style={{ marginBottom: "1rem" }}>
+                Execute state-changing actions immediately after this response
+                is served, such as incrementing a counter, or mutating a global
+                variable.
+              </p>
               {!postActions.length && (
                 <p className="muted-text">
                   No post response actions configured.
@@ -954,11 +1087,13 @@ export function MockApiResponseEditor({
 
           {activeTab === "rules" && (
             <div className="editor-tab-panel rule-editor-panel flat-panel">
+              <p className="muted-text" style={{ marginBottom: "1rem" }}>
+                Rules define the conditions that must be met for this response
+                to be served. You can match against headers, validate JSON
+                payloads, or check internal state variables.
+              </p>
               <div className="rule-editor-frame">
-                <RuleTreeEditor
-                  initialTree={ruleTree}
-                  onChange={setRuleTree}
-                />
+                <RuleTreeEditor initialTree={ruleTree} onChange={setRuleTree} />
               </div>
             </div>
           )}

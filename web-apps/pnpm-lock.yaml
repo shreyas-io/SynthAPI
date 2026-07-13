@@ -128,6 +128,9 @@ importers:
       dagre:
         specifier: ^0.8.5
         version: 0.8.5
+      lucide-react:
+        specifier: ^1.17.0
+        version: 1.17.0(react@19.2.7)
       react:
         specifier: ^19.1.0
         version: 19.2.7

@@ -92,3 +92,21 @@ export type OrganizationCreditUsagesTable = {
   source_id: string | null;
   created_at: Timestamp;
 };
+
+export type PaymentTransactionsTable = {
+  id: GeneratedUuid;
+  organization_id: string;
+  razorpay_transaction_id: string | null;
+  lemonsqueezy_transaction_id: string | null;
+  purchase_type: string;
+  plan_type_id: string | null;
+  amount: number;
+  currency: string;
+  status: ColumnType<
+    "pending" | "completed" | "failed",
+    "pending" | "completed" | "failed" | undefined,
+    "pending" | "completed" | "failed"
+  >;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+};

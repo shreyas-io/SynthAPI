@@ -62,4 +62,5 @@ export type LLMConfig = z.infer<typeof llmConfigSchema>;
 export type GenerationRequest = {
   config: LLMConfig;
   raw: unknown | null;
+  abortSignal?: AbortSignal;
 };

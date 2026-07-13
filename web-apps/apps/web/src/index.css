@@ -2697,8 +2697,8 @@ h3 {
 .terminal-chat-bar {
   width: 2.9rem;
   height: 100%;
-  background: transparent;
-  color: var(--color-text);
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.05), rgba(139, 92, 246, 0.15));
+  color: #c4b5fd;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -2707,13 +2707,20 @@ h3 {
   padding: 1rem 0 0.85rem;
   font-family: var(--font-mono);
   font-size: 0.8rem;
-  font-weight: 600;
+  font-weight: 700;
   flex-shrink: 0;
   border: none;
+  border-left: 1px solid rgba(139, 92, 246, 0.3);
+  box-shadow: inset 2px 0 10px rgba(139, 92, 246, 0.2), 0 0 15px rgba(139, 92, 246, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
 }
 
 .terminal-chat-bar:hover {
-  background: transparent;
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.15), rgba(139, 92, 246, 0.3));
+  box-shadow: inset 3px 0 15px rgba(139, 92, 246, 0.4), 0 0 25px rgba(139, 92, 246, 0.35);
+  border-left: 1px solid rgba(167, 139, 250, 0.6);
+  color: #fff;
 }
 
 .terminal-chat-title,
@@ -2728,7 +2735,8 @@ h3 {
 .terminal-chat-title {
   flex: 0 0 auto;
   flex-direction: column;
-  color: var(--color-primary);
+  color: inherit;
+  text-shadow: 0 0 8px rgba(167, 139, 250, 0.6);
 }
 
 .terminal-chat-title span:last-child {
@@ -2740,8 +2748,9 @@ h3 {
 
 .terminal-chat-status {
   flex: 0 0 auto;
-  color: var(--color-text-muted);
+  color: inherit;
   font-size: 0.72rem;
+  opacity: 0.8;
 }
 
 .terminal-chat-status svg {

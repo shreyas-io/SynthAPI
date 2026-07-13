@@ -87,7 +87,7 @@ export function MockApiDetailPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [variablesTab, setVariablesTab] = useState<
     "globals" | "constants" | "local"
-  >("globals");
+  >("local");
 
   if (!mockApiId || !projectId) {
     return <main className="page-content">Missing ID.</main>;
@@ -373,6 +373,13 @@ export function MockApiDetailPage() {
             </div>
             <nav className="editor-tabs" aria-label="Mock API variable tabs">
               <button
+                className={variablesTab === "local" ? "active" : ""}
+                type="button"
+                onClick={() => setVariablesTab("local")}
+              >
+                Local variables
+              </button>
+              <button
                 className={variablesTab === "globals" ? "active" : ""}
                 type="button"
                 onClick={() => setVariablesTab("globals")}
@@ -386,48 +393,39 @@ export function MockApiDetailPage() {
               >
                 Constants
               </button>
-              <button
-                className={variablesTab === "local" ? "active" : ""}
-                type="button"
-                onClick={() => setVariablesTab("local")}
-              >
-                Local variables
-              </button>
             </nav>
-            {variablesTab === "globals" && (
+            {variablesTab === "local" && (
               <VariablesEditor
+                title="Local variables"
+                description="Local variables are scoped specifically to this mock API route. They persist across calls to this specific endpoint, but cannot be accessed by other routes."
+                variables={variables}
+                onChange={setVariables}
+              />
+            )}
+            {variablesTab === "globals" && (
+              <VariablesViewer
                 title="Project globals"
+                description="Project globals can be read and updated by this mock API. Their values are shared with all other routes in this project."
                 variables={globals}
-                onChange={setGlobals}
+                prefix="globals"
               />
             )}
             {variablesTab === "constants" && (
               <VariablesViewer
                 title="Constants"
+                description="Constants are read-only project variables. You can reference them here, but you cannot change their values. Manage them from the Project Settings."
                 variables={project.data?.constants}
-              />
-            )}
-            {variablesTab === "local" && (
-              <VariablesEditor
-                title="Local variables"
-                variables={variables}
-                onChange={setVariables}
+                prefix="constants"
               />
             )}
             {updateMockApiMutation.isError && (
               <p className="error">{updateMockApiMutation.error.message}</p>
             )}
-            {updateProjectMutation.isError && (
-              <p className="error">{updateProjectMutation.error.message}</p>
-            )}
             <Button
               variant="secondary"
-              disabled={
-                updateMockApiMutation.isPending ||
-                updateProjectMutation.isPending
-              }
+              disabled={updateMockApiMutation.isPending}
               onClick={() => {
-                if (!mockApi.data || !project.data) return;
+                if (!mockApi.data) return;
 
                 updateMockApiMutation.mutate({
                   project_id: mockApi.data.project_id,
@@ -436,12 +434,6 @@ export function MockApiDetailPage() {
                   name: mockApi.data.name,
                   description: mockApi.data.description,
                   variables,
-                });
-                updateProjectMutation.mutate({
-                  name: project.data.name,
-                  description: project.data.description,
-                  globals,
-                  constants: project.data.constants ?? [],
                 });
               }}
             >

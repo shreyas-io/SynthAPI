@@ -11,6 +11,7 @@ export type CloudflareWorkersAiStreamInput = {
   tools?: ToolSet;
   temperature?: number;
   maxOutputTokens?: number;
+  abortSignal?: AbortSignal;
 };
 
 export async function streamTextViaCloudflareWorkersAi(
@@ -30,6 +31,7 @@ export async function streamTextViaCloudflareWorkersAi(
       model: provider(input.model),
       system: input.system,
       messages: input.messages,
+      abortSignal: input.abortSignal,
       ...(input.tools === undefined ? {} : { tools: input.tools }),
       ...(input.temperature === undefined
         ? {}

@@ -391,6 +391,7 @@ export function ProjectDetailPage() {
             {variablesTab === "globals" && (
               <VariablesEditor
                 title="Globals"
+                description="Globals are variables scoped to the entire project. Their values persist across all API calls and can be updated by any API route during execution."
                 variables={globals}
                 onChange={setGlobals}
               />
@@ -398,6 +399,7 @@ export function ProjectDetailPage() {
             {variablesTab === "constants" && (
               <VariablesEditor
                 title="Constants"
+                description="Constants are read-only values scoped to the entire project. They cannot be modified during execution, making them perfect for API keys, base URLs, or configuration."
                 variables={constants}
                 onChange={setConstants}
               />

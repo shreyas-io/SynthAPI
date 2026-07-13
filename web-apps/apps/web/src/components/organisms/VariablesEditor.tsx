@@ -1,4 +1,4 @@
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Copy, Check } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { Variable } from "../../features/projects/types";
@@ -38,11 +38,15 @@ const parseValue = (row: VariableRow): unknown => {
 
 export function VariablesEditor({
   title,
+  description,
   variables,
+  allowAdd = true,
   onChange,
 }: {
   title: string;
+  description?: React.ReactNode;
   variables: Variable[] | null | undefined;
+  allowAdd?: boolean;
   onChange: (variables: Variable[]) => void;
 }) {
   const [rows, setRows] = useState<VariableRow[]>(() =>
@@ -90,25 +94,28 @@ export function VariablesEditor({
     <section className="variables-editor">
       <div className="section-heading">
         <h3>{title}</h3>
-        <Button
-          variant="purple"
-          onClick={() =>
-            emit([
-              ...rows,
-              {
-                id: createId(),
-                name: "",
-                type: "string",
-                value: "",
-                value_text: "",
-              },
-            ])
-          }
-        >
-          <Plus size={14} />
-          Add
-        </Button>
+        {allowAdd && (
+          <Button
+            variant="purple"
+            onClick={() =>
+              emit([
+                ...rows,
+                {
+                  id: createId(),
+                  name: "",
+                  type: "string",
+                  value: "",
+                  value_text: "",
+                },
+              ])
+            }
+          >
+            <Plus size={14} />
+            Add
+          </Button>
+        )}
       </div>
+      {description && <p className="muted-text" style={{ marginBottom: "1rem", marginTop: "-0.5rem" }}>{description}</p>}
       {!rows.length && <p>No variables configured.</p>}
       {rows.map((row) => (
         <article className="variable-editor-row" key={row.id}>
@@ -225,26 +232,62 @@ export function VariablesEditor({
   );
 }
 
+function VariableViewerRow({ variable, prefix }: { variable: Variable; prefix: string }) {
+  const [copiedTag, setCopiedTag] = useState(false);
+  const [copiedValue, setCopiedValue] = useState(false);
+
+  const handleCopyTag = () => {
+    void navigator.clipboard.writeText(`{{${prefix}.${variable.name}}}`);
+    setCopiedTag(true);
+    setTimeout(() => setCopiedTag(false), 2000);
+  };
+
+  const handleCopyValue = () => {
+    void navigator.clipboard.writeText(stringifyValue(variable.value));
+    setCopiedValue(true);
+    setTimeout(() => setCopiedValue(false), 2000);
+  };
+
+  return (
+    <article className="variable-editor-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div>
+        <strong>{variable.name}</strong>
+        <p>
+          {variable.type}: <code>{stringifyValue(variable.value)}</code>
+        </p>
+      </div>
+      <div style={{ display: 'flex', gap: '0.5rem' }}>
+        <Button variant="secondary" size="compact" onClick={handleCopyValue}>
+          {copiedValue ? <Check size={14} /> : <Copy size={14} />}
+          {copiedValue ? "Copied" : "Copy value"}
+        </Button>
+        <Button variant="secondary" size="compact" onClick={handleCopyTag}>
+          {copiedTag ? <Check size={14} /> : <Copy size={14} />}
+          {copiedTag ? "Copied" : "Copy tag"}
+        </Button>
+      </div>
+    </article>
+  );
+}
+
 export function VariablesViewer({
   title,
+  description,
   variables,
+  prefix,
 }: {
   title: string;
+  description?: React.ReactNode;
   variables: Variable[] | null | undefined;
+  prefix: string;
 }) {
   return (
     <section className="variables-editor">
       <h3>{title}</h3>
+      {description && <p className="muted-text" style={{ marginBottom: "1rem", marginTop: "-0.5rem" }}>{description}</p>}
       {!variables?.length && <p>No variables configured.</p>}
       {variables?.map((variable) => (
-        <article className="variable-editor-row" key={variable.name}>
-          <div>
-            <strong>{variable.name}</strong>
-            <p>
-              {variable.type}: <code>{stringifyValue(variable.value)}</code>
-            </p>
-          </div>
-        </article>
+        <VariableViewerRow key={variable.name} variable={variable} prefix={prefix} />
       ))}
     </section>
   );

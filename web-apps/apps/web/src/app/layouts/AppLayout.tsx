@@ -14,6 +14,7 @@ import { Avatar } from "../../components/atoms/Avatar";
 import { SynthLogo } from "../../components/atoms/SynthLogo";
 import { useSelectedOrganization } from "../context/OrganizationContext";
 import { AgentChatProvider } from "../../features/agent-chat/context/AgentChatContext";
+import { ContactModal } from "../../components/organisms/ContactModal";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export function AppLayout() {
     useSelectedOrganization();
   const credits = useOrganizationCredits(selectedOrganizationId ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
@@ -179,6 +181,22 @@ export function AppLayout() {
           </div>
         </AgentChatProvider>
       </div>
+      <footer style={{ borderTop: '1px solid var(--color-border)', padding: '1rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--color-text-muted)', background: 'var(--color-surface)', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem' }}>
+          <a href="/docs/" style={{ color: 'inherit', textDecoration: 'none' }}>Docs</a>
+          <button 
+            onClick={() => setContactModalOpen(true)}
+            style={{ color: 'inherit', textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0 }}
+          >
+            Contact Us
+          </button>
+          <span style={{ cursor: 'help' }} title="No refunds allowed">Refund policy</span>
+        </div>
+        <div style={{ opacity: 0.7 }}>
+          SynthAPI
+        </div>
+      </footer>
+      <ContactModal isOpen={contactModalOpen} onClose={() => setContactModalOpen(false)} source="app_footer" />
     </div>
   );
 }
