@@ -4,6 +4,18 @@ export type AiCredits = {
   remaining: number;
 };
 
+export type OrganizationPlan = {
+  subscription_id: string;
+  organization_id: string;
+  expires_at: string;
+  plan_key: string;
+  max_org_members: number;
+  max_projects: number;
+  max_request_logs: number;
+  default_ai_credits: number;
+  rate_limit_req_per_sec: number;
+};
+
 export type ProfileOrganization = {
   id: string;
   name: string;
@@ -27,6 +39,16 @@ export type ProfileOrganization = {
     max_org_members: number | null;
     default_ai_credits: number | null;
   } | null;
+  queued_plans: {
+    subscription_id: string;
+    key: string;
+    name: string;
+    status: "queued";
+    starts_at: string;
+    expires_at: string;
+    max_org_members: number | null;
+    default_ai_credits: number | null;
+  }[];
   ai_credits: AiCredits;
 };
 

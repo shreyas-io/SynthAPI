@@ -14,6 +14,7 @@ import { Avatar } from "../../components/atoms/Avatar";
 import { SynthLogo } from "../../components/atoms/SynthLogo";
 import { useSelectedOrganization } from "../context/OrganizationContext";
 import { AgentChatProvider } from "../../features/agent-chat/context/AgentChatContext";
+import { ContactModal } from "../../components/organisms/ContactModal";
 
 export function AppLayout() {
   const navigate = useNavigate();
@@ -24,6 +25,7 @@ export function AppLayout() {
     useSelectedOrganization();
   const credits = useOrganizationCredits(selectedOrganizationId ?? "");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [contactModalOpen, setContactModalOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [orgMenuOpen, setOrgMenuOpen] = useState(false);
   const orgMenuRef = useRef<HTMLDivElement>(null);
@@ -66,6 +68,12 @@ export function AppLayout() {
             <Folder size={14} />
             Projects
           </Link>
+          {(!selectedOrg?.plan || selectedOrg.plan.key === "basic") && (
+            <Link to="/billing">
+              <Sparkles size={14} />
+              Upgrade
+            </Link>
+          )}
         </nav>
         <div className="top-bar-actions">
           {selectedOrganizationId && credits.data && (
@@ -100,7 +108,14 @@ export function AppLayout() {
                     }}
                     role="menuitem"
                   >
-                    <span>{org.name}</span>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px", alignItems: "flex-start" }}>
+                      <span>{org.name}</span>
+                      {org.plan && (
+                        <span style={{ fontSize: "10px", color: "var(--text-muted)" }}>
+                          {org.plan.name} • {org.plan.status === "active" ? `Expires ${new Date(org.plan.expires_at).toLocaleDateString()}` : org.plan.status}
+                        </span>
+                      )}
+                    </div>
                     {org.id === selectedOrganizationId && (
                       <span className="pill">active</span>
                     )}
@@ -166,6 +181,22 @@ export function AppLayout() {
           </div>
         </AgentChatProvider>
       </div>
+      <footer style={{ borderTop: '1px solid var(--color-border)', padding: '1rem 2rem', fontSize: '0.85rem', color: 'var(--color-text-muted)', background: 'var(--color-surface)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '2rem' }}>
+          <a href="/docs/" style={{ color: 'inherit', textDecoration: 'none' }}>Docs</a>
+          <button 
+            onClick={() => setContactModalOpen(true)}
+            style={{ color: 'inherit', textDecoration: 'none', background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0 }}
+          >
+            Contact Us
+          </button>
+          <span style={{ cursor: 'help' }} title="No refunds allowed">Refund policy</span>
+        </div>
+        <div style={{ opacity: 0.7, fontWeight: 500 }}>
+          SynthAPI
+        </div>
+      </footer>
+      <ContactModal isOpen={contactModalOpen} onClose={() => setContactModalOpen(false)} source="app_footer" />
     </div>
   );
 }

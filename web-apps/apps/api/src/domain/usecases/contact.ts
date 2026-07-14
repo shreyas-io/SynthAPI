@@ -10,6 +10,7 @@ export type ContactMessage = {
   email: string;
   company: string | null;
   message: string;
+  source: string | null;
   created_at: Date;
 };
 
@@ -40,6 +41,7 @@ export const ContactUsecase = (ctx: AppContext) => {
     email: string;
     company?: string | undefined;
     message: string;
+    source?: string | undefined;
   }): Promise<ContactMessage> => {
     await assertRateLimit();
 
@@ -50,6 +52,7 @@ export const ContactUsecase = (ctx: AppContext) => {
         email: input.email,
         company: input.company ?? null,
         message: input.message,
+        source: input.source ?? null,
       })
       .returning([
         "id",
@@ -57,6 +60,7 @@ export const ContactUsecase = (ctx: AppContext) => {
         "email",
         "company",
         "message",
+        "source",
         "created_at",
       ])
       .executeTakeFirstOrThrow();

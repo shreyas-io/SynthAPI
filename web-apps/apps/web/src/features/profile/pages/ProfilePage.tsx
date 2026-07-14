@@ -12,6 +12,8 @@ import {
 import { Avatar } from "../../../components/atoms/Avatar";
 import { Button } from "../../../components/atoms/Button";
 import { ResourceCard } from "../../../components/molecules/ResourceCard";
+import { useNavigate } from "react-router";
+import { useSelectedOrganization } from "../../../app/context/OrganizationContext";
 import { ApiError } from "../../../lib/api/client";
 import {
   useCreateOrganization,
@@ -22,6 +24,7 @@ import {
   useOrganizationMembers,
   useProfile,
   useRevokeOrganizationInvite,
+  useUpdateOrganizationMemberStatus,
   useRestoreOrganization,
 } from "../hooks/profile_hooks";
 import type { ProfileOrganization } from "../types";
@@ -63,6 +66,7 @@ function OrganizationAccessPanel({
   const invitesQuery = useOrganizationInvites(organization.id, showMembersPanel);
   const inviteMutation = useInviteOrganizationMember();
   const revokeInviteMutation = useRevokeOrganizationInvite();
+  const updateMemberStatusMutation = useUpdateOrganizationMemberStatus();
   const inviteAllowed = canInviteMember(organization.membership.role);
   const revokeAllowed = canRevokeInvite(organization.membership.role);
 
@@ -173,9 +177,36 @@ function OrganizationAccessPanel({
                       <strong>{member.display_name ?? member.email ?? "Member"}</strong>
                       <span>{member.email ?? "No email address"}</span>
                     </div>
-                    <span className={`pill ${getRolePillClass(member.role)}`}>
-                      {member.role}
-                    </span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <span className={`pill ${getRolePillClass(member.role)}`}>
+                        {member.role}
+                      </span>
+                      {member.status === "stale" && (
+                        <span className="pill pill-stale" style={{ backgroundColor: '#ffcc00', color: '#333' }}>
+                          stale
+                        </span>
+                      )}
+                      {revokeAllowed && member.role !== "owner" && member.status === "stale" && (
+                        <Button
+                          size="compact"
+                          variant="secondary"
+                          onClick={() => updateMemberStatusMutation.mutate({ organizationId: organization.id, userId: member.id, status: "active" })}
+                          disabled={updateMemberStatusMutation.isPending}
+                        >
+                          Reactivate
+                        </Button>
+                      )}
+                      {revokeAllowed && member.role !== "owner" && member.status === "active" && (
+                        <Button
+                          size="compact"
+                          variant="secondary"
+                          onClick={() => updateMemberStatusMutation.mutate({ organizationId: organization.id, userId: member.id, status: "stale" })}
+                          disabled={updateMemberStatusMutation.isPending}
+                        >
+                          Mark stale
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -253,12 +284,14 @@ function OrganizationAccessPanel({
 
 export function ProfilePage() {
   const profile = useProfile();
+  const navigate = useNavigate();
+  const { setSelectedOrganizationId } = useSelectedOrganization();
   const createOrgMutation = useCreateOrganization();
   const deleteOrgMutation = useDeleteOrganization();
   const leaveOrgMutation = useLeaveOrganization();
   const restoreOrgMutation = useRestoreOrganization();
   const [newOrgName, setNewOrgName] = useState("");
-  const [orgTab, setOrgTab] = useState<OrgTab>("active");
+  const [orgTab, setOrgTab] = useState<"active" | "deleted">("active");
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -413,9 +446,39 @@ export function ProfilePage() {
                       <strong>Status:</strong> {org.membership.status}
                     </p>
                     {org.plan && (
-                      <p>
-                        <strong>Plan:</strong> {org.plan.name} ({org.plan.status})
-                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <p style={{ margin: 0 }}>
+                          <strong>Plan:</strong> {org.plan.name} (
+                          {org.plan.status === "active"
+                            ? `Expires ${new Date(org.plan.expires_at).toLocaleDateString()}`
+                            : org.plan.status}
+                          )
+                        </p>
+                        {org.membership.role === "owner" && (
+                          <Button
+                            size="compact"
+                            variant="secondary"
+                            onClick={() => {
+                              setSelectedOrganizationId(org.id);
+                              navigate("/billing");
+                            }}
+                          >
+                            Buy plan
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                    {org.queued_plans && org.queued_plans.length > 0 && (
+                      <div className="queued-plans" style={{ marginTop: '8px', marginBottom: '8px', padding: '8px', background: 'var(--bg-surface)', borderRadius: '4px' }}>
+                        <p style={{ margin: '0 0 4px 0', fontSize: '12px', fontWeight: 600 }}>Queued Plans:</p>
+                        <ul style={{ margin: 0, paddingLeft: '16px', fontSize: '12px' }}>
+                          {org.queued_plans.map((qp) => (
+                            <li key={qp.subscription_id}>
+                              {qp.name} (Starts {new Date(qp.starts_at).toLocaleDateString()})
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
                     <p>
                       <strong>AI Credits:</strong> {org.ai_credits.remaining} /{" "}

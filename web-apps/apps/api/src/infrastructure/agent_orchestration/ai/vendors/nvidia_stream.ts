@@ -47,6 +47,7 @@ export function streamTextViaNvidia(ctx: AppContext) {
               temperature: request.config.temperature,
               maxOutputTokens: request.config.max_tokens,
               model_gateway: request.config.model_gateway,
+              abortSignal: request.abortSignal,
               ...(toolSet === undefined ? {} : { tools: toolSet }),
             })
           : await streamTextViaOpenRouter(ctx, {
@@ -56,6 +57,7 @@ export function streamTextViaNvidia(ctx: AppContext) {
               temperature: request.config.temperature,
               maxOutputTokens: request.config.max_tokens,
               model_gateway: request.config.model_gateway,
+              abortSignal: request.abortSignal,
               ...(toolSet === undefined ? {} : { tools: toolSet }),
             });
 

@@ -1,4 +1,7 @@
 import "dotenv/config";
+import "./instrument";
+
+import * as Sentry from "@sentry/node";
 
 import cors from "cors";
 import express, { type Express } from "express";
@@ -96,7 +99,12 @@ export const createApiApp = async (): Promise<ApiApp> => {
       credentials: true,
     }),
   );
-  app.use(express.json({ limit: "1mb" }));
+  app.use(express.json({
+    limit: "1mb",
+    verify: (req: any, res, buf) => {
+      req.rawBody = buf.toString("utf8");
+    }
+  }));
   app.use(express.text({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: false, limit: "1mb" }));
   app.use(express.raw({ type: "application/octet-stream", limit: "10mb" }));
@@ -116,6 +124,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
   app.use(responseMiddleware);
 
   addRoutes(app, appContext);
+  Sentry.setupExpressErrorHandler(app);
   app.use(errorMiddleware);
 
   return {

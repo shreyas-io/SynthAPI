@@ -49,6 +49,7 @@ export function streamTextViaOpenAI(ctx: AppContext) {
           ? {}
           : { thinking: request.config.thinking }),
         ...(toolSet === undefined ? {} : { tools: toolSet }),
+        abortSignal: request.abortSignal,
       };
 
       const result =

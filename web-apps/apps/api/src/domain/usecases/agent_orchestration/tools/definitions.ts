@@ -196,7 +196,7 @@ export const toolDefinitions = {
           type: "boolean",
           description: "Whether this is the default response",
         },
-        response: responseSchema,
+        ...responseSchema.properties,
         rule_tree: {
           type: "object",
           description: "Rule tree",
@@ -214,7 +214,7 @@ export const toolDefinitions = {
           },
         },
       },
-      required: ["mock_api_id", "name", "response"],
+      required: ["mock_api_id", "name", ...responseSchema.required],
     },
   ),
   update_mock_api_response: toolEntry(
@@ -230,7 +230,7 @@ export const toolDefinitions = {
           type: "boolean",
           description: "Whether this is the default response",
         },
-        response: responseSchema,
+        ...responseSchema.properties,
         rule_tree: {
           type: "object",
           description: "Rule tree",

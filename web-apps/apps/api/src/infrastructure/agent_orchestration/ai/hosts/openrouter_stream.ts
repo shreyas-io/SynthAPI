@@ -23,6 +23,7 @@ export type OpenRouterStreamInput = {
   thinking?: {
     effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
   };
+  abortSignal?: AbortSignal;
 };
 
 function getModel(ctx: AppContext, input: OpenRouterStreamInput): any {
@@ -62,6 +63,7 @@ function createStreamTextResult(
     model,
     system: input.system,
     messages: input.messages,
+    abortSignal: input.abortSignal,
     ...(input.tools === undefined ? {} : { tools: input.tools }),
     ...(input.temperature === undefined
       ? {}

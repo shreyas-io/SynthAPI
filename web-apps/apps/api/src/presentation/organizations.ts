@@ -4,13 +4,14 @@ import {
   ApiGatewayException,
   HttpStatusCode,
 } from "../domain/exceptions/exception";
-import { getOrganizationAiCreditBalance } from "../domain/usecases/organizations/plans";
+import { getOrganizationAiCreditBalance, getActiveOrganizationPlan } from "../domain/usecases/organizations/plans";
 import { OrganizationsUsecase } from "../domain/usecases/organizations";
 import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
 import {
   createOrganizationDto,
   addOrganizationMemberDto,
+  updateOrganizationMemberDto,
   getInvitesQueryDto,
 } from "./dtos/organizations";
 import { z } from "zod";
@@ -57,6 +58,38 @@ export const addOrganizationRoutes = (app: Express, ctx: AppContext) => {
       }
 
       res.json(await getOrganizationAiCreditBalance(ctx.db, organization_id));
+    }),
+  );
+
+  app.get(
+    "/api/v1/organizations/:organization_id/plan",
+    asyncRoute(async (req, res) => {
+      const organization_id = req.params.organization_id as string;
+      const user = getAuthenticatedUser(req.user);
+
+      const membership = await ctx.db
+        .selectFrom("organization_memberships")
+        .innerJoin(
+          "organizations",
+          "organizations.id",
+          "organization_memberships.organization_id",
+        )
+        .select(["organization_memberships.id"])
+        .where("organization_memberships.organization_id", "=", organization_id)
+        .where("organizations.deleted_at", "is", null)
+        .where("organization_memberships.user_id", "=", user.id)
+        .where("organization_memberships.status", "=", "active")
+        .executeTakeFirst();
+
+      if (!membership) {
+        throw new ApiGatewayException({
+          public_message: "Organization not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      const plan = await getActiveOrganizationPlan(ctx.db, organization_id);
+      res.json(plan);
     }),
   );
 
@@ -184,6 +217,24 @@ export const addOrganizationRoutes = (app: Express, ctx: AppContext) => {
         getAuthenticatedUser(req.user),
         organization_id,
         invite_id,
+      );
+
+      res.status(204).send();
+    }),
+  );
+
+  app.patch(
+    "/api/v1/organizations/:organization_id/members/:user_id",
+    asyncRoute(async (req, res) => {
+      const organization_id = req.params.organization_id as string;
+      const user_id = req.params.user_id as string;
+      const payload = updateOrganizationMemberDto.parse(req.body);
+
+      await organizations.updateMember(
+        getAuthenticatedUser(req.user),
+        organization_id,
+        user_id,
+        payload.status,
       );
 
       res.status(204).send();

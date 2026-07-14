@@ -2,6 +2,7 @@ import type { Kysely, Transaction } from "kysely";
 
 import type { Database } from "../../../infrastructure/kysely/models";
 import { HttpStatusCode, MockApiException } from "../../exceptions/exception";
+import type { PlanSubscriptionStatus } from "../../entities/organization";
 
 type DatabaseExecutor = Kysely<Database> | Transaction<Database>;
 type PlanKey = "basic" | "plus";
@@ -32,33 +33,76 @@ export const createOrganizationPlanSubscription = async (
     organization_id: string;
     plan_key: PlanKey;
     starts_at?: Date;
+    duration_days?: number;
+    credit_amount?: number;
+    credit_duration_days?: number;
   },
 ) => {
   const plan = await getPlanType(db, input.plan_key);
-  const startsAt = input.starts_at ?? new Date();
-  const expiresAt = addDays(startsAt, plan.credit_grant_duration_days);
+
+  const activeSub = await db
+    .selectFrom("organization_plan_subscriptions")
+    .selectAll()
+    .where("organization_id", "=", input.organization_id)
+    .where("status", "=", "active")
+    .executeTakeFirst();
+
+  let startsAt = input.starts_at ?? new Date();
+  let baseDateForExpiration = new Date(startsAt.getTime());
+  let targetStatus: PlanSubscriptionStatus = "active";
+
+  if (activeSub && activeSub.plan_type_id === plan.id) {
+    if (activeSub.expires_at > baseDateForExpiration) {
+      baseDateForExpiration = new Date(activeSub.expires_at.getTime());
+    }
+    startsAt = activeSub.starts_at;
+  } else if (activeSub && activeSub.plan_type_id !== plan.id) {
+    // If it's a cross-tier upgrade, queue the new plan to start after the current one expires
+    targetStatus = "queued";
+    startsAt = activeSub.expires_at;
+    baseDateForExpiration = activeSub.expires_at;
+  }
+
+  const duration = input.duration_days ?? plan.credit_grant_duration_days;
+  const expiresAt = addDays(baseDateForExpiration, duration);
+
+  if (targetStatus === "active") {
+    await db
+      .updateTable("organization_plan_subscriptions")
+      .set({ status: "expired" })
+      .where("organization_id", "=", input.organization_id)
+      .where("status", "=", "active")
+      .execute();
+  }
 
   const subscription = await db
     .insertInto("organization_plan_subscriptions")
     .values({
       organization_id: input.organization_id,
       plan_type_id: plan.id,
-      status: "active",
+      status: targetStatus,
       starts_at: startsAt,
       expires_at: expiresAt,
     })
     .returningAll()
     .executeTakeFirstOrThrow();
 
-  if (plan.default_ai_credits > 0) {
+  const creditsToGrant = input.credit_amount ?? plan.default_ai_credits;
+
+  if (creditsToGrant > 0) {
+    const transactionDate = input.starts_at ?? new Date();
+    const creditExpiresAt = input.credit_duration_days
+      ? addDays(transactionDate, input.credit_duration_days)
+      : subscription.expires_at;
+
     await db
       .insertInto("organization_credit_grants")
       .values({
         organization_id: input.organization_id,
         grant_type: "ai_credits",
-        amount: plan.default_ai_credits,
+        amount: creditsToGrant,
         source_subscription_id: subscription.id,
-        expires_at: subscription.expires_at,
+        expires_at: creditExpiresAt,
       })
       .executeTakeFirstOrThrow();
   }
@@ -180,24 +224,18 @@ export const getOrganizationAiCreditBalance = async (
   };
 };
 
-export const downgradeExpiredPlusTrials = async (
+export const processExpiredSubscriptions = async (
   db: Kysely<Database>,
 ): Promise<number> => {
   const now = new Date();
   const expiredSubscriptions = await db
     .selectFrom("organization_plan_subscriptions")
-    .innerJoin(
-      "plan_types",
-      "plan_types.id",
-      "organization_plan_subscriptions.plan_type_id",
-    )
     .select([
       "organization_plan_subscriptions.id as subscription_id",
       "organization_plan_subscriptions.organization_id as organization_id",
     ])
     .where("organization_plan_subscriptions.status", "=", "active")
     .where("organization_plan_subscriptions.expires_at", "<=", now)
-    .where("plan_types.key", "=", "plus")
     .execute();
 
   for (const subscription of expiredSubscriptions) {
@@ -213,23 +251,67 @@ export const downgradeExpiredPlusTrials = async (
         return;
       }
 
-      await createOrganizationPlanSubscription(trx, {
-        organization_id: subscription.organization_id,
-        plan_key: "basic",
-        starts_at: now,
-      });
+      const queuedSub = await trx
+        .selectFrom("organization_plan_subscriptions")
+        .selectAll()
+        .where("organization_id", "=", subscription.organization_id)
+        .where("status", "=", "queued")
+        .orderBy("starts_at", "asc")
+        .executeTakeFirst();
 
-      await trx
-        .updateTable("organization_memberships")
-        .set({
-          status: "stale",
-          stale_reason: PLAN_DOWNGRADE_STALE_REASON,
-          staled_at: now,
-        })
+      let nextPlanTypeId: string;
+
+      if (queuedSub) {
+        await trx
+          .updateTable("organization_plan_subscriptions")
+          .set({ status: "active" })
+          .where("id", "=", queuedSub.id)
+          .execute();
+        nextPlanTypeId = queuedSub.plan_type_id;
+      } else {
+        const basicPlan = await getPlanType(trx, "basic");
+        nextPlanTypeId = basicPlan.id;
+        await createOrganizationPlanSubscription(trx, {
+          organization_id: subscription.organization_id,
+          plan_key: "basic",
+          starts_at: now,
+        });
+      }
+
+      const nextPlan = await trx
+        .selectFrom("plan_types")
+        .selectAll()
+        .where("id", "=", nextPlanTypeId)
+        .executeTakeFirstOrThrow();
+
+      // Fetch all active members except the owner (who is always retained)
+      const nonOwnerMembers = await trx
+        .selectFrom("organization_memberships")
+        .select(["id"])
         .where("organization_id", "=", subscription.organization_id)
         .where("status", "=", "active")
         .where("role", "!=", "owner")
+        .orderBy("created_at", "asc")
         .execute();
+
+      // The total allowed active members minus 1 (for the owner)
+      const allowedNonOwners = Math.max(0, nextPlan.max_org_members - 1);
+
+      if (nonOwnerMembers.length > allowedNonOwners) {
+        const membersToStale = nonOwnerMembers
+          .slice(allowedNonOwners)
+          .map((m) => m.id);
+
+        await trx
+          .updateTable("organization_memberships")
+          .set({
+            status: "stale",
+            stale_reason: PLAN_DOWNGRADE_STALE_REASON,
+            staled_at: now,
+          })
+          .where("id", "in", membersToStale)
+          .execute();
+      }
     });
   }
 

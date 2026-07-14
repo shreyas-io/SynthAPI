@@ -33,8 +33,9 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   const eventBus = ctx.eventBus;
   const toolRegistry = AgentToolRegistry();
   const runningTurns = new Set<string>();
+  const turnAbortControllers = new Map<string, AbortController>();
 
-  const credits_per_usd = 1000 / 0.5;
+  const credits_per_usd = 4000; // denotes how much credit we charge the user for every usd
   const min_credit_charge = 0.01;
   const web_search_cost_usd = 0.008;
   const MAX_ITERATIONS = 30;
@@ -377,6 +378,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     organization_id: string,
     user_id: string,
     workspace?: ToolWorkspaceContext,
+    abortSignal?: AbortSignal,
   ): Promise<void> => {
     const sessionCount = await ctx.db
       .selectFrom("chat_sessions")
@@ -473,6 +475,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           custom_tools: llmConfigWithTools.custom_tools,
         },
         raw: initialRawMessages,
+        abortSignal,
       };
       let currentContextRaw = contextRawMessages;
 
@@ -752,12 +755,16 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       }
 
       runningTurns.add(turn_id);
+      const abortController = new AbortController();
+      turnAbortControllers.set(turn_id, abortController);
+
       executeChatTurnInternal(
         chat_session_id,
         turn_id,
         organization_id,
         user_id,
         workspace,
+        abortController.signal
       )
         .catch((error) => {
           logger.error(
@@ -767,7 +774,16 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         })
         .finally(() => {
           runningTurns.delete(turn_id);
+          turnAbortControllers.delete(turn_id);
         });
+    },
+    cancelChatTurn: (turn_id: string) => {
+      const controller = turnAbortControllers.get(turn_id);
+      if (controller) {
+        controller.abort(new Error("Turn cancelled by user"));
+        turnAbortControllers.delete(turn_id);
+        runningTurns.delete(turn_id);
+      }
     },
     getTurnStatus: async (turn_id: string) => {
       const turn = await ctx.db

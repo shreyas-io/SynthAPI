@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/query/query_keys";
 
 import { getChatTurnStreamUrl } from "../api/agent_chat_api";
 import {
@@ -9,6 +11,8 @@ import {
   useProjectChatEvents,
   useProjectChats,
   useRefetchProjectChatEvents,
+  useCancelChatTurn,
+  useDeleteProjectChat,
 } from "../hooks/agent_chat_hooks";
 import { MarkdownMessage } from "./MarkdownMessage";
 import type {
@@ -389,6 +393,7 @@ export function ProjectAgentChatPanel({
 }: ProjectAgentChatPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const chatIdFromUrl = searchParams.get("chat_id");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(
     chatIdFromUrl,
@@ -452,11 +457,42 @@ export function ProjectAgentChatPanel({
     });
 
   const createTurnMutation = useCreateChatTurn(projectId);
+  const deleteChatMutation = useDeleteProjectChat(projectId);
+  const cancelTurnMutation = useCancelChatTurn(projectId);
 
   const rawRecords = useMemo(
     () => events.data?.pages.flatMap((page) => page.records) ?? [],
     [events.data?.pages],
   );
+
+  const processedEventIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const event of rawRecords) {
+      if (processedEventIds.current.has(event.id)) continue;
+      processedEventIds.current.add(event.id);
+
+      if (
+        event.payload.type === "tool-result" &&
+        event.payload.output.status === "success"
+      ) {
+        const label = event.payload.output.label;
+        if (
+          label === "create_mock_api" ||
+          label === "update_mock_api" ||
+          label === "delete_mock_api" ||
+          label === "create_mock_api_response" ||
+          label === "update_mock_api_response" ||
+          label === "delete_mock_api_response" ||
+          label === "reorder_mock_api_responses"
+        ) {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.mockApis(projectId),
+          });
+        }
+      }
+    }
+  }, [rawRecords, projectId, queryClient]);
 
   const canonicalMessages = useMemo(
     () => messagesFromEvents([...rawRecords].reverse()),
@@ -851,6 +887,9 @@ export function ProjectAgentChatPanel({
           if (payload.output.status === "success") {
             const label = payload.output.label;
             const content = payload.output.content as Record<string, unknown>;
+            if (label === "create_mock_api" || label === "update_mock_api" || label === "delete_mock_api") {
+              queryClient.invalidateQueries({ queryKey: queryKeys.mockApis(projectId) });
+            }
             if (label === "create_mock_api" || label === "update_mock_api") {
               if (typeof content.id === "string") {
                 navigate(`/projects/${projectId}/mock-apis/${content.id}`);
@@ -1103,6 +1142,37 @@ export function ProjectAgentChatPanel({
               </div>
             )}
           </div>
+          {selectedChatId && !isDraftChat && (
+            <button
+              type="button"
+              className="agent-new-chat-btn agent-delete-chat-btn"
+              onClick={async () => {
+                if (confirm("Are you sure you want to delete this chat?")) {
+                  await deleteChatMutation.mutateAsync(selectedChatId);
+                  setSelectedChatId(null);
+                  startDraftChat();
+                }
+              }}
+              disabled={isSending || deleteChatMutation.isPending}
+              title="Delete Chat"
+              style={{ color: "var(--color-error, #ff4444)" }}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M3 6h18"></path>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+            </button>
+          )}
           <button
             type="button"
             className="agent-new-chat-btn"
@@ -1308,18 +1378,30 @@ export function ProjectAgentChatPanel({
             disabled={isSending || (!selectedChatId && !isDraftChat)}
             rows={3}
           />
-          <button
-            className="agent-send-button"
-            type="submit"
-            disabled={
-              isSending || !message.trim() || (!selectedChatId && !isDraftChat)
-            }
-          >
-            {isSending && (
-              <span aria-hidden="true" className="agent-send-spinner" />
-            )}
-            {isSending ? "Sending" : "Send"}
-          </button>
+          {isSending && activeTurnId && selectedChatId ? (
+            <button
+              className="agent-send-button agent-cancel-button"
+              type="button"
+              onClick={() => {
+                cancelTurnMutation.mutate({ chatId: selectedChatId, turnId: activeTurnId });
+              }}
+            >
+              Cancel
+            </button>
+          ) : (
+            <button
+              className="agent-send-button"
+              type="submit"
+              disabled={
+                isSending || !message.trim() || (!selectedChatId && !isDraftChat)
+              }
+            >
+              {isSending && (
+                <span aria-hidden="true" className="agent-send-spinner" />
+              )}
+              {isSending ? "Sending" : "Send"}
+            </button>
+          )}
         </form>
       )}
     </>

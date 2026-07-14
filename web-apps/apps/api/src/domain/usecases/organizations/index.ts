@@ -126,6 +126,7 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
           "plan_types.default_ai_credits as default_ai_credits",
         ])
         .where("organization_memberships.user_id", "=", user.id)
+        .where("organization_memberships.status", "!=", "stale")
         .orderBy("organizations.created_at", "asc")
         .execute();
 
@@ -135,6 +136,29 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
             ctx.db,
             organization.organization_id,
           );
+
+          const queuedSubscriptions = await ctx.db
+            .selectFrom("organization_plan_subscriptions")
+            .innerJoin(
+              "plan_types",
+              "plan_types.id",
+              "organization_plan_subscriptions.plan_type_id",
+            )
+            .selectAll("organization_plan_subscriptions")
+            .select([
+              "plan_types.key as plan_key",
+              "plan_types.name as plan_name",
+              "plan_types.max_org_members as max_org_members",
+              "plan_types.default_ai_credits as default_ai_credits",
+            ])
+            .where(
+              "organization_plan_subscriptions.organization_id",
+              "=",
+              organization.organization_id,
+            )
+            .where("organization_plan_subscriptions.status", "=", "queued")
+            .orderBy("organization_plan_subscriptions.starts_at", "asc")
+            .execute();
 
           return {
             id: organization.organization_id,
@@ -161,6 +185,16 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
                   default_ai_credits: organization.default_ai_credits,
                 }
               : null,
+            queued_plans: queuedSubscriptions.map((sub) => ({
+              subscription_id: sub.id,
+              key: sub.plan_key,
+              name: sub.plan_name,
+              status: sub.status,
+              starts_at: sub.starts_at,
+              expires_at: sub.expires_at,
+              max_org_members: sub.max_org_members,
+              default_ai_credits: sub.default_ai_credits,
+            })),
             ai_credits: credits,
           };
         }),
@@ -177,6 +211,7 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
         organizations: records,
       };
     },
+    getMembership,
     createOrganization: async (
       user: AuthenticatedUser,
       input: { name: string },
@@ -338,12 +373,16 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
         .returningAll()
         .executeTakeFirstOrThrow();
 
-      await ctx.emailService.sendOrganizationInvite({
-        to: target_user_email,
-        organizationName: organization.name,
-        invitedBy: user.display_name ?? (user.email || "Someone"),
-        inviteUrl: `${ctx.env.WEB_APP_BASE_URL}/invites/${invite.id}`,
-      });
+      try {
+        await ctx.emailService.sendOrganizationInvite({
+          to: target_user_email,
+          organizationName: organization.name,
+          invitedBy: user.display_name ?? (user.email || "Someone"),
+          inviteUrl: `${ctx.env.WEB_APP_BASE_URL}/invites/${invite.id}`,
+        });
+      } catch (error) {
+        console.error("Failed to send organization invite email", error);
+      }
 
       return invite;
     },
@@ -434,6 +473,70 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
         .updateTable("organization_invites")
         .set({ status: "revoked" })
         .where("id", "=", inviteId)
+        .execute();
+    },
+    updateMember: async (
+      user: AuthenticatedUser,
+      organization_id: string,
+      target_user_id: string,
+      status: "active" | "stale",
+    ) => {
+      const membership = await getMembership(user, organization_id);
+
+      if (membership.role !== "owner" && membership.role !== "admin") {
+        throw new MockApiException({
+          public_message: "Only owners and admins can manage members.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      const targetMembership = await ctx.db
+        .selectFrom("organization_memberships")
+        .select(["role", "status"])
+        .where("organization_id", "=", organization_id)
+        .where("user_id", "=", target_user_id)
+        .executeTakeFirst();
+
+      if (!targetMembership) {
+        throw new MockApiException({
+          public_message: "Member not found.",
+          status_code: HttpStatusCode.NOT_FOUND,
+        });
+      }
+
+      if (membership.role === "admin") {
+        if (
+          targetMembership.role === "owner" ||
+          targetMembership.role === "admin"
+        ) {
+          throw new MockApiException({
+            public_message: "Admins can only manage members.",
+            status_code: HttpStatusCode.FORBIDDEN,
+          });
+        }
+      }
+
+      if (status === "stale" && targetMembership.role === "owner") {
+        throw new MockApiException({
+          public_message: "Owners cannot be made stale.",
+          status_code: HttpStatusCode.FORBIDDEN,
+        });
+      }
+
+      if (status === "active" && targetMembership.status === "stale") {
+        await assertOrganizationCanAddMember(ctx.db, organization_id);
+      }
+
+      await ctx.db
+        .updateTable("organization_memberships")
+        .set({
+          status,
+          stale_reason: status === "stale" ? "manual" : null,
+          staled_at: status === "stale" ? new Date() : null,
+          updated_at: new Date(),
+        })
+        .where("organization_id", "=", organization_id)
+        .where("user_id", "=", target_user_id)
         .execute();
     },
     removeMember: async (
@@ -546,14 +649,14 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
     getInvites: async (
       user: AuthenticatedUser,
       organization_id: string,
-      status: OrganizationInviteEt["status"],
+      status?: OrganizationInviteEt["status"],
     ) => {
       const membership = await getMembership(user, organization_id);
       if (membership.role === "member") {
         return [];
       }
 
-      const invites = await ctx.db
+      let query = ctx.db
         .selectFrom("organization_invites")
         .innerJoin(
           "users",
@@ -570,11 +673,23 @@ export const OrganizationsUsecase = (ctx: AppContext) => {
           "users.display_name as invited_by_name",
         ])
         .where("organization_invites.organization_id", "=", organization_id)
-        .where("organization_invites.status", "=", "pending")
-        .where("organization_invites.expires_at", ">", new Date())
-        .where("organization_invites.status", "=", status)
-        .orderBy("organization_invites.created_at", "desc")
-        .execute();
+        .where("organization_invites.status", "!=", "revoked")
+        .where("organization_invites.status", "!=", "expired");
+
+      if (status) {
+        query = query.where("organization_invites.status", "=", status);
+        if (status === "pending") {
+          query = query.where(
+            "organization_invites.expires_at",
+            ">",
+            new Date(),
+          );
+        }
+      }
+
+      query = query.orderBy("organization_invites.created_at", "desc");
+
+      const invites = await query.execute();
 
       return invites;
     },
