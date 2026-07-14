@@ -261,9 +261,11 @@ export function BillingPage() {
             <p style={{ color: "var(--color-text-muted)", marginBottom: "2rem", fontSize: "1rem" }}>Select your preferred payment provider to complete the purchase.</p>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {/* Temporarily hidden 
               <button className="funky-btn funky-btn-secondary" onClick={() => executePurchase(purchaseType, "lemonsqueezy")} disabled={isPending}>
                 {isPending && provider === "lemonsqueezy" ? <Loader2 className="spin" size={18} /> : null} Pay with Lemon Squeezy
               </button>
+              */}
               <button className="funky-btn funky-btn-secondary" onClick={() => executePurchase(purchaseType, "razorpay")} disabled={isPending}>
                 {isPending && provider === "razorpay" ? <Loader2 className="spin" size={18} /> : null} Pay with Razorpay
               </button>
