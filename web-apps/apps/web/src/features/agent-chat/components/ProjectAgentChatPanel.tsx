@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/query/query_keys";
 
 import { getChatTurnStreamUrl } from "../api/agent_chat_api";
 import {
@@ -391,6 +393,7 @@ export function ProjectAgentChatPanel({
 }: ProjectAgentChatPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const chatIdFromUrl = searchParams.get("chat_id");
   const [selectedChatId, setSelectedChatId] = useState<string | null>(
     chatIdFromUrl,
@@ -461,6 +464,35 @@ export function ProjectAgentChatPanel({
     () => events.data?.pages.flatMap((page) => page.records) ?? [],
     [events.data?.pages],
   );
+
+  const processedEventIds = useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const event of rawRecords) {
+      if (processedEventIds.current.has(event.id)) continue;
+      processedEventIds.current.add(event.id);
+
+      if (
+        event.payload.type === "tool-result" &&
+        event.payload.output.status === "success"
+      ) {
+        const label = event.payload.output.label;
+        if (
+          label === "create_mock_api" ||
+          label === "update_mock_api" ||
+          label === "delete_mock_api" ||
+          label === "create_mock_api_response" ||
+          label === "update_mock_api_response" ||
+          label === "delete_mock_api_response" ||
+          label === "reorder_mock_api_responses"
+        ) {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.mockApis(projectId),
+          });
+        }
+      }
+    }
+  }, [rawRecords, projectId, queryClient]);
 
   const canonicalMessages = useMemo(
     () => messagesFromEvents([...rawRecords].reverse()),
@@ -855,6 +887,9 @@ export function ProjectAgentChatPanel({
           if (payload.output.status === "success") {
             const label = payload.output.label;
             const content = payload.output.content as Record<string, unknown>;
+            if (label === "create_mock_api" || label === "update_mock_api" || label === "delete_mock_api") {
+              queryClient.invalidateQueries({ queryKey: queryKeys.mockApis(projectId) });
+            }
             if (label === "create_mock_api" || label === "update_mock_api") {
               if (typeof content.id === "string") {
                 navigate(`/projects/${projectId}/mock-apis/${content.id}`);
