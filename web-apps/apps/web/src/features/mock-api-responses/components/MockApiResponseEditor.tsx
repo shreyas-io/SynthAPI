@@ -1114,21 +1114,21 @@ export function MockApiResponseEditor({
                   onMoveUp={() => {
                     if (index === 0) return;
                     const newActions = [...postActions];
-                    const temp = newActions[index - 1];
-                    newActions[index - 1] = newActions[index];
+                    const temp = newActions[index - 1]!;
+                    newActions[index - 1] = newActions[index]!;
                     newActions[index] = temp;
-                    newActions[index - 1].order = index;
-                    newActions[index].order = index + 1;
+                    newActions[index - 1]!.order = index;
+                    newActions[index]!.order = index + 1;
                     setPostActions(newActions);
                   }}
                   onMoveDown={() => {
                     if (index === postActions.length - 1) return;
                     const newActions = [...postActions];
-                    const temp = newActions[index + 1];
-                    newActions[index + 1] = newActions[index];
+                    const temp = newActions[index + 1]!;
+                    newActions[index + 1] = newActions[index]!;
                     newActions[index] = temp;
-                    newActions[index + 1].order = index + 2;
-                    newActions[index].order = index + 1;
+                    newActions[index + 1]!.order = index + 2;
+                    newActions[index]!.order = index + 1;
                     setPostActions(newActions);
                   }}
                   onChange={(nextAction) =>

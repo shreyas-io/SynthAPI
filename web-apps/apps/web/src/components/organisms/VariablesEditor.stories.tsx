@@ -51,6 +51,6 @@ export const Editor: Story = {
 
 export const Viewer: Story = {
   render: () => (
-    <VariablesViewer title="Constants" variables={variablesFixture} />
+    <VariablesViewer title="Constants" prefix="" variables={variablesFixture} />
   ),
 };
