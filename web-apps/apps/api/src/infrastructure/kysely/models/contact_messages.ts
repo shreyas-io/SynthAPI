@@ -8,5 +8,6 @@ export type ContactMessagesTable = {
   email: string;
   company: string | null;
   message: string;
+  source: string | null;
   created_at: Timestamp;
 };

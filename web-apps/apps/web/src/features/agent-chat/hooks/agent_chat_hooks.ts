@@ -4,6 +4,8 @@ import { queryKeys } from "../../../lib/query/query_keys";
 import {
   createChatTurn,
   createProjectChat,
+  deleteProjectChat,
+  cancelChatTurn,
   listChatTurnEvents,
   listProjectChats,
 } from "../api/agent_chat_api";
@@ -72,4 +74,24 @@ export const useRefetchProjectChatEvents = (projectId: string) => {
     queryClient.invalidateQueries({
       queryKey: queryKeys.projectChatEvents(projectId, chatId),
     });
+};
+
+export const useDeleteProjectChat = (projectId: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (chatId: string) => deleteProjectChat(projectId, chatId),
+    async onSuccess() {
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.projectChats(projectId),
+      });
+    },
+  });
+};
+
+export const useCancelChatTurn = (projectId: string) => {
+  return useMutation({
+    mutationFn: (input: { chatId: string; turnId: string }) =>
+      cancelChatTurn(projectId, input.chatId, input.turnId),
+  });
 };

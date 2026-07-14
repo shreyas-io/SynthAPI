@@ -24,6 +24,7 @@ export type PortkeyStreamInput = {
     effort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
   };
   promptCache?: PromptCacheOptions;
+  abortSignal?: AbortSignal;
 };
 
 function createStreamTextResult(
@@ -39,6 +40,7 @@ function createStreamTextResult(
     model: openai.chat(input.model),
     system: input.system,
     messages: input.messages,
+    abortSignal: input.abortSignal,
     ...(input.tools === undefined ? {} : { tools: input.tools }),
     ...(input.temperature === undefined
       ? {}

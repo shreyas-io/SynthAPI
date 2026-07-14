@@ -73,7 +73,12 @@ export const mockApiResponseTools = {
           mock_api_id: parsed.mock_api_id,
           name: parsed.name,
           is_default: parsed.is_default,
-          response: parsed.response as any,
+          response: {
+            status_code: parsed.status_code,
+            headers: parsed.headers,
+            body: parsed.body,
+            cookies: parsed.cookies,
+          } as any,
           rule_tree: (parsed.rule_tree as any) ?? null,
           post_response_actions: (parsed.post_response_actions as any) ?? null,
           ...(parsed.execution_order !== undefined
@@ -98,10 +103,16 @@ export const mockApiResponseTools = {
         mock_api_id: existing.mock_api_id,
         name: parsed.name ?? existing.name,
         is_default: parsed.is_default ?? existing.is_default,
-        response: (parsed.response as any) ?? existing.response,
-        rule_tree: Object.prototype.hasOwnProperty.call(parsed, "rule_tree")
-          ? ((parsed.rule_tree as any) ?? null)
-          : existing.rule_tree,
+        response: {
+          status_code: parsed.status_code ?? existing.response.status_code,
+          headers: parsed.headers ?? existing.response.headers,
+          body: parsed.body ?? existing.response.body,
+          cookies: parsed.cookies ?? existing.response.cookies,
+        } as any,
+        rule_tree:
+          parsed.rule_tree !== undefined
+            ? (parsed.rule_tree as any)
+            : existing.rule_tree,
         post_response_actions: Object.prototype.hasOwnProperty.call(
           parsed,
           "post_response_actions",

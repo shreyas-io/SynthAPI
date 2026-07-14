@@ -11,6 +11,7 @@ export type OllamaStreamInput = {
   tools?: ToolSet;
   temperature?: number;
   maxOutputTokens?: number;
+  abortSignal?: AbortSignal;
 };
 
 export async function streamTextViaOllama(
@@ -33,6 +34,7 @@ export async function streamTextViaOllama(
       model: provider(input.model),
       system: input.system,
       messages: input.messages,
+      abortSignal: input.abortSignal,
       ...(input.tools === undefined ? {} : { tools: input.tools }),
       ...(input.temperature === undefined
         ? {}

@@ -1,5 +1,6 @@
 import type React from "react";
 import { useState } from "react";
+import { PricingSection } from "./PricingSection";
 const platformBaseUrl =
   import.meta.env.VITE_PLATFORM_BASE_URL?.replace(/\/$/, "") ?? "/platform";
 
@@ -665,7 +666,7 @@ type ContactFormStatus =
   | { state: "success" }
   | { state: "error"; message: string };
 
-function ContactForm({ endpoint }: { endpoint: string }) {
+function ContactForm({ endpoint, source }: { endpoint: string; source: string }) {
   const [status, setStatus] = useState<ContactFormStatus>({ state: "idle" });
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -681,6 +682,7 @@ function ContactForm({ endpoint }: { endpoint: string }) {
         email: String(data.get("email") ?? "").trim(),
         company: String(data.get("company") ?? "").trim() || undefined,
         message: String(data.get("message") ?? "").trim(),
+        source,
       };
 
       const response = await fetch(endpoint, {
@@ -791,6 +793,7 @@ export function LandingPage() {
       <header className="site-header">
         <Logo />
         <nav aria-label="Primary navigation">
+          <a href="#pricing">Pricing</a>
           <a href={docsUrl}>Docs</a>
           <a href={signinUrl}>Sign in</a>
           <a className="header-cta" href={signupUrl}>
@@ -888,6 +891,8 @@ export function LandingPage() {
         ))}
       </div>
 
+      <PricingSection />
+
       <section className="faq-section">
         <h2>
           <span className="hash" aria-hidden="true"></span>
@@ -900,7 +905,7 @@ export function LandingPage() {
         </ul>
       </section>
 
-      <section className="cta-section">
+      <section className="cta-section" id="contact">
         <h2>
           <span className="hash" aria-hidden="true"></span>
           Reach out
@@ -909,7 +914,7 @@ export function LandingPage() {
           Building something and want a hand, or just have a question? Tell us
           what you're working on and we'll get back to you.
         </p>
-        <ContactForm endpoint={contactUrl} />
+        <ContactForm endpoint={contactUrl} source="landing_page" />
       </section>
 
       <footer className="site-footer">
@@ -918,12 +923,15 @@ export function LandingPage() {
           <p className="footer-tag">Realistic mock APIs for builders.</p>
         </div>
         <nav className="footer-nav" aria-label="Footer">
+          <a href="#pricing">Pricing</a>
           <a href={docsUrl}>Docs</a>
           <a href={signinUrl}>Sign in</a>
           <a href={signupUrl}>Start free</a>
+          <a href="#contact">Contact Us</a>
+          <a href="#" style={{ cursor: 'help' }} title="No refunds allowed" onClick={(e) => e.preventDefault()}>Refund policy</a>
         </nav>
         <p className="footer-meta">
-          ©{new Date().getFullYear()} SynthAPI · Alpha
+          SynthAPI · Alpha
         </p>
       </footer>
     </main>

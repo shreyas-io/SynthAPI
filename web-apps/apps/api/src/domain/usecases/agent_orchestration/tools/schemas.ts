@@ -62,9 +62,31 @@ export const getMockApiResponseToolInputDto = z.object({
   response_id: z.uuidv7(),
 });
 
-export const createMockApiResponseToolInputDto = createMockApiResponseDto;
+const jsonStringOrObject = z.preprocess((val) => {
+  if (typeof val === "string") {
+    try {
+      return JSON.parse(val);
+    } catch {
+      return val;
+    }
+  }
+  return val;
+}, z.any());
 
-export const updateMockApiResponseToolInputDto = createMockApiResponseDto
+export const createMockApiResponseToolInputDto = z.object({
+  mock_api_id: z.uuidv7(),
+  name: z.string().max(64),
+  is_default: z.boolean().default(false),
+  status_code: z.coerce.number().min(100).max(599),
+  headers: jsonStringOrObject,
+  body: jsonStringOrObject,
+  cookies: jsonStringOrObject,
+  rule_tree: jsonStringOrObject.nullable().optional(),
+  post_response_actions: jsonStringOrObject.nullable().optional(),
+  execution_order: z.number().int().min(1).optional(),
+});
+
+export const updateMockApiResponseToolInputDto = createMockApiResponseToolInputDto
   .partial()
   .extend({
     response_id: z.uuidv7(),

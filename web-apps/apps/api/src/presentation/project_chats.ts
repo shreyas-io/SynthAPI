@@ -260,6 +260,40 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
     }),
   );
 
+  // DELETE /api/v1/projects/:project_id/chats/:chat_id
+  app.delete(
+    "/api/v1/projects/:project_id/chats/:chat_id",
+    asyncRoute(async (req, res) => {
+      const project_id = req.params.project_id as string;
+      const chat_id = req.params.chat_id as string;
+      const user = getAuthenticatedUser(req.user);
+
+      await validateProjectAccess(projects, user, project_id);
+      await validateChatOwnership(chat_sessions, project_id, chat_id);
+
+      await chat_sessions.deleteChatSession(chat_id);
+      res.status(204).end();
+    }),
+  );
+
+  // POST /api/v1/projects/:project_id/chats/:chat_id/turns/:turn_id/cancel
+  app.post(
+    "/api/v1/projects/:project_id/chats/:chat_id/turns/:turn_id/cancel",
+    asyncRoute(async (req, res) => {
+      const project_id = req.params.project_id as string;
+      const chat_id = req.params.chat_id as string;
+      const turn_id = req.params.turn_id as string;
+      const user = getAuthenticatedUser(req.user);
+
+      await validateProjectAccess(projects, user, project_id);
+      await validateChatOwnership(chat_sessions, project_id, chat_id);
+      await validateTurnOwnership(agent_chat, chat_id, turn_id);
+
+      agent_chat.cancelChatTurn(turn_id);
+      res.status(200).json({ success: true });
+    }),
+  );
+
   // GET /api/v1/projects/:project_id/chats/:chat_id/turns/:turn_id/stream
   app.get(
     "/api/v1/projects/:project_id/chats/:chat_id/turns/:turn_id/stream",

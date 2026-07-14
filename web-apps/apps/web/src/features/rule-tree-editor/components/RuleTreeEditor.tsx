@@ -197,11 +197,6 @@ function PredicateNode({ data }: { data: PredicateNodeData }) {
             className="rf-input"
           />
         </label>
-        <RequestTemplatePicker
-          label="Actual value template"
-          insertLabel="Use"
-          onInsert={(template) => data.onChange({ actual: template })}
-        />
         <label>
           Operator
           <select

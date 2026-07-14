@@ -40,6 +40,7 @@ export function streamTextViaMeta(ctx: AppContext) {
         messages: [...getRawMessages(request), ...inputMessages],
         temperature: request.config.temperature,
         maxOutputTokens: request.config.max_tokens,
+        abortSignal: request.abortSignal,
         ...(toolSet === undefined ? {} : { tools: toolSet }),
       });
 

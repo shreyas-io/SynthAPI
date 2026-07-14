@@ -5,6 +5,8 @@ import {
   CreditCard,
   ShoppingBag,
   Loader2,
+  Gift,
+  Zap,
 } from "lucide-react";
 import {
   useCreateLemonSqueezyCheckout,
@@ -12,6 +14,7 @@ import {
 } from "../hooks/billing_hooks";
 import { useSelectedOrganization } from "../../../app/context/OrganizationContext";
 import type { PurchaseType } from "../api/billing_api";
+import "./BillingPage.css";
 
 export function BillingPage() {
   const { selectedOrganizationId } = useSelectedOrganization();
@@ -55,7 +58,7 @@ export function BillingPage() {
             ? "Plus Subscription"
             : "Credit Package",
           order_id: res.order_id,
-          handler: function (response: any) {
+          handler: function () {
             alert("Payment successful! Credits will be provisioned shortly.");
             setPurchaseType(null);
           },
@@ -74,774 +77,205 @@ export function BillingPage() {
   };
 
   return (
-    <div className="workspace-container">
-      <div className="workspace-header" style={{ justifyContent: "center" }}>
-        <h1 className="workspace-title">Billing & Upgrades</h1>
-      </div>
+    <div className="billing-container">
+      <div className="billing-glow glow-purple"></div>
+      <div className="billing-glow glow-pink"></div>
 
-
-      <div
-        className="workspace-content"
-        style={{
-          padding: "2rem",
-          maxWidth: "1600px",
-          margin: "0 auto",
-          display: "flex",
-          gap: "3rem",
-          alignItems: "flex-start",
-        }}
-      >
-        {/* PLUS PLANS */}
-        <div
-          style={{
-            flex: "2",
-            background: "var(--color-surface)",
-            padding: "2rem",
-            borderRadius: "16px",
-            border: "1px solid var(--color-border)",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ marginBottom: "2rem" }}>
-            <h2
-              style={{
-                fontSize: "1.8rem",
-                marginBottom: "0.5rem",
-                fontWeight: "600",
-              }}
-            >
-              Plus Subscriptions
+      <div className="billing-content">
+        {/* Early Bird Banner */}
+        <div className="early-bird-banner">
+          <div className="banner-text">
+            <h2>
+              <Gift size={28} /> Early Bird Special!
             </h2>
-            <p style={{ color: "var(--color-text-muted)", fontSize: "1rem" }}>
-              Prepaid passes. Supercharge your workflow with massive limits.
+            <p>
+              Get up to 50% off on all Plus subscriptions. Valid for a limited time.
             </p>
           </div>
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: "1rem",
-              flex: 1,
-            }}
-          >
-            {/* 1 Month */}
-            <div
-              className="card"
-              style={{
-                padding: "1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                border: "1px solid var(--color-border)",
-                borderRadius: "12px",
-                background: "var(--color-bg)",
-              }}
-            >
-              <div
-                style={{
-                  color: "var(--color-text-muted)",
-                  fontSize: "0.8rem",
-                  fontWeight: "600",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                1 MONTH
-              </div>
-              <h3 style={{ fontSize: "1.6rem", marginBottom: "0.2rem" }}>
-                $9.99
-              </h3>
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: "1rem 0 1.5rem 0",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.4rem",
-                  fontSize: "0.85rem",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>
-                    <b>10k</b> Credits
-                  </span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>30 days access</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>10 Team Members</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>100 Projects</span>
-                </li>
-              </ul>
-              <button
-                className="btn btn-secondary"
-                style={{
-                  marginTop: "auto",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  width: "100%",
-                  padding: "0.6rem",
-                  fontSize: "0.9rem",
-                }}
-                onClick={() => handlePurchase("plus_1m")}
-                disabled={isPending}
-              >
-                {isPending ? (
-                  <Loader2 className="spin" size={14} />
-                ) : (
-                  <CreditCard size={14} />
-                )}{" "}
-                Select Plan
-              </button>
-            </div>
-
-            {/* 3 Months */}
-            <div
-              className="card"
-              style={{
-                padding: "1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                border: "1px solid var(--color-primary)",
-                borderRadius: "12px",
-                background: "var(--color-bg)",
-                position: "relative",
-                boxShadow: "0 8px 24px rgba(59, 130, 246, 0.1)",
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: "-10px",
-                  left: "50%",
-                  transform: "translateX(-50%)",
-                  background: "var(--color-primary)",
-                  color: "white",
-                  fontSize: "0.7rem",
-                  fontWeight: "bold",
-                  padding: "2px 8px",
-                  borderRadius: "10px",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                25% OFF
-              </div>
-              <div
-                style={{
-                  color: "var(--color-primary)",
-                  fontSize: "0.8rem",
-                  fontWeight: "700",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                3 MONTHS
-              </div>
-              <h3 style={{ fontSize: "1.6rem", marginBottom: "0.2rem" }}>
-                $22.49
-              </h3>
-              <div
-                style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}
-              >
-                ($7.49 / mo)
-              </div>
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: "1rem 0 1.5rem 0",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.4rem",
-                  fontSize: "0.85rem",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>
-                    <b>30k</b> Credits
-                  </span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>90 days access</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>10 Team Members</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>100 Projects</span>
-                </li>
-              </ul>
-              <button
-                className="btn btn-primary"
-                style={{
-                  marginTop: "auto",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  width: "100%",
-                  padding: "0.6rem",
-                  fontSize: "0.9rem",
-                }}
-                onClick={() => handlePurchase("plus_3m")}
-                disabled={isPending}
-              >
-                {isPending ? (
-                  <Loader2 className="spin" size={14} />
-                ) : (
-                  <CreditCard size={14} />
-                )}{" "}
-                Select Plan
-              </button>
-            </div>
-
-            {/* 6 Months */}
-            <div
-              className="card"
-              style={{
-                padding: "1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                border: "1px solid var(--color-border)",
-                borderRadius: "12px",
-                background: "var(--color-bg)",
-              }}
-            >
-              <div
-                style={{
-                  color: "var(--color-text-muted)",
-                  fontSize: "0.8rem",
-                  fontWeight: "600",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                6 MONTHS
-              </div>
-              <h3 style={{ fontSize: "1.6rem", marginBottom: "0.2rem" }}>
-                $39.99
-              </h3>
-              <div
-                style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}
-              >
-                ($6.66 / mo)
-              </div>
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: "1rem 0 1.5rem 0",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.4rem",
-                  fontSize: "0.85rem",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>
-                    <b>60k</b> Credits
-                  </span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>180 days access</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>10 Team Members</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>100 Projects</span>
-                </li>
-              </ul>
-              <button
-                className="btn btn-secondary"
-                style={{
-                  marginTop: "auto",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  width: "100%",
-                  padding: "0.6rem",
-                  fontSize: "0.9rem",
-                }}
-                onClick={() => handlePurchase("plus_6m")}
-                disabled={isPending}
-              >
-                {isPending ? (
-                  <Loader2 className="spin" size={14} />
-                ) : (
-                  <CreditCard size={14} />
-                )}{" "}
-                Select Plan
-              </button>
-            </div>
-
-            {/* 12 Months */}
-            <div
-              className="card"
-              style={{
-                padding: "1.5rem",
-                display: "flex",
-                flexDirection: "column",
-                border: "1px solid var(--color-border)",
-                borderRadius: "12px",
-                background:
-                  "linear-gradient(180deg, rgba(59, 130, 246, 0.03) 0%, var(--color-bg) 100%)",
-              }}
-            >
-              <div
-                style={{
-                  color: "var(--color-text-muted)",
-                  fontSize: "0.8rem",
-                  fontWeight: "600",
-                  marginBottom: "0.5rem",
-                }}
-              >
-                12 MONTHS (50% OFF)
-              </div>
-              <h3 style={{ fontSize: "1.6rem", marginBottom: "0.2rem" }}>
-                $59.99
-              </h3>
-              <div
-                style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}
-              >
-                ($4.99 / mo)
-              </div>
-              <ul
-                style={{
-                  listStyle: "none",
-                  padding: 0,
-                  margin: "1rem 0 1.5rem 0",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "0.4rem",
-                  fontSize: "0.85rem",
-                  color: "var(--color-text-secondary)",
-                }}
-              >
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>
-                    <b>120k</b> Credits
-                  </span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>365 days access</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>10 Team Members</span>
-                </li>
-                <li
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: "0.5rem",
-                  }}
-                >
-                  <Check
-                    size={14}
-                    color="var(--color-success)"
-                    style={{ flexShrink: 0, marginTop: "2px" }}
-                  />{" "}
-                  <span>100 Projects</span>
-                </li>
-              </ul>
-              <button
-                className="btn btn-secondary"
-                style={{
-                  marginTop: "auto",
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  width: "100%",
-                  padding: "0.6rem",
-                  fontSize: "0.9rem",
-                }}
-                onClick={() => handlePurchase("plus_12m")}
-                disabled={isPending}
-              >
-                {isPending ? (
-                  <Loader2 className="spin" size={14} />
-                ) : (
-                  <CreditCard size={14} />
-                )}{" "}
-                Select Plan
-              </button>
-            </div>
-          </div>
+          <Sparkles size={48} opacity={0.8} />
         </div>
 
-        {/* CREDIT PACKS */}
-        <div
-          style={{
-            flex: "1",
-            minWidth: "300px",
-            background: "var(--color-surface)",
-            padding: "2rem",
-            borderRadius: "16px",
-            border: "1px solid var(--color-border)",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <div style={{ marginBottom: "2rem" }}>
-            <h2
-              style={{
-                fontSize: "1.8rem",
-                marginBottom: "0.5rem",
-                fontWeight: "600",
-              }}
-            >
-              Buy Credits
+        <div style={{ textAlign: "center", marginBottom: "4rem" }}>
+          <h1 style={{ fontSize: "3rem", fontWeight: "800", marginBottom: "1rem" }}>
+            Supercharge your workflow
+          </h1>
+          <p style={{ fontSize: "1.2rem", color: "var(--color-text-muted)" }}>
+            Choose the perfect plan for your API mocking needs. No hidden fees.
+          </p>
+        </div>
+
+        <div style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
+          {/* PLUS PLANS */}
+          <div>
+            <h2 style={{ fontSize: "1.8rem", fontWeight: "700", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <Zap color="#8b5cf6" /> Plus Subscriptions
             </h2>
-            <p style={{ color: "var(--color-text-muted)", fontSize: "1rem" }}>
-              One-off credit packs.
-            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
+              {/* 1 Month */}
+              <div className="funky-card">
+                <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>1 MONTH</div>
+                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0" }}>$9.99</h3>
+                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>Standard access</div>
+                
+                <ul className="funky-features">
+                  <li><Check size={18} /> <span><b>10k</b> Credits</span></li>
+                  <li><Check size={18} /> <span>30 days access</span></li>
+                  <li><Check size={18} /> <span>10 Team Members</span></li>
+                  <li><Check size={18} /> <span>100 Projects</span></li>
+                </ul>
+
+                <button
+                  className="funky-btn funky-btn-secondary"
+                  onClick={() => handlePurchase("plus_1m")}
+                  disabled={isPending}
+                >
+                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Select Plan
+                </button>
+              </div>
+
+              {/* 3 Months */}
+              <div className="funky-card highlight">
+                <div className="funky-badge">25% OFF</div>
+                <div style={{ color: "var(--color-primary)", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>3 MONTHS</div>
+                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0", color: "var(--color-primary)" }}>$22.49</h3>
+                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>($7.49 / mo)</div>
+                
+                <ul className="funky-features">
+                  <li><Check size={18} /> <span><b>30k</b> Credits</span></li>
+                  <li><Check size={18} /> <span>90 days access</span></li>
+                  <li><Check size={18} /> <span>10 Team Members</span></li>
+                  <li><Check size={18} /> <span>100 Projects</span></li>
+                </ul>
+
+                <button
+                  className="funky-btn funky-btn-primary"
+                  onClick={() => handlePurchase("plus_3m")}
+                  disabled={isPending}
+                >
+                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Get 25% Off
+                </button>
+              </div>
+
+              {/* 6 Months */}
+              <div className="funky-card">
+                <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>6 MONTHS</div>
+                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0" }}>$39.99</h3>
+                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>($6.66 / mo)</div>
+                
+                <ul className="funky-features">
+                  <li><Check size={18} /> <span><b>60k</b> Credits</span></li>
+                  <li><Check size={18} /> <span>180 days access</span></li>
+                  <li><Check size={18} /> <span>10 Team Members</span></li>
+                  <li><Check size={18} /> <span>100 Projects</span></li>
+                </ul>
+
+                <button
+                  className="funky-btn funky-btn-secondary"
+                  onClick={() => handlePurchase("plus_6m")}
+                  disabled={isPending}
+                >
+                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Select Plan
+                </button>
+              </div>
+
+              {/* 12 Months */}
+              <div className="funky-card highlight" style={{ borderColor: "rgba(236, 72, 153, 0.4)", background: "linear-gradient(180deg, rgba(236, 72, 153, 0.1) 0%, var(--color-surface) 100%)" }}>
+                <div className="funky-badge" style={{ background: "#ec4899" }}>50% OFF</div>
+                <div style={{ color: "#ec4899", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>12 MONTHS</div>
+                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0", color: "#ec4899" }}>$59.99</h3>
+                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>($4.99 / mo)</div>
+                
+                <ul className="funky-features">
+                  <li><Check size={18} /> <span><b>120k</b> Credits</span></li>
+                  <li><Check size={18} /> <span>365 days access</span></li>
+                  <li><Check size={18} /> <span>10 Team Members</span></li>
+                  <li><Check size={18} /> <span>100 Projects</span></li>
+                </ul>
+
+                <button
+                  className="funky-btn"
+                  style={{ background: "linear-gradient(90deg, #ec4899, #f43f5e)", color: "white" }}
+                  onClick={() => handlePurchase("plus_12m")}
+                  disabled={isPending}
+                >
+                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Get 50% Off
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
-          >
-            {/* $4.99 Pack */}
-            <div
-              className="card"
-              style={{
-                padding: "1.2rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                border: "1px solid var(--color-border)",
-                borderRadius: "12px",
-                background: "var(--color-surface)",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    color: "var(--color-primary)",
-                    fontSize: "0.75rem",
-                    fontWeight: "700",
-                    marginBottom: "0.2rem",
-                  }}
+          <div style={{ marginTop: "3rem", borderTop: "1px solid var(--color-border)", paddingTop: "3rem" }}>
+            <h2 style={{ fontSize: "1.8rem", fontWeight: "700", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <ShoppingBag color="#3b82f6" /> Buy Credits On-Demand
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
+              {/* $4.99 Pack */}
+              <div className="funky-card">
+                <div className="funky-badge" style={{ background: "#3b82f6" }}>BEST VALUE</div>
+                <h3 style={{ fontSize: "1.8rem", margin: "1rem 0 0.5rem 0" }}>10,000 Credits</h3>
+                <div style={{ fontSize: "1.2rem", color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>$4.99</div>
+                <button
+                  className="funky-btn funky-btn-secondary"
+                  onClick={() => handlePurchase("credits_5000")}
+                  disabled={isPending}
                 >
-                  BEST VALUE (2x PROMO)
-                </div>
-                <h3 style={{ fontSize: "1.2rem", margin: 0 }}>10k Credits</h3>
-                <div
-                  style={{
-                    fontSize: "0.9rem",
-                    color: "var(--color-text-muted)",
-                    marginTop: "0.2rem",
-                  }}
-                >
-                  $4.99
-                </div>
+                  {isPending ? <Loader2 className="spin" size={18} /> : <ShoppingBag size={18} />} Buy Credits
+                </button>
               </div>
-              <button
-                className="btn btn-secondary"
-                style={{ padding: "0.5rem", borderRadius: "8px" }}
-                onClick={() => handlePurchase("credits_5000")}
-                disabled={isPending}
-                title="Buy 10,000 Credits"
-              >
-                {isPending ? (
-                  <Loader2 className="spin" size={16} />
-                ) : (
-                  <ShoppingBag size={16} />
-                )}
-              </button>
-            </div>
 
-            {/* $1.99 Pack */}
-            <div
-              className="card"
-              style={{
-                padding: "1.2rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                border: "1px solid var(--color-border)",
-                borderRadius: "12px",
-                background: "var(--color-surface)",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    color: "var(--color-text-muted)",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    marginBottom: "0.2rem",
-                  }}
+              {/* $1.99 Pack */}
+              <div className="funky-card">
+                <div className="funky-badge" style={{ background: "var(--color-text-muted)", color: "var(--color-bg)" }}>POPULAR</div>
+                <h3 style={{ fontSize: "1.8rem", margin: "1rem 0 0.5rem 0" }}>4,000 Credits</h3>
+                <div style={{ fontSize: "1.2rem", color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>$1.99</div>
+                <button
+                  className="funky-btn funky-btn-secondary"
+                  onClick={() => handlePurchase("credits_2000")}
+                  disabled={isPending}
                 >
-                  POPULAR (2x PROMO)
-                </div>
-                <h3 style={{ fontSize: "1.2rem", margin: 0 }}>4,000 Credits</h3>
-                <div
-                  style={{
-                    fontSize: "0.9rem",
-                    color: "var(--color-text-muted)",
-                    marginTop: "0.2rem",
-                  }}
-                >
-                  $1.99
-                </div>
+                  {isPending ? <Loader2 className="spin" size={18} /> : <ShoppingBag size={18} />} Buy Credits
+                </button>
               </div>
-              <button
-                className="btn btn-secondary"
-                style={{ padding: "0.5rem", borderRadius: "8px" }}
-                onClick={() => handlePurchase("credits_2000")}
-                disabled={isPending}
-                title="Buy 4,000 Credits"
-              >
-                {isPending ? (
-                  <Loader2 className="spin" size={16} />
-                ) : (
-                  <ShoppingBag size={16} />
-                )}
-              </button>
-            </div>
 
-            {/* $0.99 Pack */}
-            <div
-              className="card"
-              style={{
-                padding: "1.2rem",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                border: "1px solid var(--color-border)",
-                borderRadius: "12px",
-                background: "var(--color-surface)",
-              }}
-            >
-              <div>
-                <div
-                  style={{
-                    color: "var(--color-text-muted)",
-                    fontSize: "0.75rem",
-                    fontWeight: "600",
-                    marginBottom: "0.2rem",
-                  }}
+              {/* $0.99 Pack */}
+              <div className="funky-card">
+                <h3 style={{ fontSize: "1.8rem", margin: "1rem 0 0.5rem 0" }}>1,000 Credits</h3>
+                <div style={{ fontSize: "1.2rem", color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>$0.99</div>
+                <button
+                  className="funky-btn funky-btn-secondary"
+                  onClick={() => handlePurchase("credits_500")}
+                  disabled={isPending}
                 >
-                  STARTER (2x PROMO)
-                </div>
-                <h3 style={{ fontSize: "1.2rem", margin: 0 }}>1,000 Credits</h3>
-                <div
-                  style={{
-                    fontSize: "0.9rem",
-                    color: "var(--color-text-muted)",
-                    marginTop: "0.2rem",
-                  }}
-                >
-                  $0.99
-                </div>
+                  {isPending ? <Loader2 className="spin" size={18} /> : <ShoppingBag size={18} />} Buy Credits
+                </button>
               </div>
-              <button
-                className="btn btn-secondary"
-                style={{ padding: "0.5rem", borderRadius: "8px" }}
-                onClick={() => handlePurchase("credits_500")}
-                disabled={isPending}
-                title="Buy 1,000 Credits"
-              >
-                {isPending ? (
-                  <Loader2 className="spin" size={16} />
-                ) : (
-                  <ShoppingBag size={16} />
-                )}
-              </button>
             </div>
           </div>
         </div>
       </div>
 
       {purchaseType && (
-        <div className="modal-overlay" style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", background: "rgba(0,0,0,0.7)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 1000 }}>
-          <div className="card" style={{ background: "var(--color-bg)", padding: "2.5rem", borderRadius: "16px", border: "1px solid var(--color-border)", minWidth: "400px", boxShadow: "0 20px 40px rgba(0,0,0,0.5)" }}>
-            <h2 style={{ marginBottom: "0.5rem", fontSize: "1.6rem" }}>Select Payment Provider</h2>
-            <p style={{ color: "var(--color-text-muted)", marginBottom: "2rem" }}>Choose how you'd like to pay for your plan.</p>
+        <div className="funky-modal-overlay">
+          <div className="funky-modal">
+            <h2 style={{ marginBottom: "0.5rem", fontSize: "1.8rem", fontWeight: "800" }}>Checkout</h2>
+            <p style={{ color: "var(--color-text-muted)", marginBottom: "2rem", fontSize: "1rem" }}>Select your preferred payment provider to complete the purchase.</p>
+            
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <button className="btn btn-secondary" style={{ padding: "1rem", fontSize: "1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }} onClick={() => executePurchase(purchaseType, "lemonsqueezy")} disabled={isPending}>
-                {isPending && provider === "lemonsqueezy" ? <Loader2 className="spin" /> : null} Pay with Lemon Squeezy
+              <button className="funky-btn funky-btn-secondary" onClick={() => executePurchase(purchaseType, "lemonsqueezy")} disabled={isPending}>
+                {isPending && provider === "lemonsqueezy" ? <Loader2 className="spin" size={18} /> : null} Pay with Lemon Squeezy
               </button>
-              <button className="btn btn-secondary" style={{ padding: "1rem", fontSize: "1rem", display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }} onClick={() => executePurchase(purchaseType, "razorpay")} disabled={isPending}>
-                {isPending && provider === "razorpay" ? <Loader2 className="spin" /> : null} Pay with Razorpay
+              <button className="funky-btn funky-btn-secondary" onClick={() => executePurchase(purchaseType, "razorpay")} disabled={isPending}>
+                {isPending && provider === "razorpay" ? <Loader2 className="spin" size={18} /> : null} Pay with Razorpay
               </button>
             </div>
-            <div style={{ marginTop: "2rem", textAlign: "right" }}>
-              <button className="btn" onClick={() => setPurchaseType(null)} style={{ background: "transparent", color: "var(--color-text-muted)" }}>Cancel</button>
+            
+            <div style={{ marginTop: "2rem", textAlign: "center" }}>
+              <button 
+                onClick={() => setPurchaseType(null)} 
+                style={{ background: "transparent", color: "var(--color-text-muted)", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: "600" }}
+              >
+                Cancel
+              </button>
             </div>
           </div>
         </div>

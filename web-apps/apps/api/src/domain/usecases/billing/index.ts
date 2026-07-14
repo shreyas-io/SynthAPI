@@ -1,6 +1,6 @@
 import type { AppContext } from "../../../server";
 import { HttpStatusCode, MockApiException } from "../../exceptions/exception";
-import { createOrganizationPlanSubscription } from "../organizations/plans";
+import { createOrganizationPlanSubscription, getActiveOrganizationPlan } from "../organizations/plans";
 import crypto from "crypto";
 
 export type PurchaseType = "plus_1m" | "plus_3m" | "plus_6m" | "plus_12m" | "credits_500" | "credits_2000" | "credits_5000";
@@ -40,6 +40,12 @@ export const BillingUsecase = (ctx: AppContext) => {
     createRazorpayOrder: async (organizationId: string, type: PurchaseType) => {
       const amount = PURCHASE_AMOUNTS[type];
 
+      let planTypeId: string | null = null;
+      if (type.startsWith("plus")) {
+        const plan = await ctx.db.selectFrom("plan_types").select("id").where("key", "=", "plus").executeTakeFirst();
+        if (plan) planTypeId = plan.id;
+      }
+
       const auth = Buffer.from(`${RZP_KEY}:${RZP_SECRET}`).toString("base64");
       
       try {
@@ -66,6 +72,17 @@ export const BillingUsecase = (ctx: AppContext) => {
         }
 
         const data: any = await response.json();
+
+        await ctx.db.insertInto("payment_transactions").values({
+          organization_id: organizationId,
+          purchase_type: type,
+          plan_type_id: planTypeId,
+          amount,
+          currency: "USD",
+          razorpay_transaction_id: data.id,
+          status: "pending"
+        }).execute();
+
         return { order_id: data.id, amount, currency: "USD", key: RZP_KEY };
       } catch (err: any) {
         throw new MockApiException({
@@ -89,6 +106,13 @@ export const BillingUsecase = (ctx: AppContext) => {
         const orgId = payment.notes?.organization_id;
         const type = payment.notes?.purchase_type as PurchaseType;
 
+        if (payment.order_id) {
+          await ctx.db.updateTable("payment_transactions")
+            .set({ status: "completed" })
+            .where("razorpay_transaction_id", "=", payment.order_id)
+            .execute();
+        }
+
         if (orgId && type) {
           await ctx.db.transaction().execute(async (trx) => {
             if (PLUS_PLAN_CONFIG[type]) {
@@ -104,13 +128,21 @@ export const BillingUsecase = (ctx: AppContext) => {
               const expiresAt = new Date();
               expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
+              const activePlan = await getActiveOrganizationPlan(trx, orgId);
+              if (!activePlan) {
+                throw new MockApiException({
+                  public_message: "No active plan found for organization.",
+                  status_code: HttpStatusCode.INTERNAL_SERVER_ERROR
+                });
+              }
+
               await trx
                 .insertInto("organization_credit_grants")
                 .values({
                   organization_id: orgId,
                   grant_type: "ai_credits",
                   amount: CREDIT_GRANTS[type as keyof typeof CREDIT_GRANTS],
-                  source_subscription_id: `rzp_payment_${payment.id}`,
+                  source_subscription_id: activePlan.subscription_id,
                   expires_at: expiresAt,
                 })
                 .execute();
@@ -130,7 +162,25 @@ export const BillingUsecase = (ctx: AppContext) => {
       if (type === "credits_2000") variantId = process.env.LS_VARIANT_2000 || "1003";
       if (type === "credits_500") variantId = process.env.LS_VARIANT_500 || "1004";
 
+      let planTypeId: string | null = null;
+      if (type.startsWith("plus")) {
+        const plan = await ctx.db.selectFrom("plan_types").select("id").where("key", "=", "plus").executeTakeFirst();
+        if (plan) planTypeId = plan.id;
+      }
+
+      const txId = crypto.randomUUID();
+
       try {
+        await ctx.db.insertInto("payment_transactions").values({
+          id: txId,
+          organization_id: organizationId,
+          purchase_type: type,
+          plan_type_id: planTypeId,
+          amount: PURCHASE_AMOUNTS[type],
+          currency: "USD",
+          status: "pending"
+        }).execute();
+
         const response = await fetch("https://api.lemonsqueezy.com/v1/checkouts", {
           method: "POST",
           headers: {
@@ -145,7 +195,8 @@ export const BillingUsecase = (ctx: AppContext) => {
                 checkout_data: {
                   custom: {
                     organization_id: organizationId,
-                    purchase_type: type
+                    purchase_type: type,
+                    transaction_id: txId
                   }
                 }
               },
@@ -186,6 +237,14 @@ export const BillingUsecase = (ctx: AppContext) => {
         const customData = payload.meta.custom_data || {};
         const orgId = customData.organization_id;
         const type = customData.purchase_type as PurchaseType;
+        const txId = customData.transaction_id;
+
+        if (txId && payload.data.id) {
+          await ctx.db.updateTable("payment_transactions")
+            .set({ status: "completed", lemonsqueezy_transaction_id: String(payload.data.id) })
+            .where("id", "=", txId)
+            .execute();
+        }
 
         if (orgId && type) {
           await ctx.db.transaction().execute(async (trx) => {
@@ -202,13 +261,21 @@ export const BillingUsecase = (ctx: AppContext) => {
               const expiresAt = new Date();
               expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
+              const activePlan = await getActiveOrganizationPlan(trx, orgId);
+              if (!activePlan) {
+                throw new MockApiException({
+                  public_message: "No active plan found for organization.",
+                  status_code: HttpStatusCode.INTERNAL_SERVER_ERROR
+                });
+              }
+
               await trx
                 .insertInto("organization_credit_grants")
                 .values({
                   organization_id: orgId,
                   grant_type: "ai_credits",
                   amount: CREDIT_GRANTS[type as keyof typeof CREDIT_GRANTS],
-                  source_subscription_id: `ls_order_${payload.data.id}`,
+                  source_subscription_id: activePlan.subscription_id,
                   expires_at: expiresAt,
                 })
                 .execute();

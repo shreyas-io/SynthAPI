@@ -5,4 +5,5 @@ export const createContactMessageDto = z.object({
   email: z.email().max(255),
   company: z.string().max(255).optional(),
   message: z.string().min(1).max(10_000),
+  source: z.string().max(255).optional(),
 });

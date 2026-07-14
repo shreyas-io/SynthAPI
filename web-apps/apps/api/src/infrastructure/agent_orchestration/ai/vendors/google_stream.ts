@@ -48,6 +48,7 @@ export function streamTextViaGoogle(ctx: AppContext) {
               messages: [...getRawMessages(request), ...inputMessages],
               temperature: request.config.temperature,
               maxOutputTokens: request.config.max_tokens,
+              abortSignal: request.abortSignal,
               ...(toolSet === undefined ? {} : { tools: toolSet }),
             })
           : request.config.model_host === "portkey"
@@ -58,6 +59,7 @@ export function streamTextViaGoogle(ctx: AppContext) {
                 temperature: request.config.temperature,
                 maxOutputTokens: request.config.max_tokens,
                 model_gateway: request.config.model_gateway,
+                abortSignal: request.abortSignal,
                 ...(toolSet === undefined ? {} : { tools: toolSet }),
               })
           : await streamTextViaOpenRouter(ctx, {
@@ -67,6 +69,7 @@ export function streamTextViaGoogle(ctx: AppContext) {
               temperature: request.config.temperature,
               maxOutputTokens: request.config.max_tokens,
               model_gateway: request.config.model_gateway,
+              abortSignal: request.abortSignal,
               ...(toolSet === undefined ? {} : { tools: toolSet }),
             });
 
