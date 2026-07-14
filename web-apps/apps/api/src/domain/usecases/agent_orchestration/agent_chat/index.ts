@@ -658,6 +658,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         }));
 
         currentRequest = {
+          ...currentRequest,
           config: {
             ...currentRequest.config,
             input_messages: [],
