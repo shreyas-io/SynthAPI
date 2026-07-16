@@ -2,8 +2,6 @@ import type { AppContext } from "../../../../server";
 import { logger } from "../../../../infrastructure/logger";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
-import type { LLMConfig } from "../../../entities/agent_orchestration/generation";
-import type { FilePart, TextPart, UserModelMessage } from "ai";
 import type {
   ChatSessionTurnEt,
   ChatTurnUserInput,
@@ -12,33 +10,31 @@ import type {
   ChatTurnEventPayload,
   ChatTurnEventType,
 } from "../../../entities/agent_orchestration/chat_turn_event";
-import { streamText } from "../../../../infrastructure/agent_orchestration/ai/stream";
 import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import {
-  generateText,
-  type GenerateTextUsage,
-} from "../../../../infrastructure/agent_orchestration/ai/generate";
 import { createChatTurn } from "./create";
-import { AgentToolRegistry } from "../tools/registry";
-import type { ToolKey } from "../../../entities/agent_orchestration/tool_keys";
+import { createLangChainTools } from "../tools/langchain";
 import type { ToolWorkspaceContext } from "../tools/types";
-import type { AgentPricingConfig } from "../../../entities/agent_orchestration/agent_config";
+import { AgentConfig } from "../../../configs/agent-config/config";
+import { createAgent, summarizationMiddleware } from "langchain";
+import {
+  createLlm,
+  createFallbackMiddleware,
+} from "../../../../infrastructure/agent_orchestration/langchain_llm";
+import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
+import { getPostgresConnString } from "../../../../config/utils";
+import { threadId } from "node:worker_threads";
 
 export const AgentChatUsecase = (ctx: AppContext) => {
-  const llm = streamText(ctx);
-  const textGenerator = generateText(ctx);
   const eventBus = ctx.eventBus;
-  const toolRegistry = AgentToolRegistry();
   const runningTurns = new Set<string>();
   const turnAbortControllers = new Map<string, AbortController>();
 
-  const credits_per_usd = 4000; // denotes how much credit we charge the user for every usd
+  const credits_per_usd = 4000;
   const min_credit_charge = 0.01;
   const web_search_cost_usd = 0.008;
-  const MAX_ITERATIONS = 30;
 
   type TokenUsage = {
     input_tokens: number;
@@ -52,33 +48,16 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     output_tokens: a.output_tokens + b.output_tokens,
   });
 
-  const usageFromGenerateText = (
-    usage: GenerateTextUsage | undefined,
-  ): TokenUsage => ({
-    input_tokens: usage?.input_tokens ?? 0,
-    output_tokens: usage?.output_tokens ?? 0,
-  });
-
-  const usageFromStreamResponse = (
-    usage:
-      | { inputTokens?: number | undefined; outputTokens?: number | undefined }
-      | undefined,
-  ): TokenUsage => ({
-    input_tokens: usage?.inputTokens ?? 0,
-    output_tokens: usage?.outputTokens ?? 0,
-  });
-
   const calculateCost = (
     chat_usage: TokenUsage,
     compaction_usage: TokenUsage,
-    pricing: AgentPricingConfig,
     web_search_count: number,
   ): number => {
-    const chat_input_price = pricing.chat_config.input_tokens ?? 0;
-    const chat_output_price = pricing.chat_config.output_tokens ?? 0;
-    const compaction_input_price = pricing.compaction_config.input_tokens ?? 0;
-    const compaction_output_price =
-      pricing.compaction_config.output_tokens ?? 0;
+    // Hardcoded pricing from previous migrations
+    const chat_input_price = 8e-8;
+    const chat_output_price = 4.5e-7;
+    const compaction_input_price = 3e-8;
+    const compaction_output_price = 1.5e-7;
 
     const chat_cost =
       chat_usage.input_tokens * chat_input_price +
@@ -107,9 +86,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       .orderBy("created_at", "asc")
       .executeTakeFirst();
 
-    if (active_grant) {
-      return active_grant.id;
-    }
+    if (active_grant) return active_grant.id;
 
     const fallback_grant = await ctx.db
       .selectFrom("organization_credit_grants")
@@ -128,18 +105,14 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     chat_turn_id: string;
     chat_usage: TokenUsage;
     compaction_usage: TokenUsage;
-    pricing: AgentPricingConfig;
     web_search_count: number;
   }): Promise<void> => {
     const cost_usd = calculateCost(
       input.chat_usage,
       input.compaction_usage,
-      input.pricing,
       input.web_search_count,
     );
-    if (cost_usd <= 0) {
-      return;
-    }
+    if (cost_usd <= 0) return;
 
     const credits = roundCredits(cost_usd * credits_per_usd);
     const credit_grant_id = await getCreditGrantForUsage(input.organization_id);
@@ -170,7 +143,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
   const createAndPublishEvent = async (input: {
     chat_turn_id: string;
-    sequence: number;
     event_type: ChatTurnEventType;
     payload: ChatTurnEventPayload;
   }) => {
@@ -179,7 +151,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       .values({
         id: uuidv7(),
         chat_turn_id: input.chat_turn_id,
-        sequence: input.sequence,
         event_type: input.event_type,
         payload: JSON.stringify(input.payload),
       })
@@ -187,204 +158,27 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     eventBus.publish(input.chat_turn_id, input.payload);
   };
 
-  const getNextSequence = async (chat_turn_id: string) => {
-    const event = await ctx.db
-      .selectFrom("chat_turn_events")
-      .select(["sequence"])
-      .where("chat_turn_id", "=", chat_turn_id)
-      .orderBy("sequence", "desc")
-      .limit(1)
-      .offset(0)
-      .executeTakeFirst();
-
-    return (event?.sequence ?? 0) + 1;
-  };
-
-  const settleTurn = async (input: {
-    chat_turn_id: string;
-    sequence: number;
-    status: "completed" | "failed";
-    conversation_context: ChatSessionTurnEt["conversation_context"];
-    error?: string;
-  }) => {
-    await ctx.db
-      .updateTable("chat_session_turns")
-      .set({
-        conversation_context: input.conversation_context
-          ? JSON.stringify(input.conversation_context)
-          : null,
-        status: input.status,
-      })
-      .where("id", "=", input.chat_turn_id)
-      .execute();
-
-    await createAndPublishEvent({
-      chat_turn_id: input.chat_turn_id,
-      sequence: input.sequence,
-      event_type: "turn-settled",
-      payload: {
-        type: "turn-settled",
-        status: input.status,
-        ...(input.error ? { error: input.error } : {}),
-      },
-    });
-  };
-
-  const getAgentConfig = async (id: string) => {
-    const config = (await ctx.db
-      .selectFrom("agent_configs")
-      .selectAll()
-      .where("id", "=", id)
-      .executeTakeFirst()) as unknown as
-      | {
-          id: string;
-          chat_config: unknown;
-          compaction_config: unknown | null;
-          compaction_threshold_tokens: number | null;
-          pricing_config: AgentPricingConfig;
-        }
-      | undefined;
-    if (!config) {
-      throw new AgentOrchestrationException({
-        public_message: "Agent config not found.",
-        status_code: HttpStatusCode.NOT_FOUND,
-      });
-    }
-    return config;
-  };
-
-  const estimateTokenCount = (input: unknown): number => {
-    const serialized =
-      typeof input === "string" ? input : JSON.stringify(input ?? "");
-    return Math.ceil(serialized.length / 4);
-  };
-
-  const buildUserMessages = async (
-    userInput: ChatTurnUserInput,
-  ): Promise<{
-    requestMessage: UserModelMessage;
-    contextMessage: UserModelMessage;
-  }> => {
-    const requestParts: Array<TextPart | FilePart> = [];
-    const contextParts: string[] = [];
-
-    for (const item of userInput) {
-      if (item.type === "text") {
-        requestParts.push({ type: "text", text: item.source.text });
-        contextParts.push(item.source.text);
-        continue;
-      }
-
-      const blob = await ctx.db
-        .selectFrom("chat_turn_blobs")
-        .select(["id", "mime_type", "size_bytes", "content"])
-        .where("id", "=", item.source.id)
-        .executeTakeFirst();
-
-      if (!blob) {
-        throw new AgentOrchestrationException({
-          public_message: `File '${item.source.id}' was not found.`,
-          status_code: HttpStatusCode.NOT_FOUND,
-        });
-      }
-
-      requestParts.push({
-        type: "file",
-        data: blob.content,
-        mediaType: blob.mime_type,
-        filename: blob.id,
-      });
-      contextParts.push(
-        `[Attached file: ${blob.id}, MIME type: ${blob.mime_type}, Size: ${blob.size_bytes} bytes]`,
-      );
-    }
-
-    const requestContent =
-      requestParts.length === 1 && requestParts[0]?.type === "text"
-        ? requestParts[0].text
-        : requestParts;
-    const contextContent = contextParts.filter(Boolean).join("\n\n");
-
-    return {
-      requestMessage: { role: "user", content: requestContent },
-      contextMessage: { role: "user", content: contextContent },
-    };
-  };
-
-  const compactConversation = async (input: {
-    chat_turn_id: string;
-    sequence: number;
-    raw_messages: unknown[];
-    compaction_config: LLMConfig;
-  }): Promise<{
-    raw_messages: unknown[];
-    sequence: number;
-    usage: TokenUsage;
-  }> => {
-    let sequence = input.sequence;
-
-    await createAndPublishEvent({
-      chat_turn_id: input.chat_turn_id,
-      sequence: sequence++,
-      event_type: "compaction-started",
-      payload: {
-        type: "compaction-started",
-      },
-    });
-
-    const compacted = await textGenerator.generateText({
-      config: {
-        ...input.compaction_config,
-        input_messages: [
-          {
-            role: "user",
-            content: {
-              type: "text",
-              text: JSON.stringify(input.raw_messages),
-            },
-          },
-        ],
-        custom_tools: [],
-      },
-      raw: null,
-    });
-
-    const compactedRawMessages = [
-      {
-        role: "user" as const,
-        content: compacted.text,
-      },
-    ];
-
-    await createAndPublishEvent({
-      chat_turn_id: input.chat_turn_id,
-      sequence: sequence++,
-      event_type: "chat-compacted",
-      payload: {
-        type: "chat-compacted",
-      },
-    });
-
-    return {
-      raw_messages: compactedRawMessages,
-      sequence,
-      usage: usageFromGenerateText(compacted.usage),
-    };
-  };
-
-  const executeChatTurnInternal = async (
-    chat_session_id: string,
-    turn_id: string,
-    organization_id: string,
-    user_id: string,
-    workspace?: ToolWorkspaceContext,
-    abortSignal?: AbortSignal,
-  ): Promise<void> => {
+  const executeChatTurnInternal = async ({
+    chat_session_id,
+    turn_id,
+    organization_id,
+    user_id,
+    workspace,
+    abort_signal,
+  }: {
+    chat_session_id: string;
+    turn_id: string;
+    organization_id: string;
+    user_id: string;
+    workspace: ToolWorkspaceContext;
+    abort_signal: AbortSignal;
+  }): Promise<void> => {
     const sessionCount = await ctx.db
       .selectFrom("chat_sessions")
       .select(sql<number>`count(*)::int`.as("count"))
       .where("id", "=", chat_session_id)
       .executeTakeFirstOrThrow();
+
     if (sessionCount.count === 0) {
       throw new AgentOrchestrationException({
         public_message: "Chat session not found.",
@@ -392,347 +186,214 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       });
     }
 
-    const turn = (await ctx.db
+    const turn = await ctx.db
       .selectFrom("chat_session_turns")
       .select(["status", "chat_session_id", "user_input"])
       .where("id", "=", turn_id)
       .where("chat_session_id", "=", chat_session_id)
-      .executeTakeFirst()) as unknown as
-      | Pick<ChatSessionTurnEt, "status" | "chat_session_id" | "user_input">
-      | undefined;
+      .executeTakeFirst();
 
-    if (!turn) {
-      throw new AgentOrchestrationException({
-        public_message: "Chat turn not found.",
-        status_code: HttpStatusCode.NOT_FOUND,
-      });
-    }
+    if (!turn || turn.status !== "in_progress") return;
 
-    if (turn.status !== "in_progress") {
-      return;
-    }
-
-    let sequence = await getNextSequence(turn_id);
-    let agentConfig: Awaited<ReturnType<typeof getAgentConfig>> | null = null;
     let totalChatUsage = zeroUsage();
     let totalCompactionUsage = zeroUsage();
-    let toolRunCounts = new Map<string, number>();
+    let webSearchCount = 0;
 
     try {
-      const previousTurn = (await ctx.db
-        .selectFrom("chat_session_turns")
-        .select(["conversation_context"])
-        .where("chat_session_id", "=", chat_session_id)
-        .where("status", "=", "completed")
-        .orderBy("created_at", "desc")
-        .limit(1)
-        .offset(0)
-        .executeTakeFirst()) as unknown as
-        | Pick<ChatSessionTurnEt, "conversation_context">
-        | undefined;
-      const initialRaw =
-        previousTurn?.conversation_context?.raw_context ?? null;
+      const checkpointer = PostgresSaver.fromConnString(
+        getPostgresConnString(ctx),
+      );
+      await checkpointer.setup();
 
-      const chatSession = await ctx.db
-        .selectFrom("chat_sessions")
-        .selectAll()
-        .where("id", "=", turn.chat_session_id)
-        .executeTakeFirst();
-      if (!chatSession) {
-        throw new AgentOrchestrationException({
-          public_message: "Chat session not found.",
-          status_code: HttpStatusCode.NOT_FOUND,
-        });
-      }
+      const llm = createLlm(
+        ctx,
+        AgentConfig.agent,
+        turn.chat_session_id,
+        user_id,
+        chat_session_id,
+      );
+      const fallback = createFallbackMiddleware(
+        ctx,
+        AgentConfig.agent,
+        turn.chat_session_id,
+        user_id,
+        chat_session_id,
+      );
+      const compaction_llm = createLlm(
+        ctx,
+        AgentConfig.compaction,
+        turn.chat_session_id,
+        user_id,
+        chat_session_id,
+      );
 
-      agentConfig = await getAgentConfig(chatSession.agent_config_id);
+      const tools = createLangChainTools(ctx, workspace, 1);
 
-      const llmConfig = agentConfig.chat_config as unknown as LLMConfig;
-      const compactionConfig =
-        agentConfig.compaction_config as unknown as LLMConfig | null;
-      const compactionThresholdTokens =
-        agentConfig.compaction_threshold_tokens ?? 0;
-      const llmConfigWithTools: LLMConfig = {
-        ...llmConfig,
-        custom_tools: toolRegistry.getAllToolDefinitions(),
-      };
+      const middlewares = [
+        ...(fallback ? [fallback] : []),
+        summarizationMiddleware({
+          model: compaction_llm,
+          trigger: { tokens: AgentConfig.compaction.threshold_tokens },
+          keep: { messages: 20 },
+          summaryPrompt: AgentConfig.compaction.prompt,
+        }),
+      ];
 
-      const {
-        requestMessage: userMessage,
-        contextMessage: contextUserMessage,
-      } = await buildUserMessages(turn.user_input);
-      const initialRawMessages = Array.isArray(initialRaw)
-        ? [...initialRaw, userMessage]
-        : [userMessage];
-      const contextRawMessages = Array.isArray(initialRaw)
-        ? [...initialRaw, contextUserMessage]
-        : [contextUserMessage];
+      const agent = createAgent({
+        model: llm,
+        tools,
+        checkpointer,
+        systemPrompt: AgentConfig.agent.prompt,
+        ...(middlewares.length > 0 ? { middleware: middlewares } : {}),
+      });
 
-      let currentRequest = {
-        config: {
-          ...llmConfig,
-          input_messages: [],
-          custom_tools: llmConfigWithTools.custom_tools,
+      const event_stream = agent.streamEvents(
+        {
+          messages: turn.user_input
+            .map((i) => {
+              if (i.source.type === "text") {
+                return {
+                  role: "user",
+                  content: i.source.text,
+                };
+              }
+            })
+            .filter((v) => v !== undefined),
         },
-        raw: initialRawMessages,
-        abortSignal,
-      };
-      let currentContextRaw = contextRawMessages;
-
-      let iteration = 0;
+        { version: "v2", configurable: { thread_id: chat_session_id } },
+      );
 
       let fullText = "";
 
-      while (iteration < MAX_ITERATIONS) {
-        iteration++;
+      for await (const event of event_stream) {
+        if (abort_signal?.aborted) break;
 
-        const contextRawMessages = Array.isArray(currentRequest.raw)
-          ? currentRequest.raw
-          : [];
-        const tokenCount = estimateTokenCount(contextRawMessages);
-        if (
-          compactionConfig &&
-          compactionThresholdTokens > 0 &&
-          tokenCount > compactionThresholdTokens
-        ) {
-          const compacted = await compactConversation({
-            chat_turn_id: turn_id,
-            sequence,
-            raw_messages: contextRawMessages,
-            compaction_config: compactionConfig,
+        if (event.event === "on_chat_model_stream") {
+          const chunk = event.data.chunk;
+          if (chunk.content) {
+            fullText += chunk.content;
+            eventBus.publish(turn_id, {
+              type: "assistant-delta",
+              text: chunk.content,
+            });
+          }
+          const reasoning = (chunk as any).additional_kwargs?.reasoning_content;
+          if (reasoning) {
+            eventBus.publish(turn_id, {
+              type: "reasoning-delta",
+              text: reasoning,
+            });
+          }
+        }
+
+        if (event.event === "on_chat_model_end") {
+          const usage = event.data.output?.usage_metadata;
+          if (usage) {
+            totalChatUsage = addUsage(totalChatUsage, {
+              input_tokens: usage.input_tokens,
+              output_tokens: usage.output_tokens,
+            });
+          }
+        }
+
+        if (event.event === "on_tool_start") {
+          if (event.name === "web_search") webSearchCount++;
+          eventBus.publish(turn_id, {
+            type: "tool-input-start",
+            text: event.name,
           });
-          sequence = compacted.sequence;
-          totalCompactionUsage = addUsage(
-            totalCompactionUsage,
-            compacted.usage,
-          );
-          currentRequest = {
-            ...currentRequest,
-            raw: compacted.raw_messages,
-          };
-          currentContextRaw = compacted.raw_messages;
-        }
-
-        const result = await llm.streamText(currentRequest);
-        for await (const event of result.fullStream) {
-          switch (event.type) {
-            case "text-delta":
-              fullText += event.text;
-              eventBus.publish(turn_id, {
-                type: "assistant-delta",
-                text: event.text,
-              });
-              continue;
-            case "reasoning-delta":
-              eventBus.publish(turn_id, {
-                type: event.type,
-                text: event.text,
-              });
-              continue;
-            case "tool-input-start":
-              eventBus.publish(turn_id, {
-                type: "tool-input-start",
-                text: event.toolName,
-              });
-              continue;
-            case "tool-call":
-              await createAndPublishEvent({
-                chat_turn_id: turn_id,
-                sequence: sequence++,
-                event_type: "tool-input",
-                payload: {
-                  type: "tool-input",
-                  input: {
-                    tool_use_id: event.toolCallId,
-                    label: event.toolName,
-                    content: event.input as Record<string, any>,
-                  },
-                },
-              });
-              continue;
-            case "tool-result":
-              eventBus.publish(turn_id, {
-                type: "tool-result",
-                output: {
-                  tool_use_id: event.toolCallId,
-                  label: event.toolName,
-                  content: event.output as Record<string, any>,
-                  status: "success",
-                },
-              });
-              continue;
-            default:
-              continue;
-          }
-        }
-
-        const response = await result.response;
-        const streamUsage = await result.totalUsage;
-        totalChatUsage = addUsage(
-          totalChatUsage,
-          usageFromStreamResponse(streamUsage),
-        );
-        const rawMessages = response.messages;
-        const toolCalls = await result.toolCalls;
-
-        if (!toolCalls || toolCalls.length === 0) {
-          currentRequest = {
-            ...currentRequest,
-            raw: [...(currentRequest?.raw ?? []), ...(rawMessages ?? [])],
-          };
-          currentContextRaw = [...currentContextRaw, ...(rawMessages ?? [])];
-          break;
-        }
-
-        const toolResponses = [];
-
-        for (const toolCall of toolCalls) {
-          const toolName = toolCall.toolName as string;
-          const toolArgs = toolCall.input as Record<string, unknown>;
-          const toolCallId = toolCall.toolCallId as string;
-
-          if (!workspace) {
-            throw new AgentOrchestrationException({
-              public_message: "Tool workspace context not configured.",
-            });
-          }
-
-          const tool = toolRegistry.getToolByName(toolName as ToolKey);
-          if (!tool) {
-            throw new AgentOrchestrationException({
-              public_message: `Tool '${toolName}' is not available.`,
-            });
-          }
-
-          let toolResult: unknown;
-          let toolStatus: "success" | "failed" = "success";
-
-          const currentCount = toolRunCounts.get(toolName) ?? 0;
-          const nextCount = currentCount + 1;
-          toolRunCounts.set(toolName, nextCount);
-
-          try {
-            toolResult = await tool.execute(
-              ctx,
-              workspace,
-              toolArgs,
-              nextCount,
-            );
-          } catch (error) {
-            toolStatus = "failed";
-            toolResult = { error: String(error) };
-          }
-
           await createAndPublishEvent({
             chat_turn_id: turn_id,
-            sequence: sequence++,
+            event_type: "tool-input",
+            payload: {
+              type: "tool-input",
+              input: {
+                tool_use_id: event.run_id,
+                label: event.name,
+                content: event.data.input,
+              },
+            },
+          });
+        }
+
+        if (event.event === "on_tool_end") {
+          eventBus.publish(turn_id, {
+            type: "tool-result",
+            output: {
+              tool_use_id: event.run_id,
+              label: event.name,
+              content: event.data.output,
+              status: "success",
+            },
+          });
+          await createAndPublishEvent({
+            chat_turn_id: turn_id,
             event_type: "tool-response",
             payload: {
               type: "tool-result",
               output: {
-                tool_use_id: toolCallId,
-                label: toolName,
-                content: { result: toolResult },
-                status: toolStatus,
+                tool_use_id: event.run_id,
+                label: event.name,
+                content: { result: event.data.output },
+                status: "success",
               },
             },
           });
-
-          toolResponses.push({
-            tool_use_id: toolCallId,
-            name: toolName,
-            output: JSON.stringify(toolResult),
-          });
         }
 
-        const toolResultMessages = toolResponses.map((tr) => ({
-          role: "tool" as const,
-          content: [
-            {
-              type: "tool-result" as const,
-              toolCallId: tr.tool_use_id,
-              toolName: tr.name,
-              output: { type: "text" as const, value: tr.output },
-            },
-          ],
-        }));
+        if (event.event === "on_chain_end" && event.name === "LangGraph") {
+          // latestStateMessages = event.data.output.messages;
+        }
+      }
 
-        currentRequest = {
-          ...currentRequest,
-          config: {
-            ...currentRequest.config,
-            input_messages: [],
+      if (fullText.length > 0) {
+        await createAndPublishEvent({
+          chat_turn_id: turn_id,
+          event_type: "assistant-message",
+          payload: {
+            type: "assistant-message",
+            content: [
+              { type: "text", source: { type: "text", text: fullText } },
+            ],
           },
-          raw: [
-            ...(currentRequest?.raw ?? []),
-            ...rawMessages,
-            ...toolResultMessages,
-          ],
-        };
-        currentContextRaw = [
-          ...currentContextRaw,
-          ...rawMessages,
-          ...toolResultMessages,
-        ];
+        });
       }
 
       await createAndPublishEvent({
         chat_turn_id: turn_id,
-        sequence: sequence++,
-        event_type: "assistant-message",
+        event_type: "turn-settled",
         payload: {
-          type: "assistant-message",
-          content: [
-            {
-              type: "text",
-              source: { type: "text", text: fullText },
-            },
-          ],
+          type: "turn-settled",
+          status: "completed",
         },
       });
-
-      await settleTurn({
-        chat_turn_id: turn_id,
-        sequence: sequence++,
-        conversation_context: currentContextRaw
-          ? {
-              model_host: currentRequest.config.model_host,
-              model_provider: currentRequest.config.model_provider,
-              model_gateway: currentRequest.config.model_gateway,
-              model_id: currentRequest.config.model_id,
-              raw_context: currentContextRaw,
-            }
-          : null,
-        status: "completed",
-      });
     } catch (error) {
-      await settleTurn({
+      await createAndPublishEvent({
         chat_turn_id: turn_id,
-        sequence: await getNextSequence(turn_id),
-        conversation_context: null,
-        status: "failed",
-        error: error instanceof Error ? error.message : String(error),
+        event_type: "turn-settled",
+        payload: {
+          type: "turn-settled",
+          status: "failed",
+          error: error instanceof Error ? error.message : String(error),
+        },
       });
 
       throw error;
     } finally {
-      if (agentConfig) {
-        try {
-          await recordCreditUsage({
-            organization_id,
-            user_id,
-            chat_turn_id: turn_id,
-            chat_usage: totalChatUsage,
-            compaction_usage: totalCompactionUsage,
-            pricing: agentConfig.pricing_config,
-            web_search_count: toolRunCounts.get("web_search") ?? 0,
-          });
-        } catch (error) {
-          logger.error(
-            { err: error, chat_turn_id: turn_id },
-            "Failed to record credit usage",
-          );
-        }
+      try {
+        await recordCreditUsage({
+          organization_id,
+          user_id,
+          chat_turn_id: turn_id,
+          chat_usage: totalChatUsage,
+          compaction_usage: totalCompactionUsage,
+          web_search_count: webSearchCount,
+        });
+      } catch (error) {
+        logger.error(
+          { err: error, chat_turn_id: turn_id },
+          "Failed to record credit usage",
+        );
       }
     }
   };
@@ -740,33 +401,28 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   return {
     createChatTurn: (
       chat_session_id: string,
-      input: {
-        user_input: ChatTurnUserInput;
-      },
+      input: { user_input: ChatTurnUserInput },
     ) => createChatTurn(ctx, chat_session_id, input),
     executeChatTurn: (
       chat_session_id: string,
       turn_id: string,
       organization_id: string,
       user_id: string,
-      workspace?: ToolWorkspaceContext,
+      workspace: ToolWorkspaceContext,
     ): void => {
-      if (runningTurns.has(turn_id)) {
-        return;
-      }
-
+      if (runningTurns.has(turn_id)) return;
       runningTurns.add(turn_id);
       const abortController = new AbortController();
       turnAbortControllers.set(turn_id, abortController);
 
-      executeChatTurnInternal(
+      executeChatTurnInternal({
         chat_session_id,
         turn_id,
         organization_id,
         user_id,
         workspace,
-        abortController.signal
-      )
+        abort_signal: abortController.signal,
+      })
         .catch((error) => {
           logger.error(
             { err: error, chat_session_id, turn_id },
@@ -798,11 +454,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           status_code: HttpStatusCode.NOT_FOUND,
         });
       }
-      return {
-        id: turn.id,
-        chat_session_id: turn.chat_session_id,
-        status: turn.status,
-      };
+      return turn;
     },
     subscribeToTurn: (
       turn_id: string,

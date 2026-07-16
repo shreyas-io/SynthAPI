@@ -44,7 +44,6 @@ export async function createChatTurn(
     .values({
       id: uuidv7(),
       chat_turn_id: turnId,
-      sequence: 1,
       event_type: "user-input",
       payload: JSON.stringify({ type: "user-input", input: input.user_input }),
     })

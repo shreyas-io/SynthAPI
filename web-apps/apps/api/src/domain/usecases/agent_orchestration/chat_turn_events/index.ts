@@ -101,7 +101,6 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
         .values({
           id,
           chat_turn_id: input.chat_turn_id,
-          sequence: input.sequence,
           event_type: input.event_type,
           payload: JSON.stringify(input.payload),
         })
@@ -181,7 +180,6 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
         .where("chat_session_turns.chat_session_id", "=", chatId)
         .selectAll("chat_turn_events")
         .orderBy("chat_session_turns.created_at", "desc")
-        .orderBy("chat_turn_events.sequence", "desc")
         .limit(50)
         .execute()) as unknown as ChatTurnEventEt[];
 
