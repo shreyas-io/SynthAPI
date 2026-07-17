@@ -11,7 +11,10 @@ export const getPostgresConnString = (ctx: AppContext) => {
   url.pathname = ctx.env.DB_NAME;
 
   if (ctx.env.ENV === "production") {
-    url.searchParams.set("sslmode", "require");
+    // pg-connection-string treats "require" as verify-full by default, so we
+    // use the non-standard "no-verify" mode to require SSL without validating
+    // the server certificate (matching the main Kysely pool config).
+    url.searchParams.set("sslmode", "no-verify");
   }
 
   return url.toString().replace("http:", "postgresql:");
