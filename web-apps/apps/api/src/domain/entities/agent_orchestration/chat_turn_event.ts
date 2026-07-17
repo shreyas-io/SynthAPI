@@ -48,7 +48,7 @@ export type ChatTurnEventPayload =
     }
   | {
       type: "turn-settled";
-      status: "completed" | "failed";
+      status: "completed" | "failed" | "cancelled";
       error?: string | undefined;
     };
 

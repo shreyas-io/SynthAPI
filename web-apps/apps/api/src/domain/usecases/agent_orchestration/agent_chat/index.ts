@@ -18,14 +18,19 @@ import { createChatTurn } from "./create";
 import { createLangChainTools } from "../tools/langchain";
 import type { ToolWorkspaceContext } from "../tools/types";
 import { AgentConfig } from "../../../configs/agent-config/config";
-import { createAgent, summarizationMiddleware } from "langchain";
+import {
+  createAgent,
+  createMiddleware,
+  summarizationMiddleware,
+} from "langchain";
 import {
   createLlm,
   createFallbackMiddleware,
 } from "../../../../infrastructure/agent_orchestration/langchain_llm";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { getPostgresConnString } from "../../../../config/utils";
-import { threadId } from "node:worker_threads";
+
+const cancelledTurns = new Set<string>();
 
 export const AgentChatUsecase = (ctx: AppContext) => {
   const eventBus = ctx.eventBus;
@@ -198,6 +203,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     let totalChatUsage = zeroUsage();
     let totalCompactionUsage = zeroUsage();
     let webSearchCount = 0;
+    let wasCancelled = false;
 
     try {
       const checkpointer = PostgresSaver.fromConnString(
@@ -260,91 +266,109 @@ export const AgentChatUsecase = (ctx: AppContext) => {
             })
             .filter((v) => v !== undefined),
         },
-        { version: "v2", configurable: { thread_id: chat_session_id } },
+        {
+          version: "v2",
+          configurable: { thread_id: chat_session_id, turn_id },
+          signal: abort_signal,
+        },
       );
 
       let fullText = "";
 
-      for await (const event of event_stream) {
-        if (abort_signal?.aborted) break;
+      try {
+        for await (const event of event_stream) {
+          if (abort_signal?.aborted) {
+            wasCancelled = true;
+            break;
+          }
 
-        if (event.event === "on_chat_model_stream") {
-          const chunk = event.data.chunk;
-          if (chunk.content) {
-            fullText += chunk.content;
+          if (event.event === "on_chat_model_stream") {
+            const chunk = event.data.chunk;
+            if (chunk.content) {
+              fullText += chunk.content;
+              eventBus.publish(turn_id, {
+                type: "assistant-delta",
+                text: chunk.content,
+              });
+            }
+            const reasoning = (chunk as any).additional_kwargs
+              ?.reasoning_content;
+            if (reasoning) {
+              eventBus.publish(turn_id, {
+                type: "reasoning-delta",
+                text: reasoning,
+              });
+            }
+          }
+
+          if (event.event === "on_chat_model_end") {
+            const usage = event.data.output?.usage_metadata;
+            if (usage) {
+              totalChatUsage = addUsage(totalChatUsage, {
+                input_tokens: usage.input_tokens,
+                output_tokens: usage.output_tokens,
+              });
+            }
+          }
+
+          if (event.event === "on_tool_start") {
+            if (event.name === "web_search") webSearchCount++;
             eventBus.publish(turn_id, {
-              type: "assistant-delta",
-              text: chunk.content,
+              type: "tool-input-start",
+              text: event.name,
             });
-          }
-          const reasoning = (chunk as any).additional_kwargs?.reasoning_content;
-          if (reasoning) {
-            eventBus.publish(turn_id, {
-              type: "reasoning-delta",
-              text: reasoning,
-            });
-          }
-        }
-
-        if (event.event === "on_chat_model_end") {
-          const usage = event.data.output?.usage_metadata;
-          if (usage) {
-            totalChatUsage = addUsage(totalChatUsage, {
-              input_tokens: usage.input_tokens,
-              output_tokens: usage.output_tokens,
-            });
-          }
-        }
-
-        if (event.event === "on_tool_start") {
-          if (event.name === "web_search") webSearchCount++;
-          eventBus.publish(turn_id, {
-            type: "tool-input-start",
-            text: event.name,
-          });
-          await createAndPublishEvent({
-            chat_turn_id: turn_id,
-            event_type: "tool-input",
-            payload: {
-              type: "tool-input",
-              input: {
-                tool_use_id: event.run_id,
-                label: event.name,
-                content: event.data.input,
+            await createAndPublishEvent({
+              chat_turn_id: turn_id,
+              event_type: "tool-input",
+              payload: {
+                type: "tool-input",
+                input: {
+                  tool_use_id: event.run_id,
+                  label: event.name,
+                  content: event.data.input,
+                },
               },
-            },
-          });
-        }
+            });
+          }
 
-        if (event.event === "on_tool_end") {
-          eventBus.publish(turn_id, {
-            type: "tool-result",
-            output: {
-              tool_use_id: event.run_id,
-              label: event.name,
-              content: event.data.output,
-              status: "success",
-            },
-          });
-          await createAndPublishEvent({
-            chat_turn_id: turn_id,
-            event_type: "tool-response",
-            payload: {
+          if (event.event === "on_tool_end") {
+            eventBus.publish(turn_id, {
               type: "tool-result",
               output: {
                 tool_use_id: event.run_id,
                 label: event.name,
-                content: { result: event.data.output },
+                content: event.data.output,
                 status: "success",
               },
-            },
-          });
-        }
+            });
+            await createAndPublishEvent({
+              chat_turn_id: turn_id,
+              event_type: "tool-response",
+              payload: {
+                type: "tool-result",
+                output: {
+                  tool_use_id: event.run_id,
+                  label: event.name,
+                  content: { result: event.data.output },
+                  status: "success",
+                },
+              },
+            });
+          }
 
-        if (event.event === "on_chain_end" && event.name === "LangGraph") {
-          // latestStateMessages = event.data.output.messages;
+          if (event.event === "on_chain_end" && event.name === "LangGraph") {
+            // latestStateMessages = event.data.output.messages;
+          }
+        }
+      } catch (error) {
+        if (abort_signal?.aborted) {
+          wasCancelled = true;
+        } else {
+          throw error;
         }
       }
+
+      if (wasCancelled) return;
 
       if (fullText.length > 0) {
         await createAndPublishEvent({
@@ -368,15 +392,17 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         },
       });
     } catch (error) {
-      await createAndPublishEvent({
-        chat_turn_id: turn_id,
-        event_type: "turn-settled",
-        payload: {
-          type: "turn-settled",
-          status: "failed",
-          error: error instanceof Error ? error.message : String(error),
-        },
-      });
+      if (!wasCancelled) {
+        await createAndPublishEvent({
+          chat_turn_id: turn_id,
+          event_type: "turn-settled",
+          payload: {
+            type: "turn-settled",
+            status: "failed",
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
+      }
 
       throw error;
     } finally {
@@ -434,13 +460,32 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           turnAbortControllers.delete(turn_id);
         });
     },
-    cancelChatTurn: (turn_id: string) => {
+    cancelChatTurn: async (turn_id: string) => {
+      cancelledTurns.add(turn_id);
+
       const controller = turnAbortControllers.get(turn_id);
       if (controller) {
         controller.abort(new Error("Turn cancelled by user"));
         turnAbortControllers.delete(turn_id);
         runningTurns.delete(turn_id);
       }
+
+      await ctx.db
+        .updateTable("chat_session_turns")
+        .set({ status: "cancelled" })
+        .where("id", "=", turn_id)
+        .executeTakeFirst();
+
+      await createAndPublishEvent({
+        chat_turn_id: turn_id,
+        event_type: "turn-settled",
+        payload: {
+          type: "turn-settled",
+          status: "cancelled",
+        },
+      });
+
+      cancelledTurns.delete(turn_id);
     },
     getTurnStatus: async (turn_id: string) => {
       const turn = await ctx.db
