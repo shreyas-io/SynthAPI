@@ -6,9 +6,10 @@ import type {
   ChatSessionTurnEt,
   ChatTurnUserInput,
 } from "../../../entities/agent_orchestration/chat_session_turn";
-import type {
-  ChatTurnEventPayload,
-  ChatTurnEventType,
+import {
+  AGENT_CHAT_GENERIC_ERROR_MESSAGE,
+  type ChatTurnEventPayload,
+  type ChatTurnEventType,
 } from "../../../entities/agent_orchestration/chat_turn_event";
 import {
   AgentOrchestrationException,
@@ -29,6 +30,8 @@ import {
 } from "../../../../infrastructure/agent_orchestration/langchain_llm";
 import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { getPostgresConnString } from "../../../../config/utils";
+
+export { AGENT_CHAT_GENERIC_ERROR_MESSAGE } from "../../../entities/agent_orchestration/chat_turn_event";
 
 const cancelledTurns = new Set<string>();
 
@@ -332,13 +335,35 @@ export const AgentChatUsecase = (ctx: AppContext) => {
           }
 
           if (event.event === "on_tool_end") {
+            let toolStatus: "success" | "failed" = "success";
+            let toolContent: Record<string, unknown> = {
+              result: event.data.output,
+            };
+
+            try {
+              const parsed = JSON.parse(event.data.output);
+              if (
+                parsed != null &&
+                typeof parsed === "object" &&
+                "error" in parsed
+              ) {
+                toolStatus = "failed";
+                toolContent = { error: AGENT_CHAT_GENERIC_ERROR_MESSAGE };
+              }
+            } catch {
+              // Not a JSON output; leave as success.
+            }
+
             eventBus.publish(turn_id, {
               type: "tool-result",
               output: {
                 tool_use_id: event.run_id,
                 label: event.name,
-                content: event.data.output,
-                status: "success",
+                content:
+                  toolStatus === "failed"
+                    ? toolContent
+                    : event.data.output,
+                status: toolStatus,
               },
             });
             await createAndPublishEvent({
@@ -349,8 +374,8 @@ export const AgentChatUsecase = (ctx: AppContext) => {
                 output: {
                   tool_use_id: event.run_id,
                   label: event.name,
-                  content: { result: event.data.output },
-                  status: "success",
+                  content: toolContent,
+                  status: toolStatus,
                 },
               },
             });
@@ -393,13 +418,17 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       });
     } catch (error) {
       if (!wasCancelled) {
+        logger.error(
+          { err: error, chat_turn_id: turn_id },
+          "Chat turn execution failed",
+        );
         await createAndPublishEvent({
           chat_turn_id: turn_id,
           event_type: "turn-settled",
           payload: {
             type: "turn-settled",
             status: "failed",
-            error: error instanceof Error ? error.message : String(error),
+            error: AGENT_CHAT_GENERIC_ERROR_MESSAGE,
           },
         });
       }

@@ -5,14 +5,16 @@ import {
   AgentOrchestrationException,
   HttpStatusCode,
 } from "../../../exceptions/exception";
-import type {
-  ChatTurnEventEt,
-  ChatTurnEventType,
+import {
+  AGENT_CHAT_GENERIC_ERROR_MESSAGE,
+  type ChatTurnEventEt,
+  type ChatTurnEventPayload,
+  type ChatTurnEventType,
 } from "../../../entities/agent_orchestration/chat_turn_event";
 
 type ChatTurnEventInput = Pick<
   ChatTurnEventEt,
-  "chat_turn_id" | "sequence" | "event_type" | "payload"
+  "chat_turn_id" | "event_type" | "payload"
 >;
 type ChatTurnEventFilters = {
   ids?: string[] | undefined;
@@ -37,6 +39,38 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
       filters.chat_session_ids?.length ||
       filters.event_types?.length,
     );
+
+  const sanitizeErrorPayload = (
+    event: ChatTurnEventEt,
+  ): ChatTurnEventEt => {
+    if (event.event_type !== "turn-settled") return event;
+
+    let payload: ChatTurnEventPayload;
+    try {
+      payload =
+        typeof event.payload === "string"
+          ? (JSON.parse(event.payload) as ChatTurnEventPayload)
+          : event.payload;
+    } catch {
+      return event;
+    }
+
+    if (
+      payload.type === "turn-settled" &&
+      payload.status === "failed" &&
+      payload.error
+    ) {
+      return {
+        ...event,
+        payload: {
+          ...payload,
+          error: AGENT_CHAT_GENERIC_ERROR_MESSAGE,
+        },
+      };
+    }
+
+    return event;
+  };
 
   const countChatTurnEvents = async (
     filters: ChatTurnEventFilters,
@@ -88,7 +122,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
       });
     }
 
-    return chat_turn_event;
+    return sanitizeErrorPayload(chat_turn_event);
   };
 
   return {
@@ -162,10 +196,12 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
         .limit(pagination.limit)
         .offset(pagination.offset);
 
-      const [total, records] = await Promise.all([
+      const [total, rawRecords] = await Promise.all([
         countChatTurnEvents(filters),
         recordsQuery.execute() as Promise<ChatTurnEventEt[]>,
       ]);
+
+      const records = rawRecords.map(sanitizeErrorPayload);
 
       return { total, records };
     },

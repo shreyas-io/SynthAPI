@@ -2,6 +2,7 @@ import { tool } from "@langchain/core/tools";
 import { AgentToolRegistry } from "./registry";
 import * as schemas from "./schemas";
 import type { AppContext } from "../../../../server";
+import { logger } from "../../../../infrastructure/logger";
 import type { ToolWorkspaceContext } from "./types";
 import { z } from "zod";
 
@@ -43,6 +44,10 @@ export function createLangChainTools(
           const result = await t.execute(ctx, workspace, input, runs_in_turn);
           return JSON.stringify(result);
         } catch (error: any) {
+          logger.error(
+            { err: error, tool: t.definition.name },
+            "Agent tool execution failed",
+          );
           return JSON.stringify({ error: error.message });
         }
       },

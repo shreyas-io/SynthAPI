@@ -1,5 +1,8 @@
 import type { ChatTurnUserInput, TextMessageItem } from "./chat_session_turn";
 
+export const AGENT_CHAT_GENERIC_ERROR_MESSAGE =
+  "An unexpected error occurred. Please try again later.";
+
 type ToolUseDisplayBlock = {
   tool_use_id: string;
   label: string;
