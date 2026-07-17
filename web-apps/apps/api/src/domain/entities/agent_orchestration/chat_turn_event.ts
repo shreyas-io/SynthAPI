@@ -1,5 +1,8 @@
 import type { ChatTurnUserInput, TextMessageItem } from "./chat_session_turn";
 
+export const AGENT_CHAT_GENERIC_ERROR_MESSAGE =
+  "An unexpected error occurred. Please try again later.";
+
 type ToolUseDisplayBlock = {
   tool_use_id: string;
   label: string;
@@ -48,7 +51,7 @@ export type ChatTurnEventPayload =
     }
   | {
       type: "turn-settled";
-      status: "completed" | "failed";
+      status: "completed" | "failed" | "cancelled";
       error?: string | undefined;
     };
 
@@ -71,7 +74,6 @@ export type ChatTurnStreamingEventPayload =
 export type ChatTurnEventEt = {
   id: string;
   chat_turn_id: string;
-  sequence: number;
   event_type: ChatTurnEventType;
   payload: ChatTurnEventPayload;
   created_at: Date;

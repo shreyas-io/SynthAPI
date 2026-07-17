@@ -5,6 +5,7 @@ const emptyStringToUndefined = (value: unknown): unknown =>
   value === "" ? undefined : value;
 
 const secretsSchema = z.object({
+  ENV: z.string(),
   DB_USER: z.string(),
   DB_PASS: z.string(),
   DB_HOST: z.string(),
@@ -46,14 +47,38 @@ const secretsSchema = z.object({
   }),
   RZP_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
   RZP_SECRET: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  RZP_WEBHOOK_SECRET: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  LEMON_SQUEEZY_API_KEY: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  LEMON_SQUEEZY_STORE_ID: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  LEMON_SQUEEZY_WEBHOOK_SECRET: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  LS_VARIANT_PLUS_1M: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  LS_VARIANT_PLUS_3M: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  LS_VARIANT_PLUS_6M: z.preprocess(emptyStringToUndefined, z.string().optional()),
-  LS_VARIANT_PLUS_12M: z.preprocess(emptyStringToUndefined, z.string().optional()),
+  RZP_WEBHOOK_SECRET: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  LEMON_SQUEEZY_API_KEY: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  LEMON_SQUEEZY_STORE_ID: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  LEMON_SQUEEZY_WEBHOOK_SECRET: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  LS_VARIANT_PLUS_1M: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  LS_VARIANT_PLUS_3M: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  LS_VARIANT_PLUS_6M: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
+  LS_VARIANT_PLUS_12M: z.preprocess(
+    emptyStringToUndefined,
+    z.string().optional(),
+  ),
   LS_VARIANT_5000: z.preprocess(emptyStringToUndefined, z.string().optional()),
   LS_VARIANT_2000: z.preprocess(emptyStringToUndefined, z.string().optional()),
   LS_VARIANT_500: z.preprocess(emptyStringToUndefined, z.string().optional()),

@@ -7,7 +7,10 @@ import {
   HttpStatusCode,
   MockApiException,
 } from "../domain/exceptions/exception";
-import { AgentChatUsecase } from "../domain/usecases/agent_orchestration/agent_chat";
+import {
+  AgentChatUsecase,
+  AGENT_CHAT_GENERIC_ERROR_MESSAGE,
+} from "../domain/usecases/agent_orchestration/agent_chat";
 import { ChatSessionsUsecase } from "../domain/usecases/agent_orchestration/chat_sessions";
 import { ChatTurnBlobsUsecase } from "../domain/usecases/agent_orchestration/chat_turn_blobs";
 import { ChatTurnEventsUsecase } from "../domain/usecases/agent_orchestration/chat_turn_events";
@@ -15,6 +18,7 @@ import { ProjectsUsecase } from "../domain/usecases/mock_api/projects";
 import { assertOrganizationHasAiCredits } from "../domain/usecases/organizations/plans";
 import { asyncRoute } from "../middleware/async_route";
 import type { AppContext } from "../server";
+import { logger } from "../infrastructure/logger";
 import { createProjectChatSessionDto } from "./dtos/agent_orchestration/chat_sessions";
 import { createProjectChatTurnDto } from "./dtos/agent_orchestration/agent_chat";
 import { getNumber, getString } from "./utils";
@@ -359,8 +363,13 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
           unsubscribe();
         });
       } catch (error) {
+        logger.error(
+          { err: error, chat_id, turn_id },
+          "Failed to start chat turn stream",
+        );
+        unsubscribe();
         res.write(
-          `data: ${JSON.stringify({ type: "error", error: String(error) })}\n\n`,
+          `data: ${JSON.stringify({ type: "error", error: AGENT_CHAT_GENERIC_ERROR_MESSAGE })}\n\n`,
         );
         res.end();
       }

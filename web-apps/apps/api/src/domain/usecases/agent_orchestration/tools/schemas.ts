@@ -62,16 +62,7 @@ export const getMockApiResponseToolInputDto = z.object({
   response_id: z.uuidv7(),
 });
 
-const jsonStringOrObject = z.preprocess((val) => {
-  if (typeof val === "string") {
-    try {
-      return JSON.parse(val);
-    } catch {
-      return val;
-    }
-  }
-  return val;
-}, z.any());
+const jsonStringOrObject = z.any();
 
 export const createMockApiResponseToolInputDto = z.object({
   mock_api_id: z.uuidv7(),
@@ -86,9 +77,8 @@ export const createMockApiResponseToolInputDto = z.object({
   execution_order: z.number().int().min(1).optional(),
 });
 
-export const updateMockApiResponseToolInputDto = createMockApiResponseToolInputDto
-  .partial()
-  .extend({
+export const updateMockApiResponseToolInputDto =
+  createMockApiResponseToolInputDto.partial().extend({
     response_id: z.uuidv7(),
   });
 

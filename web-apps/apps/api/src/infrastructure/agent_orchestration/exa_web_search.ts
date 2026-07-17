@@ -11,7 +11,9 @@ export class ExaWebSearchProvider implements IWebSearchProvider {
     options?: { limit?: number },
   ): Promise<WebSearchResponse> {
     if (!this.apiKey) {
-      throw new Error("Web search is currently unavailable (EXA_API_KEY missing).");
+      throw new Error(
+        "Web search is currently unavailable (EXA_API_KEY missing).",
+      );
     }
 
     // Strict cap of 10 results
@@ -42,8 +44,10 @@ export class ExaWebSearchProvider implements IWebSearchProvider {
     const results = (data.results ?? []).map((r: any) => ({
       title: r.title || "Untitled",
       url: r.url,
-      snippet: r.text,
-      score: r.score,
+      snippet:
+        r.text.slice(0, 100) +
+        "..." +
+        (r.text.length > 100 ? r.text.slice(-100) : ""),
     }));
 
     return {
