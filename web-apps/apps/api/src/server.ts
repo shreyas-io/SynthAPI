@@ -8,7 +8,6 @@ import express, { type Express } from "express";
 
 import { getSecrets } from "./config/secrets";
 import { runMigrations } from "./infrastructure/kysely/run_migrations";
-import { runAgentConfigMigrations } from "./run_agent_config_migrations";
 import { InMemoryEventBus } from "./infrastructure/agent_orchestration/event_bus";
 import {
   createPyodideWorkerPool,
@@ -26,7 +25,10 @@ import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bu
 import type { IEmailService } from "./domain/interfaces/email_service";
 import { MailerSendEmailService } from "./infrastructure/email/mailersend_email_service";
 import { asyncRoute } from "./middleware/async_route";
-import { createMockApiRequestLogger, type IMockApiRequestLogger } from "./infrastructure/request_logs";
+import {
+  createMockApiRequestLogger,
+  type IMockApiRequestLogger,
+} from "./infrastructure/request_logs";
 import { logger } from "./infrastructure/logger";
 import { requestLoggerMiddleware } from "./middleware/request_logger";
 import { parseMultipartRequest } from "./middleware/multipart";
@@ -65,7 +67,10 @@ export const createApiApp = async (): Promise<ApiApp> => {
 
   const agentEventBus = InMemoryEventBus();
   const emailService = createEmailService(secrets);
-  const mockApiRequestLogger = createMockApiRequestLogger(secrets.REDIS_URL, dbClient.db);
+  const mockApiRequestLogger = createMockApiRequestLogger(
+    secrets.REDIS_URL,
+    dbClient.db,
+  );
   const webSearchProvider = new ExaWebSearchProvider(secrets.EXA_API_KEY);
   const appContext: AppContext = {
     db: dbClient.db,
@@ -82,12 +87,6 @@ export const createApiApp = async (): Promise<ApiApp> => {
     secrets,
   });
 
-  /**
-   * TODO: create different DB users for both
-   * app (only DML permissions) and migration (with DDL permissions)
-   * */
-  await runAgentConfigMigrations(appContext);
-
   const app = express();
 
   app.use(requestLoggerMiddleware);
@@ -99,12 +98,14 @@ export const createApiApp = async (): Promise<ApiApp> => {
       credentials: true,
     }),
   );
-  app.use(express.json({
-    limit: "1mb",
-    verify: (req: any, res, buf) => {
-      req.rawBody = buf.toString("utf8");
-    }
-  }));
+  app.use(
+    express.json({
+      limit: "1mb",
+      verify: (req: any, res, buf) => {
+        req.rawBody = buf.toString("utf8");
+      },
+    }),
+  );
   app.use(express.text({ limit: "1mb" }));
   app.use(express.urlencoded({ extended: false, limit: "1mb" }));
   app.use(express.raw({ type: "application/octet-stream", limit: "10mb" }));
