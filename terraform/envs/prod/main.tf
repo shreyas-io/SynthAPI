@@ -120,6 +120,10 @@ resource "aws_db_subnet_group" "main" {
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-db-subnets"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_security_group" "ec2" {
