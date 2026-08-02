@@ -121,12 +121,17 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     insert into organizations (id, name, created_by_user_id)
     select uuidv7(), coalesce(nullif(users.display_name, ''), users.email, 'Default organization'), users.id
     from users;
+  `.execute(db);
 
+  await sql`
     update users
     set default_organization_id = organizations.id
     from organizations
     where organizations.created_by_user_id = users.id
       and users.default_organization_id is null;
+  `.execute(db);
+
+  await sql`
 
     insert into organization_memberships (organization_id, user_id, role, status)
     select users.default_organization_id, users.id, 'owner', 'active'
@@ -171,7 +176,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       inserted_subscriptions.expires_at
     from inserted_subscriptions
     join plus_plan on plus_plan.id = inserted_subscriptions.plan_type_id;
+  `.execute(db);
 
+  await sql`
     update projects
     set organization_id = (
       select users.default_organization_id
@@ -181,7 +188,9 @@ export async function up(db: Kysely<unknown>): Promise<void> {
       limit 1
     )
     where organization_id is null;
+  `.execute(db);
 
+  await sql`
     alter table projects
     alter column organization_id set not null;
   `.execute(db);

@@ -4,17 +4,23 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
     alter table organizations
     add column is_default_for_owner boolean not null default false;
+  `.execute(db);
 
+  await sql`
     update organizations
     set is_default_for_owner = true
     where id in (
       select default_organization_id from users where default_organization_id is not null
     );
+  `.execute(db);
 
+  await sql`
     create unique index organizations_owner_default_idx
     on organizations(created_by_user_id)
     where is_default_for_owner = true;
+  `.execute(db);
 
+  await sql`
     alter table users
     drop column if exists default_organization_id;
   `.execute(db);
