@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import { sql } from "kysely";
 import {
   HttpStatusCode,

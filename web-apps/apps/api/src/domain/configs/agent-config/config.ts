@@ -1,22 +1,9 @@
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const system_prompt = fs.readFileSync(
-  path.join(__dirname, "system_prompt.md"),
-  "utf-8",
-);
-const compaction_prompt = fs.readFileSync(
-  path.join(__dirname, "compaction_prompt.md"),
-  "utf-8",
-);
+import { compactionPrompt } from "./compaction_prompt";
+import { systemPrompt } from "./system_prompt";
 
 export const AgentConfig = {
   agent: {
-    prompt: system_prompt,
+    prompt: systemPrompt,
     reasoning: {
       effort: "medium",
     } as const,
@@ -59,7 +46,7 @@ export const AgentConfig = {
   compaction: {
     enabled: true,
     threshold_tokens: 300000,
-    prompt: compaction_prompt,
+    prompt: compactionPrompt,
     reasoning: {
       effort: "low",
     } as const,

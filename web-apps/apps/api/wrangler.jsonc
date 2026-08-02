@@ -1,0 +1,60 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "synthapi-api",
+  "main": "src/worker.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      // Replace with IDs from:
+      //   wrangler kv:namespace create "synthapi-api-kv"
+      //   wrangler kv:namespace create "synthapi-api-kv" --preview
+      "id": "<production-namespace-id>",
+      "preview_id": "<preview-namespace-id>"
+    }
+  ],
+
+  "queues": {
+    "producers": [
+      {
+        "binding": "REQUEST_LOGS_QUEUE",
+        "queue": "synthapi-request-logs"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "synthapi-request-logs"
+      }
+    ]
+  },
+
+  "triggers": {
+    "crons": ["0 * * * *"]
+  },
+
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RATE_LIMITER_DO",
+        "class_name": "RateLimiterDO"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["RateLimiterDO"]
+    }
+  ],
+
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "<hyperdrive-id>",
+      "localConnectionString": "postgresql://user:password@postgres:5432/mock_api"
+    }
+  ]
+}

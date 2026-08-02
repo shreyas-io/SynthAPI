@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import {
   HttpStatusCode,
   MockApiException,
@@ -87,9 +87,9 @@ const createScriptSseStream = (
   execution_context: ExecutionContextEt,
 ): AsyncIterable<SseStreamItemEt> => ({
   async *[Symbol.asyncIterator]() {
-    const resp = await ctx.pyodide.execute({
+    const resp = await ctx.pythonCodeRunner.execute({
       code,
-      timeout_ms: 5000,
+      max_exec_time_ms: 5000,
       context: execution_context,
     });
     const parsedEvents = sseStreamItemsSchema.safeParse(resp.result);
@@ -254,9 +254,9 @@ const materializeResponseBody = async (
   execution_context: ExecutionContextEt,
 ): Promise<MaterializedResponseBody> => {
   if (body.type === "json_script") {
-    const { result } = await ctx.pyodide.execute({
+    const { result } = await ctx.pythonCodeRunner.execute({
       code: body.code,
-      timeout_ms: 5000,
+      max_exec_time_ms: 5000,
       context: execution_context,
     });
     return {

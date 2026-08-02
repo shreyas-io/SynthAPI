@@ -1,5 +1,5 @@
 import { sql } from "kysely";
-import type { AppContext } from "../../../server";
+import type { AppContext } from "../../../context";
 import type { AuthenticatedUser } from "../../entities/authenticated_user";
 import { OrganizationInviteEt } from "../../entities/organization";
 import { HttpStatusCode, MockApiException } from "../../exceptions/exception";

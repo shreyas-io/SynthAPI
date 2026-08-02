@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../server";
+import type { AppContext } from "../../../context";
 import { HttpStatusCode, MockApiException } from "../../exceptions/exception";
 import {
   createOrganizationPlanSubscription,

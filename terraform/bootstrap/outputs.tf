@@ -13,11 +13,6 @@ output "terraform_role_arn" {
   value       = aws_iam_role.terraform.arn
 }
 
-output "api_deploy_role_arn" {
-  description = "IAM role ARN for API deployment GitHub Actions runs."
-  value       = aws_iam_role.api_deploy.arn
-}
-
 output "local_power_user_name" {
   description = "IAM user name for local developer PowerUser access."
   value       = aws_iam_user.local_power_user.name

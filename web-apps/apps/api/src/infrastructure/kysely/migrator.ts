@@ -3,7 +3,6 @@ import "dotenv/config";
 import { Kysely, PostgresDialect } from "kysely";
 import pg from "pg";
 
-import { getSecrets } from "../../config/secrets";
 import { logger } from "../logger";
 import { rollbackMigrations, runMigrations } from "./run_migrations";
 
@@ -11,16 +10,24 @@ const { Pool } = pg;
 
 type Database = Record<string, never>;
 
-const buildConnectionString = (
-  secrets: Awaited<ReturnType<typeof getSecrets>>,
-) => {
-  const user = encodeURIComponent(secrets.DB_USER);
-  const password = encodeURIComponent(secrets.DB_PASS);
-  const host = secrets.DB_HOST;
-  const port = String(secrets.DB_PORT);
-  const name = secrets.DB_NAME;
+const buildConnectionString = (): string => {
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
 
-  return `postgres://${user}:${password}@${host}:${port}/${name}`;
+  const user = process.env.DB_USER;
+  const password = process.env.DB_PASS;
+  const host = process.env.DB_HOST;
+  const port = process.env.DB_PORT;
+  const name = process.env.DB_NAME;
+
+  if (!user || !password || !host || !port || !name) {
+    throw new Error(
+      "Database connection not configured. Set DATABASE_URL or DB_USER, DB_PASS, DB_HOST, DB_PORT, DB_NAME.",
+    );
+  }
+
+  return `postgres://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${name}`;
 };
 
 const buildPoolSslConfig = (): pg.PoolConfig["ssl"] | undefined =>
@@ -35,11 +42,10 @@ const run = async () => {
     throw new Error("Usage: pnpm migrate:latest | pnpm migrate:down");
   }
 
-  const secrets = await getSecrets();
   const db = new Kysely<Database>({
     dialect: new PostgresDialect({
       pool: new Pool({
-        connectionString: buildConnectionString(secrets),
+        connectionString: buildConnectionString(),
         max: 1,
         ssl: buildPoolSslConfig(),
       }),

@@ -1,5 +1,3 @@
-import { lookup } from "node:dns/promises";
-import net from "node:net";
 import { toolDefinitions } from "./definitions";
 import { webScrapeToolInputDto, webSearchToolInputDto } from "./schemas";
 import type { ITool } from "./types";
@@ -16,6 +14,17 @@ const USER_AGENT =
 const MAX_HTML_BYTES = 2_000_000;
 const REQUEST_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 3;
+
+const IPV4_REGEX = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+const IPV6_REGEX =
+  /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$/;
+
+const isIPv4 = (ip: string): boolean => {
+  if (!IPV4_REGEX.test(ip)) return false;
+  return ip.split(".").every((part) => Number(part) <= 255);
+};
+
+const isIPv6 = (ip: string): boolean => IPV6_REGEX.test(ip);
 
 const decodeHtml = (value: string): string =>
   value
@@ -54,8 +63,8 @@ const isPrivateIpv4 = (ip: string): boolean => {
 };
 
 const isPrivateIp = (ip: string): boolean => {
-  if (net.isIPv4(ip)) return isPrivateIpv4(ip);
-  if (!net.isIPv6(ip)) return true;
+  if (isIPv4(ip)) return isPrivateIpv4(ip);
+  if (!isIPv6(ip)) return true;
 
   const normalized = ip.toLowerCase();
   return (
@@ -70,7 +79,7 @@ const isPrivateIp = (ip: string): boolean => {
   );
 };
 
-const assertPublicHttpUrl = async (rawUrl: string): Promise<URL> => {
+const assertPublicHttpUrl = (rawUrl: string): Promise<URL> => {
   const url = new URL(rawUrl);
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     throw new Error("Only http and https URLs are supported.");
@@ -84,23 +93,13 @@ const assertPublicHttpUrl = async (rawUrl: string): Promise<URL> => {
     throw new Error("Localhost URLs are not supported.");
   }
 
-  if (net.isIP(hostname)) {
-    if (isPrivateIp(hostname))
+  if (isIPv4(hostname) || isIPv6(hostname)) {
+    if (isPrivateIp(hostname)) {
       throw new Error("Private IP URLs are not supported.");
-    return url;
+    }
   }
 
-  const addresses = await lookup(hostname, { all: true, verbatim: true });
-  if (
-    addresses.length === 0 ||
-    addresses.some((address) => isPrivateIp(address.address))
-  ) {
-    throw new Error(
-      "URLs resolving to private network addresses are not supported.",
-    );
-  }
-
-  return url;
+  return Promise.resolve(url);
 };
 
 const fetchText = async (
@@ -147,7 +146,7 @@ const fetchText = async (
     }
 
     const html = await response.text();
-    if (Buffer.byteLength(html, "utf8") > MAX_HTML_BYTES) {
+    if (new TextEncoder().encode(html).length > MAX_HTML_BYTES) {
       throw new Error("Page is too large to scrape.");
     }
 

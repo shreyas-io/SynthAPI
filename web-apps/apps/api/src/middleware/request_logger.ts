@@ -1,52 +1,39 @@
-import crypto from "node:crypto";
-
-import type { NextFunction, Request, Response } from "express";
+import { createMiddleware } from "hono/factory";
 
 import { logger } from "../infrastructure/logger";
 
-export const requestLoggerMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  const requestId =
-    req.headers["x-request-id"]?.toString() ?? crypto.randomUUID();
-  const startedAt = process.hrtime.bigint();
+export const requestLoggerMiddleware = createMiddleware(async (c, next) => {
+  const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
+  const startedAt = Date.now();
 
-  res.setHeader("x-request-id", requestId);
+  const ip =
+    c.req.header("x-forwarded-for") ?? c.req.header("x-real-ip") ?? "unknown";
 
-  req.log = logger.child({
+  c.set("log", logger.child({
     request_id: requestId,
     req: {
-      method: req.method,
-      url: req.originalUrl,
-      path: req.path,
-      ip: req.ip,
+      method: c.req.method,
+      url: c.req.url,
+      path: c.req.path,
+      ip,
     },
-  });
+  }));
 
-  const logResponse = (level: "info" | "warn", message: string) => {
-    const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
-    req.log[level](
-      {
-        res: {
-          status_code: res.statusCode,
-        },
-        response_time_ms: Math.round(durationMs * 100) / 100,
+  c.header("x-request-id", requestId);
+
+  await next();
+
+  const durationMs = Date.now() - startedAt;
+  const statusCode = c.res.status;
+  const level = statusCode >= 500 ? "warn" : "info";
+
+  c.var.log[level](
+    {
+      res: {
+        status_code: statusCode,
       },
-      message,
-    );
-  };
-
-  res.on("finish", () => {
-    logResponse(res.statusCode >= 500 ? "warn" : "info", "request completed");
-  });
-
-  res.on("close", () => {
-    if (!res.writableEnded) {
-      logResponse("warn", "request aborted");
-    }
-  });
-
-  next();
-};
+      response_time_ms: Math.round(durationMs * 100) / 100,
+    },
+    "request completed",
+  );
+});

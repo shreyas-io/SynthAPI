@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import {
@@ -9,7 +9,7 @@ import type { ChatSessionEt } from "../../../entities/agent_orchestration/chat_s
 
 type ChatSessionInput = Pick<
   ChatSessionEt,
-  "agent_config_id" | "project_id" | "name" | "description" | "status"
+  "project_id" | "name" | "description" | "status"
 >;
 type ChatSessionUpdateInput = Pick<
   ChatSessionEt,
@@ -17,7 +17,6 @@ type ChatSessionUpdateInput = Pick<
 >;
 type ChatSessionFilters = {
   ids?: string[] | undefined;
-  agent_config_ids?: string[] | undefined;
   project_ids?: string[] | undefined;
   name?: string | undefined;
   description?: string | undefined;
@@ -36,7 +35,6 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
   const hasFilters = (filters: ChatSessionFilters) =>
     Boolean(
       filters.ids?.length ||
-        filters.agent_config_ids?.length ||
         filters.project_ids?.length ||
         filters.name ||
         filters.description ||
@@ -51,13 +49,6 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
 
     if (filters.ids?.length) {
       filtered = filtered.where("id", "in", filters.ids);
-    }
-    if (filters.agent_config_ids?.length) {
-      filtered = filtered.where(
-        "agent_config_id",
-        "in",
-        filters.agent_config_ids,
-      );
     }
     if (filters.project_ids?.length) {
       filtered = filtered.where("project_id", "in", filters.project_ids);
@@ -119,7 +110,6 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
       .insertInto("chat_sessions")
       .values({
         id,
-        agent_config_id: input.agent_config_id,
         project_id: input.project_id,
         name: input.name,
         description: input.description,
@@ -137,38 +127,7 @@ export const ChatSessionsUsecase = (ctx: AppContext) => {
       name: string;
       description?: string | null;
     }) => {
-      const configs = await ctx.db
-        .selectFrom("agent_configs")
-        .selectAll()
-        .where("key", "=", "local-default")
-        .where("enabled", "=", true)
-        .execute();
-
-      let agentConfigId = configs[0]?.id;
-
-      if (!agentConfigId) {
-        const fallback = await ctx.db
-          .selectFrom("agent_configs")
-          .selectAll()
-          .where("enabled", "=", true)
-          .orderBy("created_at", "asc")
-          .limit(1)
-          .offset(0)
-          .execute();
-
-        agentConfigId = fallback[0]?.id;
-      }
-
-      if (!agentConfigId) {
-        throw new AgentOrchestrationException({
-          public_message:
-            "No enabled agent configuration found. Please create one first.",
-          status_code: HttpStatusCode.PRECONDITION_FAILED,
-        });
-      }
-
       return createChatSession({
-        agent_config_id: agentConfigId,
         project_id: input.project_id,
         name: input.name,
         description: input.description ?? null,

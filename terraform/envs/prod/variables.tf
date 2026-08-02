@@ -16,27 +16,10 @@ variable "PROJECT_NAME" {
   default     = "synthapi"
 }
 
-variable "DOMAIN_NAME" {
-  description = "Primary public domain, for example synthapi.com."
-  type        = string
-}
-
-variable "INSTANCE_TYPE" {
-  description = "EC2 instance type for the API host."
-  type        = string
-  default     = "t4g.micro"
-}
-
 variable "DB_INSTANCE_CLASS" {
   description = "RDS instance class."
   type        = string
   default     = "db.t4g.micro"
-}
-
-variable "VALKEY_NODE_TYPE" {
-  description = "ElastiCache Valkey node type."
-  type        = string
-  default     = "cache.t4g.micro"
 }
 
 variable "DB_NAME" {
@@ -57,25 +40,50 @@ variable "DB_PASSWORD" {
   sensitive   = true
 }
 
-variable "ECR_REPOSITORY_NAME" {
-  description = "ECR repository name for the API image."
-  type        = string
-  default     = "synthapi-api"
+variable "DB_ALLOWED_CIDR_BLOCKS" {
+  description = "CIDR blocks allowed to connect to RDS PostgreSQL. Restrict this to Cloudflare IP ranges in production."
+  type        = list(string)
+  default     = ["0.0.0.0/0"]
 }
 
-variable "API_IMAGE_TAG" {
-  description = "Container image tag to boot on new instances."
+variable "DB_ENGINE_VERSION" {
+  description = "PostgreSQL engine version."
   type        = string
-  default     = "test-latest"
+  default     = "17"
 }
 
-variable "BOOTSTRAP_SECRET_ARN" {
-  description = "ARN of the AWS Secrets Manager JSON secret containing USE_VAULT_SECRETS, INFISICAL_*, and CLOUDFLARE_API_TOKEN."
-  type        = string
+variable "DB_ALLOCATED_STORAGE" {
+  description = "Initial RDS storage size in GiB."
+  type        = number
+  default     = 20
 }
 
-variable "BOOTSTRAP_SECRET_VERSION_STAGE" {
-  description = "Secrets Manager version stage to read for the bootstrap secret."
-  type        = string
-  default     = "AWSCURRENT"
+variable "DB_MAX_ALLOCATED_STORAGE" {
+  description = "Maximum RDS storage size in GiB for autoscaling."
+  type        = number
+  default     = 100
+}
+
+variable "DB_PUBLICLY_ACCESSIBLE" {
+  description = "Whether the RDS instance is publicly accessible."
+  type        = bool
+  default     = true
+}
+
+variable "DB_BACKUP_RETENTION_PERIOD" {
+  description = "Number of days to retain automated RDS backups."
+  type        = number
+  default     = 7
+}
+
+variable "LAMBDA_MEMORY_SIZE" {
+  description = "Python runner Lambda memory size in MB."
+  type        = number
+  default     = 512
+}
+
+variable "LAMBDA_TIMEOUT" {
+  description = "Python runner Lambda timeout in seconds."
+  type        = number
+  default     = 30
 }

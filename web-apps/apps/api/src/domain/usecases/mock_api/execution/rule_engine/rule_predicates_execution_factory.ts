@@ -1,7 +1,7 @@
 import Ajv from "ajv";
 import _ from "lodash";
 
-import type { AppContext } from "../../../../../server";
+import type { AppContext } from "../../../../../context";
 import { MockApiException } from "../../../../exceptions/exception";
 import { ExecutionContextEt } from "../../../../entities/execution_context";
 import { MockApiPredicateEt } from "../../../../entities/mock_api_response/rule_tree";
@@ -99,9 +99,9 @@ export async function executePredicate(
   execution_context: ExecutionContextEt,
 ): Promise<boolean> {
   if (predicate.type === "custom") {
-    const { result } = await ctx.pyodide.execute({
+    const { result } = await ctx.pythonCodeRunner.execute({
       code: predicate.script,
-      timeout_ms: 5000,
+      max_exec_time_ms: 5000,
       context: execution_context,
     });
 

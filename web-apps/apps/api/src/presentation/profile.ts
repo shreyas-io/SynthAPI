@@ -1,14 +1,14 @@
-import type { Express } from "express";
+import type { Hono } from "hono";
 
 import {
   ApiGatewayException,
   HttpStatusCode,
 } from "../domain/exceptions/exception";
 import { OrganizationsUsecase } from "../domain/usecases/organizations";
-import { asyncRoute } from "../middleware/async_route";
-import type { AppContext } from "../server";
+import type { AuthenticatedUser } from "../domain/entities/authenticated_user";
+import type { AppContext } from "../context";
 
-const getAuthenticatedUser = (user: Express.Request["user"]) => {
+const getAuthenticatedUser = (user: AuthenticatedUser | undefined) => {
   if (!user) {
     throw new ApiGatewayException({
       public_message: "Unauthorized",
@@ -19,15 +19,12 @@ const getAuthenticatedUser = (user: Express.Request["user"]) => {
   return user;
 };
 
-export const addProfileRoutes = (app: Express, ctx: AppContext) => {
+export const addProfileRoutes = (app: Hono, ctx: AppContext) => {
   const organizations = OrganizationsUsecase(ctx);
 
-  app.get(
-    "/api/v1/profile",
-    asyncRoute(async (req, res) => {
-      res.json(
-        await organizations.getUserProfile(getAuthenticatedUser(req.user)),
-      );
-    }),
-  );
+  app.get("/api/v1/profile", async (c) => {
+    return c.json(
+      await organizations.getUserProfile(getAuthenticatedUser(c.var.user)),
+    );
+  });
 };

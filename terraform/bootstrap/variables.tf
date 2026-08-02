@@ -26,20 +26,8 @@ variable "TERRAFORM_ROLE_NAME" {
   default     = "synthapi-terraform"
 }
 
-variable "API_DEPLOY_ROLE_NAME" {
-  description = "IAM role name used by GitHub Actions for API deploys."
-  type        = string
-  default     = "synthapi-api-deploy"
-}
-
 variable "LOCAL_POWER_USER_NAME" {
   description = "IAM user name for local developer PowerUser access."
   type        = string
   default     = "shreyas"
-}
-
-variable "ECR_REPOSITORY_NAME" {
-  description = "Name of the API ECR repository used by the deploy role."
-  type        = string
-  default     = "synthapi-api"
 }

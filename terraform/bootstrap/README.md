@@ -17,8 +17,6 @@ Optional overrides:
 
 - `GITHUB_BRANCH`
 - `TERRAFORM_ROLE_NAME`
-- `API_DEPLOY_ROLE_NAME`
-- `ECR_REPOSITORY_NAME`
 - `LOCAL_POWER_USER_NAME`
 
 ## Apply
@@ -35,7 +33,6 @@ Use the outputs to configure:
 
 - `TF_STATE_BUCKET` in GitHub, using the prod state bucket managed by this stack
 - `AWS_TERRAFORM_ROLE_ARN` in GitHub
-- `AWS_API_DEPLOY_ROLE_ARN` in GitHub
 
 ## Local Power User
 

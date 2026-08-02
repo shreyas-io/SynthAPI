@@ -1,62 +1,76 @@
-# Terraform Prod
+# SynthAPI production AWS infrastructure
 
-This root creates the live AWS backend stack for SynthAPI.
+This Terraform environment provisions the only two AWS services used by the project:
 
-DNS for `DOMAIN_NAME` is expected to be hosted in Cloudflare. The EC2 bootstrap requests a Cloudflare Origin CA certificate for `api.<domain>` and `*.<domain>`, installs it on the instance, and serves it from nginx. This only works when the public DNS records stay proxied through Cloudflare and the zone SSL/TLS mode is `Full (strict)`.
+- **RDS PostgreSQL** (`db.t4g.micro` by default) for application data.
+- **Lambda function** for executing Python code via `pyodide`.
 
-Create these Cloudflare DNS records manually:
+The API itself runs on Cloudflare Workers and connects to RDS through Hyperdrive.
 
-- `api.<domain>`: proxied `A` record to the Terraform-created Elastic IP.
-- `*.<domain>`: proxied `A` record to the same Elastic IP for public mock hosts like `<project-slug>-mock.<domain>`.
-- `platform.<domain>`: `CNAME` record to the Cloudflare Pages target, if needed.
+## Resources
 
-## Secrets Ownership
+- RDS PostgreSQL — created inline in `main.tf` (publicly accessible instance in the default VPC).
+- `../../../infra/terraform/lambda-python-runner` — builds and deploys the Python runner Lambda.
 
-- AWS Secrets Manager bootstrap secret JSON:
-  - `USE_VAULT_SECRETS`
-  - `INFISICAL_SITE_URL`
-  - `INFISICAL_ENVIRONMENT`
-  - `INFISICAL_PROJECT_ID`
-  - `INFISICAL_SECRET_PATH`
-  - `INFISICAL_CLIENT_ID`
-  - `INFISICAL_CLIENT_SECRET`
-  - `CLOUDFLARE_API_TOKEN`
+## Usage
 
-The Cloudflare token must be able to create Origin CA certificates for the account/zone that owns `DOMAIN_NAME`.
+1. Copy the example variables and fill in `DB_PASSWORD`:
 
-- Infisical app/runtime values:
-  - `DB_USER`
-  - `DB_PASS`
-  - `DB_HOST`
-  - `DB_PORT`
-  - `DB_NAME`
-  - `REDIS_URL`
-  - `WEB_APP_BASE_URL`
-  - `MOCK_API_BASE_URL_TEMPLATE`
-  - `GOOGLE_OAUTH_CLIENT_ID`
-  - `GOOGLE_OAUTH_CLIENT_SECRET`
-  - `GOOGLE_OAUTH_REDIRECT_URI`
-  - `CORS_WHITELISTED_DOMAINS`
-  - `COOKIE_SECURE`
-  - MailerSend and AI-provider values
+   ```bash
+   cp terraform.tfvars.example terraform.tfvars
+   ```
 
-Terraform outputs `rds_endpoint`; copy that into Infisical as `DB_HOST` after the first apply.
-Terraform outputs `valkey_endpoint`; set `REDIS_URL` in Infisical to `redis://<valkey_endpoint>:6379` after the first apply.
+2. Initialize Terraform. The backend uses S3 with a lockfile; pass the bucket name from the bootstrap step:
 
-## Backend Init
+   ```bash
+   terraform init -backend-config="bucket=synthapi-terraform-state"
+   ```
 
-Configure the S3 backend created by `terraform/bootstrap`:
+3. Plan and apply:
 
-```bash
-terraform -chdir=terraform/envs/prod init \
-  -backend-config="bucket=<state bucket>" \
-  -backend-config="key=prod/terraform.tfstate" \
-  -backend-config="region=us-east-1"
-```
+   ```bash
+   terraform plan
+   terraform apply
+   ```
 
-## Apply
+4. After apply, store the outputs in the API secret store (Infisical):
+   - `DB_HOST` = `rds_endpoint`
+   - `DB_PORT` = `rds_port` (default 5432)
+   - `DB_NAME` = `rds_db_name`
+   - `DB_USER` = `rds_username`
+   - `DB_PASSWORD` = the value from `terraform.tfvars`
+   - `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` = create an access key for the `python_runner_lambda_invoker_user_name` output (see **Create the access key** below)
+   - `AWS_REGION` = `AWS_REGION`
+   - `PYTHON_RUNNER_LAMBDA_FUNCTION_NAME` = `python_runner_lambda_function_name`
 
-```bash
-terraform -chdir=terraform/envs/prod plan
-terraform -chdir=terraform/envs/prod apply
-```
+   ### Create the access key
+
+   The IAM user has a scoped policy granting **only** `lambda:InvokeFunction` on the Python runner Lambda (principle of least privilege). Terraform creates the user but not the access key itself — this keeps secret material out of Terraform state.
+
+   **Option A — AWS Console:**
+
+   1. Get the user name: `terraform output python_runner_lambda_invoker_user_name`
+   2. Open [IAM Console → Users](https://us-east-1.console.aws.amazon.com/iam/home#/users)
+   3. Click the user (e.g., `synthapi-prod-python-runner-invoker`)
+   4. **Security credentials** → **Create access key**
+   5. Select **Application running outside AWS** → **Create access key**
+   6. Copy both values immediately (shown only once):
+      - **Access key ID** → store as `AWS_ACCESS_KEY_ID`
+      - **Secret access key** → store as `AWS_SECRET_ACCESS_KEY`
+
+   **Option B — AWS CLI:**
+
+   ```bash
+   USER_NAME=$(terraform output -raw python_runner_lambda_invoker_user_name)
+   aws iam create-access-key --user-name "$USER_NAME" --query 'AccessKey.[AccessKeyId,SecretAccessKey]' --output text
+   ```
+
+   This prints two tab-separated values: first is `AWS_ACCESS_KEY_ID`, second is `AWS_SECRET_ACCESS_KEY`.
+
+5. For the GitHub Actions migrate job, create a single `DATABASE_URL` repository secret:
+   `postgres://<DB_USER>:<DB_PASSWORD>@<rds_endpoint>:<rds_port>/<DB_NAME>`
+
+## Security notes
+
+- `DB_ALLOWED_CIDR_BLOCKS` defaults to `0.0.0.0/0` for initial setup. Restrict it to Cloudflare IP ranges before going live.
+- Use the RDS master password only for Terraform; create a separate application user if needed.

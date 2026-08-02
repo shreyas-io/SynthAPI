@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import { logger } from "../../../../infrastructure/logger";
 import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
@@ -61,11 +61,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     compaction_usage: TokenUsage,
     web_search_count: number,
   ): number => {
-    // Hardcoded pricing from previous migrations
-    const chat_input_price = 8e-8;
-    const chat_output_price = 4.5e-7;
-    const compaction_input_price = 3e-8;
-    const compaction_output_price = 1.5e-7;
+    const chat_input_price = AgentConfig.agent.models[0]!.pricing.input_tokens;
+    const chat_output_price = AgentConfig.agent.models[0]!.pricing.output_tokens;
+    const compaction_input_price = AgentConfig.compaction.models[0]!.pricing.input_tokens;
+    const compaction_output_price = AgentConfig.compaction.models[0]!.pricing.output_tokens;
 
     const chat_cost =
       chat_usage.input_tokens * chat_input_price +
@@ -209,9 +208,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     let wasCancelled = false;
 
     try {
-      const checkpointer = PostgresSaver.fromConnString(
-        getPostgresConnString(ctx),
-      );
+      const checkpointer = new PostgresSaver(ctx.dbClient.pool);
       await checkpointer.setup();
 
       const llm = createLlm(

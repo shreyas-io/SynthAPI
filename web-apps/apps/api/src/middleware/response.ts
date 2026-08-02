@@ -1,19 +1,21 @@
-import type { NextFunction, Request, Response } from "express";
+import { createMiddleware } from "hono/factory";
 
-export const responseMiddleware = (
-  _req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
-  const json = res.json.bind(res);
+export const responseMiddleware = createMiddleware(async (c, next) => {
+  const originalJson = c.json.bind(c);
 
-  res.json = (data) => {
-    if (res.statusCode >= 400) {
-      return json(data);
+  (c as any).json = (
+    data: unknown,
+    status?: number,
+    headers?: Record<string, string>,
+  ) => {
+    const statusCode = status ?? c.res.status ?? 200;
+
+    if (statusCode >= 400) {
+      return (originalJson as any)(data, statusCode, headers);
     }
 
-    return json({ status: "success", data });
+    return (originalJson as any)({ status: "success", data }, statusCode, headers);
   };
 
-  next();
-};
+  await next();
+});

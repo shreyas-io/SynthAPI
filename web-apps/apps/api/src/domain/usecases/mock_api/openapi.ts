@@ -1,13 +1,14 @@
-import type { Express } from "express";
 import type { AuthenticatedUser } from "../../entities/authenticated_user";
 import SwaggerParser from "@apidevtools/swagger-parser";
 import * as yaml from "yaml";
-import { uuidv7 } from "uuidv7";
-import type { AppContext } from "../../../server";
+import type { AppContext } from "../../../context";
 import { ProjectsUsecase } from "./projects";
 import { MockApisUsecase } from "./apis";
 import { MockApiResponsesUsecase } from "./responses";
-import { ApiGatewayException, HttpStatusCode } from "../../exceptions/exception";
+import {
+  ApiGatewayException,
+  HttpStatusCode,
+} from "../../exceptions/exception";
 
 export const OpenApiUsecase = (context: AppContext) => {
   const projects = ProjectsUsecase(context);
@@ -17,10 +18,13 @@ export const OpenApiUsecase = (context: AppContext) => {
   return {
     async importSpec(user: AuthenticatedUser, projectId: string, spec: string) {
       if (!user) throw new Error("Unauthorized");
-      
+
       // Authorize and verify project
       const project = await projects.getProject(user, projectId);
-      await projects.assertOrganizationWriteAccess(user, project.organization_id);
+      await projects.assertOrganizationWriteAccess(
+        user,
+        project.organization_id,
+      );
       let parsedObj;
       try {
         parsedObj = yaml.parse(spec);
@@ -63,13 +67,24 @@ export const OpenApiUsecase = (context: AppContext) => {
         .where("deleted_at", "is", null)
         .execute();
 
-      const existingSet = new Set(existingApis.map(a => `${a.method.toUpperCase()} ${a.path}`));
+      const existingSet = new Set(
+        existingApis.map((a) => `${a.method.toUpperCase()} ${a.path}`),
+      );
 
       const operationsToCreate: any[] = [];
-      
+
       for (const [pathStr, pathItem] of Object.entries(api.paths)) {
         if (!pathItem || typeof pathItem !== "object") continue;
-        const methods = ["get", "put", "post", "delete", "options", "head", "patch", "trace"];
+        const methods = [
+          "get",
+          "put",
+          "post",
+          "delete",
+          "options",
+          "head",
+          "patch",
+          "trace",
+        ];
         for (const method of methods) {
           const operation = (pathItem as any)[method];
           if (operation) {
@@ -93,7 +108,10 @@ export const OpenApiUsecase = (context: AppContext) => {
           project_id: projectId,
           method: op.method.toUpperCase(),
           path: op.path,
-          name: op.operation.operationId || op.operation.summary || `${op.method.toUpperCase()} ${op.path}`,
+          name:
+            op.operation.operationId ||
+            op.operation.summary ||
+            `${op.method.toUpperCase()} ${op.path}`,
           description: op.operation.description || "",
           variables: null,
         });
@@ -114,10 +132,12 @@ export const OpenApiUsecase = (context: AppContext) => {
           let responseHeaders: Record<string, string> = {};
 
           if (responseObj.headers) {
-             for (const [hKey, hVal] of Object.entries<any>(responseObj.headers)) {
-                // Not generating sample header values for now to keep it simple, or could do:
-                responseHeaders[hKey] = hVal.example || hVal.default || "string";
-             }
+            for (const [hKey, hVal] of Object.entries<any>(
+              responseObj.headers,
+            )) {
+              // Not generating sample header values for now to keep it simple, or could do:
+              responseHeaders[hKey] = hVal.example || hVal.default || "string";
+            }
           }
 
           if (responseObj.content && responseObj.content["application/json"]) {
@@ -136,10 +156,10 @@ export const OpenApiUsecase = (context: AppContext) => {
           }
 
           const responsePayload = {
-             status_code: status,
-             headers: responseHeaders,
-             cookies: {},
-             body: bodyObj,
+            status_code: status,
+            headers: responseHeaders,
+            cookies: {},
+            body: bodyObj,
           };
 
           await mockApiResponses.createMockApiResponse(user, {
@@ -154,7 +174,7 @@ export const OpenApiUsecase = (context: AppContext) => {
       }
 
       return { success: true, count: operationsToCreate.length };
-    }
+    },
   };
 };
 

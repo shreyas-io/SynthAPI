@@ -1,7 +1,7 @@
 import { tool } from "@langchain/core/tools";
 import { AgentToolRegistry } from "./registry";
 import * as schemas from "./schemas";
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import { logger } from "../../../../infrastructure/logger";
 import type { ToolWorkspaceContext } from "./types";
 import { z } from "zod";

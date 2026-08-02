@@ -1,3 +1,4 @@
+claude_code_zai_env.sh
 node_modules
 .pnpm-store
 .wrangler

@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:22-bookworm
 
 WORKDIR /repo/web-apps
 
@@ -10,6 +10,6 @@ COPY web-apps/apps/web/package.json apps/web/package.json
 
 RUN pnpm install --frozen-lockfile --filter @synthapi/api...
 
-EXPOSE 3001 9229
+EXPOSE 8787 9229
 
 CMD ["sh", "-lc", "pnpm --filter @synthapi/api run migrate:latest && pnpm --filter @synthapi/api run dev"]

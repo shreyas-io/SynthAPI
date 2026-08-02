@@ -1,6 +1,6 @@
 import _ from "lodash";
 
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import {
   HttpStatusCode,
   MockApiException,
@@ -139,9 +139,9 @@ export const executePostResponseActions = async (
       });
     }
 
-    const resp = await ctx.pyodide.execute({
+    const resp = await ctx.pythonCodeRunner.execute({
       code: action.code,
-      timeout_ms: 5000,
+      max_exec_time_ms: 5000,
       context: input.execution_context,
     });
     const parsedResult = postResponseActionsSchema.safeParse(resp.result);

@@ -1,5 +1,4 @@
-import Busboy from "busboy";
-import type { NextFunction, Request, Response } from "express";
+import { createMiddleware } from "hono/factory";
 
 import type {
   MultipartField,
@@ -31,125 +30,76 @@ const appendField = (
   }
 };
 
-export function parseMultipartRequest(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) {
-  const content_type = req.headers["content-type"] ?? "";
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]!);
+  }
+  return btoa(binary);
+};
+
+export const parseMultipartRequest = createMiddleware(async (c, next) => {
+  const content_type = c.req.header("content-type") ?? "";
 
   if (!content_type.toLowerCase().includes("multipart/form-data")) {
-    next();
+    await next();
     return;
   }
 
+  const formData = await c.req.formData();
   let total_bytes = 0;
-  let aborted = false;
-
-  const busboy = Busboy({
-    headers: req.headers,
-    limits: {
-      fileSize: MULTIPART_FIELD_SIZE_LIMIT_BYTES,
-      fieldSize: MULTIPART_FIELD_SIZE_LIMIT_BYTES,
-      fields: 100,
-      files: 50,
-    },
-  });
 
   const fields: Record<string, MultipartField | MultipartField[]> = {};
 
-  busboy.on("field", (fieldname, value, info) => {
-    total_bytes += value.length;
-    if (total_bytes > MAX_TOTAL_MULTIPART_SIZE_BYTES) {
-      aborted = true;
-      busboy.destroy();
-      next(
-        Object.assign(
-          new Error("Multipart body exceeds 50MB total size limit."),
-          { status: 413 },
-        ),
-      );
-      return;
-    }
-
-    appendField(fields, fieldname, {
-      field_type: "text",
-      value,
-    });
-  });
-
-  busboy.on("file", (fieldname, file_stream, info) => {
-    const chunks: Buffer[] = [];
-    let file_size = 0;
-
-    file_stream.on("limit", () => {
-      aborted = true;
-      busboy.destroy();
-      next(
-        Object.assign(
-          new Error(
-            `File '${info.filename}' exceeds 10MB individual size limit.`,
-          ),
-          { status: 413 },
-        ),
-      );
-    });
-
-    file_stream.on("data", (chunk: Buffer) => {
-      total_bytes += chunk.length;
+  for (const [fieldname, value] of formData.entries()) {
+    if (typeof value === "string") {
+      total_bytes += value.length;
       if (total_bytes > MAX_TOTAL_MULTIPART_SIZE_BYTES) {
-        if (!aborted) {
-          aborted = true;
-          busboy.destroy();
-          next(
-            Object.assign(
-              new Error("Multipart body exceeds 50MB total size limit."),
-              { status: 413 },
-            ),
-          );
-        }
-        return;
+        throw Object.assign(
+          new Error("Multipart body exceeds 50MB total size limit."),
+          { status_code: 413 },
+        );
       }
-      file_size += chunk.length;
-      chunks.push(chunk);
-    });
 
-    file_stream.on("end", () => {
-      const buffer = Buffer.concat(chunks, file_size);
-      const file_field: Extract<
-        MultipartField,
-        { field_type: "file" }
-      > = {
+      appendField(fields, fieldname, {
+        field_type: "text",
+        value,
+      });
+    } else {
+      const file = value as File;
+
+      if (file.size > MULTIPART_FIELD_SIZE_LIMIT_BYTES) {
+        throw Object.assign(
+          new Error(
+            `File '${file.name}' exceeds 10MB individual size limit.`,
+          ),
+          { status_code: 413 },
+        );
+      }
+
+      total_bytes += file.size;
+      if (total_bytes > MAX_TOTAL_MULTIPART_SIZE_BYTES) {
+        throw Object.assign(
+          new Error("Multipart body exceeds 50MB total size limit."),
+          { status_code: 413 },
+        );
+      }
+
+      const content_base64 = arrayBufferToBase64(await file.arrayBuffer());
+
+      const file_field: Extract<MultipartField, { field_type: "file" }> = {
         field_type: "file",
-        filename: info.filename,
-        mime_type: info.mimeType,
-        encoding: info.encoding,
-        size_bytes: buffer.length,
-        content_base64: buffer.toString("base64"),
+        filename: file.name,
+        mime_type: file.type,
+        encoding: "base64",
+        size_bytes: file.size,
+        content_base64,
       };
       appendField(fields, fieldname, file_field);
-    });
-  });
-
-  busboy.on("finish", () => {
-    if (aborted) {
-      return;
     }
-    if (!res.headersSent) {
-      const multipart_body: MultipartBody = {
-        type: "multipart",
-        value: fields,
-      };
-      req.body = multipart_body;
-    }
-    next();
-  });
+  }
 
-  busboy.on("error", (err: unknown) => {
-    if (!aborted) {
-      next(err);
-    }
-  });
-
-  req.pipe(busboy);
-}
+  c.set("body", { type: "multipart", value: fields } as MultipartBody);
+  await next();
+});

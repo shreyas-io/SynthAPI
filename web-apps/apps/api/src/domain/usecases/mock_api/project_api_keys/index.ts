@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import type {
   CreatedProjectApiKeyEt,

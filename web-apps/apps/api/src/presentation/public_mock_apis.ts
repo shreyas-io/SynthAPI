@@ -1,10 +1,14 @@
-import { setTimeout as delay } from "node:timers/promises";
-import type { Express, NextFunction, Request, Response } from "express";
+import type { Hono, Context } from "hono";
+
+const delay = (ms: number): Promise<void> =>
+  new Promise((resolve) => setTimeout(resolve, ms));
+import { setCookie } from "hono/cookie";
+import { streamSSE } from "hono/streaming";
 
 import type { RequestBodyEt } from "../domain/entities/execution_context";
 import type { SseStreamItemEt } from "../domain/entities/mock_api_response/sse";
 import { executePublicMockApi } from "../domain/usecases/mock_api/execution";
-import type { AppContext } from "../server";
+import type { AppContext } from "../context";
 
 type MockApiExecutionResponse = {
   status_code: number;
@@ -34,164 +38,167 @@ const parseCookies = (header: string | undefined): Record<string, string> => {
   );
 };
 
-const getRequestBody = (req: Request): RequestBodyEt => {
-  const content_type = req.headers["content-type"]?.toLowerCase() ?? "";
+const getRequestBody = (c: Context): RequestBodyEt => {
+  const content_type = c.req.header("content-type")?.toLowerCase() ?? "";
+  const body = c.get("body");
 
   if (
     content_type.includes("multipart/form-data") &&
-    req.body &&
-    typeof req.body === "object" &&
-    "type" in req.body &&
-    req.body.type === "multipart"
+    body &&
+    typeof body === "object" &&
+    "type" in body &&
+    body.type === "multipart"
   ) {
-    return req.body as RequestBodyEt;
+    return body as RequestBodyEt;
   }
 
   if (content_type.includes("application/octet-stream")) {
-    if (Buffer.isBuffer(req.body)) {
+    if (body instanceof ArrayBuffer) {
+      const buffer = Buffer.from(body);
       return {
         type: "binary",
         value: {
           mime_type: content_type,
-          size_bytes: req.body.length,
-          content_base64: req.body.toString("base64"),
+          size_bytes: buffer.length,
+          content_base64: buffer.toString("base64"),
         },
       };
     }
     return { type: "empty" };
   }
 
-  if (req.body === undefined || req.body === null) {
+  if (body === undefined || body === null) {
     return { type: "empty" };
   }
 
   if (content_type.includes("application/x-www-form-urlencoded")) {
-    return { type: "form_urlencoded", value: req.body };
+    return { type: "form_urlencoded", value: body as Record<string, string | string[]> };
   }
 
   if (content_type.includes("text/plain")) {
-    return { type: "text", value: String(req.body) };
+    return { type: "text", value: String(body) };
   }
 
   if (content_type.includes("application/json")) {
-    return { type: "json", value: req.body };
+    return { type: "json", value: body };
   }
 
   return { type: "empty" };
 };
 
-const getForwardedHeaders = (req: Request): Record<string, any> => {
-  const {
-    "x-project-slug": _project_slug,
-    "x-synthapi-project-key": _project_key,
-    ...headers
-  } = req.headers;
+const getForwardedHeaders = (c: Context): Record<string, any> => {
+  const headers: Record<string, any> = {};
+  c.req.raw.headers.forEach((value, key) => {
+    if (key !== "x-project-slug" && key !== "x-synthapi-project-key") {
+      headers[key] = value;
+    }
+  });
 
   return headers;
 };
 
-const writeSseItem = async (
-  res: Response,
-  item: SseStreamItemEt,
-) => {
-  await delay(item.delay_ms ?? 5);
 
-  if (item.sse.id) {
-    res.write(`id: ${item.sse.id}\n`);
-  }
-
-  if (item.sse.event) {
-    res.write(`event: ${item.sse.event}\n`);
-  }
-
-  if (item.sse.retry_ms !== undefined) {
-    res.write(`retry: ${item.sse.retry_ms}\n`);
-  }
-
-  if (typeof item.sse.data === "string") {
-    for (const line of item.sse.data.split(/\r?\n/)) {
-      res.write(`data: ${line}\n`);
-    }
-  } else {
-    res.write(`data: ${JSON.stringify(item.sse.data)}\n`);
-  }
-
-  res.write("\n");
-};
 
 const sendMockApiResponse = async (
-  res: Response,
+  c: Context,
   result: MockApiExecutionResponse,
 ) => {
   for (const [key, value] of Object.entries(result.headers)) {
-    res.setHeader(key, String(value));
+    c.header(key, String(value));
   }
 
   for (const [key, value] of Object.entries(result.cookies)) {
-    res.cookie(key, String(value));
+    setCookie(c, key, String(value));
   }
 
-  res.status(result.status_code);
+  c.status(result.status_code as any);
 
   if (result.body.type === "empty") {
-    res.send();
-    return;
+    return c.body(null, result.status_code as any);
   }
 
   if (result.body.type === "text") {
-    res.type("text/plain").send(result.body.value);
-    return;
+    c.header("Content-Type", "text/plain");
+    return c.body(result.body.value, result.status_code as any);
   }
 
   if (result.body.type === "sse") {
-    const iterator = result.body.stream[Symbol.asyncIterator]();
-    let next = await iterator.next();
-
-    if (next.done) {
-      res.end();
-      return;
-    }
-
-    res.flushHeaders?.();
-
-    while (!next.done) {
-      await writeSseItem(res, next.value);
-      next = await iterator.next();
-    }
-
-    res.end();
-    return;
+    const sseBody = result.body;
+    c.header("Content-Encoding", "Identity");
+    return streamSSE(c, async (stream) => {
+      for await (const item of sseBody.stream) {
+        await delay(item.delay_ms ?? 5);
+        await stream.writeSSE({
+          data:
+            typeof item.sse.data === "string"
+              ? item.sse.data
+              : JSON.stringify(item.sse.data),
+          event: item.sse.event,
+          id: item.sse.id,
+          retry: item.sse.retry_ms,
+        });
+      }
+    });
   }
 
-  res.json(result.body.value);
+  return c.json(result.body.value, result.status_code as any);
 };
 
-export const addProjectSlugRouter = (app: Express, ctx: AppContext) => {
-  app.all(/.*/, (req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith("/api/v1")) {
-      next();
-      return;
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const extractProjectSlugFromHost = (
+  host: string,
+  template: string,
+): string | null => {
+  try {
+    const templateHostname = new URL(template).hostname;
+    const pattern = escapeRegExp(templateHostname).replace(
+      /\\\{projectSlug\\\}/g,
+      "(.+)",
+    );
+    const match = host.match(new RegExp(`^${pattern}$`));
+    return match?.[1] ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const getProjectSlug = (c: Context, template: string): string | null => {
+  const headerSlug = c.req.header("x-project-slug");
+  if (headerSlug) {
+    return headerSlug;
+  }
+
+  const host = new URL(c.req.url).hostname;
+  return extractProjectSlugFromHost(host, template);
+};
+
+export const addProjectSlugRouter = (app: Hono, ctx: AppContext) => {
+  app.all("*", async (c, next) => {
+    if (c.req.path.startsWith("/api/v1")) {
+      return next();
     }
 
-    const project_slug = req.get("x-project-slug");
+    const project_slug = getProjectSlug(c, ctx.env.MOCK_API_BASE_URL_TEMPLATE);
 
     if (!project_slug) {
-      next();
-      return;
+      return next();
     }
 
-    void executePublicMockApi(ctx, {
+    const url = new URL(c.req.url);
+    const originalUrl = `${url.pathname}${url.search}`;
+
+    const result = await executePublicMockApi(ctx, {
       project_slug,
-      method: req.method,
-      url: req.originalUrl,
-      headers: getForwardedHeaders(req),
-      project_key: req.get("x-synthapi-project-key"),
-      body: getRequestBody(req),
-      cookies: parseCookies(req.headers.cookie),
-    })
-      .then((result) =>
-        sendMockApiResponse(res, result as MockApiExecutionResponse),
-      )
-      .catch(next);
+      method: c.req.method,
+      url: originalUrl,
+      headers: getForwardedHeaders(c),
+      project_key: c.req.header("x-synthapi-project-key"),
+      body: getRequestBody(c),
+      cookies: parseCookies(c.req.header("cookie")),
+    });
+
+    return sendMockApiResponse(c, result as MockApiExecutionResponse);
   });
 };

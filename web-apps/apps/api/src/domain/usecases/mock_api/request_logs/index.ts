@@ -1,4 +1,4 @@
-import type { AppContext } from "../../../../server";
+import type { AppContext } from "../../../../context";
 import type { AuthenticatedUser } from "../../../entities/authenticated_user";
 import { ProjectsUsecase } from "../projects";
 

@@ -121,9 +121,7 @@ terraform -chdir=terraform/bootstrap output
 Set:
 
 - AWS_TERRAFORM_ROLE_ARN = terraform_role_arn
-- AWS_API_DEPLOY_ROLE_ARN = api_deploy_role_arn
 - TF_STATE_BUCKET = terraform_state_bucket_name
-- TF_STATE_LOCK_TABLE = terraform_lock_table_name
 - AWS_REGION = us-east-1
 
 If you want, I can give you the exact commands for the next step: creating the AWS Secrets

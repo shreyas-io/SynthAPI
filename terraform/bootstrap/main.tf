@@ -98,62 +98,6 @@ resource "aws_iam_role_policy_attachment" "terraform_admin" {
   policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/AdministratorAccess"
 }
 
-resource "aws_iam_role" "api_deploy" {
-  name               = var.API_DEPLOY_ROLE_NAME
-  assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
-
-  tags = local.common_tags
-}
-
-data "aws_iam_policy_document" "api_deploy" {
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "ecr:GetAuthorizationToken",
-    ]
-
-    resources = ["*"]
-  }
-
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:BatchGetImage",
-      "ecr:CompleteLayerUpload",
-      "ecr:DescribeImages",
-      "ecr:InitiateLayerUpload",
-      "ecr:PutImage",
-      "ecr:UploadLayerPart",
-    ]
-
-    resources = [
-      "arn:${data.aws_partition.current.partition}:ecr:${var.AWS_REGION}:${data.aws_caller_identity.current.account_id}:repository/${var.ECR_REPOSITORY_NAME}",
-    ]
-  }
-
-  statement {
-    effect = "Allow"
-
-    actions = [
-      "ec2:DescribeInstances",
-      "ssm:GetCommandInvocation",
-      "ssm:ListCommandInvocations",
-      "ssm:SendCommand",
-    ]
-
-    resources = ["*"]
-  }
-}
-
-resource "aws_iam_role_policy" "api_deploy" {
-  name   = "${var.API_DEPLOY_ROLE_NAME}-policy"
-  role   = aws_iam_role.api_deploy.id
-  policy = data.aws_iam_policy_document.api_deploy.json
-}
-
 resource "aws_iam_user" "local_power_user" {
   name          = var.LOCAL_POWER_USER_NAME
   force_destroy = false

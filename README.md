@@ -25,6 +25,15 @@ Local defaults:
 - Redis: `localhost:6379`
 - Redis Commander: `http://localhost:8081`
 
+## Local Development
+
+For detailed local development setup, verification steps, and troubleshooting, see [LOCAL_DEVELOPMENT.md](./LOCAL_DEVELOPMENT.md).
+
+Quick start:
+```bash
+docker compose up --build
+```
+
 ## Gateway Routes
 
 Control-plane APIs go through Nginx:
@@ -94,44 +103,29 @@ The workflow is [deploy-web.yml](/home/shreyas/Projects/mock-stack/.github/workf
 
 ## AWS Backend
 
-Terraform lives in [terraform/](/home/shreyas/Projects/mock-stack/terraform). The production backend stack is split into:
+Terraform lives in [terraform/](/home/shreyas/Projects/mock-stack/terraform). The only AWS services used in production are:
 
-- [terraform/bootstrap/README.md](/home/shreyas/Projects/mock-stack/terraform/bootstrap/README.md) for the remote-state backend and GitHub IAM roles
-- [terraform/envs/prod/README.md](/home/shreyas/Projects/mock-stack/terraform/envs/prod/README.md) for the EC2/RDS/ECR/Route53 stack
+- **RDS PostgreSQL** (`db.t4g.micro`) for application data.
+- **Lambda** for the Python runner (`pyodide`).
 
-The API deploy workflow is [deploy-api.yml](/home/shreyas/Projects/mock-stack/.github/workflows/deploy-api.yml). It assumes the bootstrap-created deploy role, builds `linux/arm64`, pushes to ECR, and restarts the single `synthapi-api` systemd service over SSM.
+The API itself runs on Cloudflare Workers and connects to RDS through Hyperdrive.
+
+The Terraform layout is:
+
+- [terraform/bootstrap/README.md](/home/shreyas/Projects/mock-stack/terraform/bootstrap/README.md) for the remote-state backend and GitHub IAM roles.
+- [terraform/envs/prod/README.md](/home/shreyas/Projects/mock-stack/terraform/envs/prod/README.md) for the RDS + Lambda stack.
+
+The Terraform workflow is [terraform.yml](/home/shreyas/Projects/mock-stack/.github/workflows/terraform.yml). It assumes the bootstrap-created Terraform role and applies `terraform/envs/prod`.
 
 Required GitHub repository variables:
 
 - `AWS_REGION`
 - `AWS_TERRAFORM_ROLE_ARN`
-- `AWS_API_DEPLOY_ROLE_ARN`
 - `TF_STATE_BUCKET`
-- `TF_STATE_LOCK_TABLE`
-- `DOMAIN_NAME`
 - `PLATFORM_PAGES_CNAME_TARGET`
-- `BOOTSTRAP_SECRET_ARN`
-- `API_ECR_REPOSITORY`
-- `API_INSTANCE_SERVICE_TAG`
-- `API_BASE_URL`
 
 Required GitHub repository secret:
 
 - `TF_VAR_DB_PASSWORD`
 
-The EC2 instance reads one AWS Secrets Manager JSON secret whose body must contain:
-
-```json
-{
-  "USE_VAULT_SECRETS": "true",
-  "INFISICAL_SITE_URL": "https://app.infisical.com",
-  "INFISICAL_ENVIRONMENT": "prod",
-  "INFISICAL_PROJECT_ID": "...",
-  "INFISICAL_SECRET_PATH": "/synthapi/prod",
-  "INFISICAL_CLIENT_ID": "...",
-  "INFISICAL_CLIENT_SECRET": "...",
-  "CLOUDFLARE_API_TOKEN": "..."
-}
-```
-
-Everything else stays in Infisical, including `DB_*`, `REDIS_*`, OAuth config, MailerSend config, and the public app URL settings.
+Everything else (OAuth config, MailerSend, etc.) stays in Infisical.

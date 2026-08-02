@@ -10,13 +10,14 @@ type Secrets = Awaited<ReturnType<typeof getSecrets>>;
 
 export type ApiGatewayDatabase = {
   db: Kysely<Database>;
+  pool: pg.Pool;
   checkHealth: () => Promise<{ status: "ok"; result: number }>;
   destroy: () => Promise<void>;
 };
 
 export type DatabaseClient = ApiGatewayDatabase;
 
-const buildConnectionString = (secrets: Secrets): string => {
+export const buildConnectionString = (secrets: Secrets): string => {
   const user = encodeURIComponent(secrets.DB_USER);
   const password = encodeURIComponent(secrets.DB_PASS);
   const host = secrets.DB_HOST;
@@ -26,24 +27,32 @@ const buildConnectionString = (secrets: Secrets): string => {
   return `postgres://${user}:${password}@${host}:${port}/${name}`;
 };
 
-const buildPoolSslConfig = (): pg.PoolConfig["ssl"] | undefined =>
-  process.env["USE_VAULT_SECRETS"] === "true"
-    ? { rejectUnauthorized: false }
-    : undefined;
+const buildPoolSslConfig = (): pg.PoolConfig["ssl"] | undefined => {
+  const useVaultSecrets =
+    (globalThis as typeof globalThis & { process?: { env?: Record<string, string | undefined> } })
+      .process?.env?.["USE_VAULT_SECRETS"] === "true";
+  return useVaultSecrets ? { rejectUnauthorized: false } : undefined;
+};
 
-export const createDatabaseClient = (secrets: Secrets): ApiGatewayDatabase => {
+export const createDatabaseClientFromConnectionString = (
+  connectionString: string,
+  poolConfig: pg.PoolConfig = {},
+): ApiGatewayDatabase => {
+  const pool = new Pool({
+    connectionString,
+    max: 10,
+    ...poolConfig,
+  });
+
   const db = new Kysely<Database>({
     dialect: new PostgresDialect({
-      pool: new Pool({
-        connectionString: buildConnectionString(secrets),
-        max: 10,
-        ssl: buildPoolSslConfig(),
-      }),
+      pool,
     }),
   });
 
   return {
     db,
+    pool,
     async checkHealth() {
       const result = await sql<{ ok: number }>`select 1 as ok`.execute(db);
       const row = result.rows[0];
@@ -57,4 +66,10 @@ export const createDatabaseClient = (secrets: Secrets): ApiGatewayDatabase => {
       await db.destroy();
     },
   };
+};
+
+export const createDatabaseClient = (secrets: Secrets): ApiGatewayDatabase => {
+  return createDatabaseClientFromConnectionString(buildConnectionString(secrets), {
+    ssl: buildPoolSslConfig(),
+  });
 };

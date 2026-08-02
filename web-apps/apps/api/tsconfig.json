@@ -5,5 +5,8 @@
     "types": ["node"],
     "exactOptionalPropertyTypes": false
   },
+  "paths": {
+    "cloudflare:workers": ["./worker-configuration.d.ts"] // fixes DurableObject import
+  },
   "include": ["src", "app", "migrations"]
 }

@@ -1,4 +1,4 @@
-import { AppContext } from "../server";
+import { AppContext } from "../context";
 
 export const getPostgresConnString = (ctx: AppContext) => {
   // We use "http://" here because the Node.js URL class does not properly

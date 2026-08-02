@@ -1,8 +1,8 @@
 import { randomBytes } from "node:crypto";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { IAuthService, type ProviderIdentity } from "./interfaces/auth_service";
 import type { User } from "./entities/user";
-import type { AppContext } from "../server";
+import type { AppContext } from "../context";
 import { seed_default_project } from "./usecases/mock_api/projects/seed_default_project";
 import { createOrganizationPlanSubscription } from "./usecases/organizations/plans";
 
@@ -13,15 +13,11 @@ const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const createToken = () => randomBytes(TOKEN_LENGTH_BYTES).toString("hex");
 
 export const AuthService = (ctx: AppContext): IAuthService => {
-  const argon_options = {
-    type: argon2.argon2id,
-  };
-
   const createSession = async (
     user_id: string,
   ): Promise<{ token: string; expiresAt: string }> => {
     const token = createToken();
-    const tokenHash = await argon2.hash(token, argon_options);
+    const tokenHash = await bcrypt.hash(token, 10);
     const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
     await ctx.db
@@ -169,7 +165,7 @@ export const AuthService = (ctx: AppContext): IAuthService => {
         .execute();
 
       for (const session of sessions) {
-        if (await argon2.verify(session.token_hash, token)) {
+        if (await bcrypt.compare(token, session.token_hash)) {
           return {
             id: session.user_id,
             email: session.email,

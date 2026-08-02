@@ -1,11 +1,12 @@
-import type { Request, Response } from "express";
+import { setCookie, deleteCookie } from "hono/cookie";
+import type { Context } from "hono";
 
 import { createCookieOptions } from "../config/cookies";
 
 export const AUTH_COOKIE_NAME = "synthapi_session";
 
-export const getAuthCookie = (req: Request): string | null => {
-  const cookieHeader = req.header("cookie");
+export const getAuthCookie = (c: Context): string | null => {
+  const cookieHeader = c.req.header("cookie");
 
   if (!cookieHeader) return null;
 
@@ -20,19 +21,19 @@ export const getAuthCookie = (req: Request): string | null => {
 };
 
 export const setAuthCookie = (
-  res: Response,
+  c: Context,
   token: string,
   expiresAt: string,
   secure: boolean,
 ) => {
-  res.cookie(AUTH_COOKIE_NAME, token, {
+  setCookie(c, AUTH_COOKIE_NAME, token, {
     ...createCookieOptions(secure),
     expires: new Date(expiresAt),
   });
 };
 
-export const clearAuthCookie = (res: Response, secure: boolean) => {
-  res.clearCookie(AUTH_COOKIE_NAME, {
+export const clearAuthCookie = (c: Context, secure: boolean) => {
+  deleteCookie(c, AUTH_COOKIE_NAME, {
     ...createCookieOptions(secure),
   });
 };

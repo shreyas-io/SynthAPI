@@ -1,3 +1,14 @@
-DOMAIN_NAME                 = "example.com"
-DB_PASSWORD                 = "replace-me"
-BOOTSTRAP_SECRET_ARN        = "arn:aws:secretsmanager:us-east-1:123456789012:secret:synthapi-infisical-bootstrap"
+AWS_REGION = "us-east-1"
+ENVIRONMENT = "prod"
+PROJECT_NAME = "synthapi"
+
+DB_INSTANCE_CLASS = "db.t4g.micro"
+DB_NAME = "mock_api"
+DB_USERNAME = "synthapi"
+DB_PASSWORD = "change-me-to-a-strong-password"
+
+# Restrict to Cloudflare IP ranges in production. Default is open to the world for initial setup.
+# DB_ALLOWED_CIDR_BLOCKS = ["0.0.0.0/0"]
+
+LAMBDA_MEMORY_SIZE = 512
+LAMBDA_TIMEOUT = 30

@@ -5,7 +5,7 @@ import {
   HttpStatusCode,
   MockApiException,
 } from "../../domain/exceptions/exception";
-import { AppContext } from "../../server";
+import { AppContext } from "../../context";
 import { createHeaders } from "portkey-ai";
 
 type LlmConfig =

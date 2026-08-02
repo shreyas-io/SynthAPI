@@ -1,6 +1,5 @@
 import type { ColumnType } from "kysely";
 
-import type { AgentConfigsTable } from "./agent_orchestration/agent_configs";
 import type { ChatSessionTurnsTable } from "./agent_orchestration/chat_session_turns";
 import type { ChatSessionsTable } from "./agent_orchestration/chat_sessions";
 import type { ChatTurnBlobsTable } from "./agent_orchestration/chat_turn_blobs";
@@ -74,7 +73,6 @@ export type Database = {
   mock_apis: MockApisTable;
   mock_api_request_logs: MockApiRequestLogsTable;
   mock_api_responses: MockApiResponsesTable;
-  agent_configs: AgentConfigsTable;
   chat_sessions: ChatSessionsTable;
   chat_turn_blobs: ChatTurnBlobsTable;
   chat_session_turns: ChatSessionTurnsTable;
