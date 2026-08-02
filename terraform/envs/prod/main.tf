@@ -114,8 +114,8 @@ resource "aws_route_table_association" "public_b" {
 }
 
 resource "aws_db_subnet_group" "main" {
-  name       = "${local.name_prefix}-db-public"
-  subnet_ids = [aws_subnet.public.id, aws_subnet.public_b.id]
+  name       = "${local.name_prefix}-db-private"
+  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 
   tags = merge(local.common_tags, {
     Name = "${local.name_prefix}-db-subnets"
@@ -172,13 +172,7 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ec2.id]
   }
 
-  ingress {
-    description = "PostgreSQL public access"
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # WARNING: Consider restricting to your specific IP for security
-  }
+
 
   egress {
     from_port   = 0
@@ -234,7 +228,7 @@ resource "aws_db_instance" "postgres" {
   deletion_protection      = false
   multi_az                 = false
   skip_final_snapshot      = true
-  publicly_accessible      = true
+  publicly_accessible      = false
   apply_immediately        = true
 
   tags = merge(local.common_tags, {
