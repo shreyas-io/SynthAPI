@@ -2,13 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { FileMigrationProvider, Kysely, Migrator, type MigrationLockProvider } from "kysely";
-
-const noOpMigrationLockProvider: MigrationLockProvider = {
-  async acquireMigrationLock() {},
-  async releaseMigrationLock() {},
-};
-
+import { FileMigrationProvider, Kysely, Migrator } from "kysely";
 
 import { logger } from "../logger";
 
@@ -41,7 +35,6 @@ export const runMigrations = async <T>(db: Kysely<T>) => {
       path,
       migrationFolder,
     }),
-    migrationLockProvider: noOpMigrationLockProvider,
   });
 
   const result = await migrator.migrateToLatest();
@@ -61,7 +54,6 @@ export const rollbackMigrations = async <T>(db: Kysely<T>) => {
       path,
       migrationFolder,
     }),
-    migrationLockProvider: noOpMigrationLockProvider,
   });
 
   const result = await migrator.migrateDown();

@@ -1,6 +1,7 @@
 import "dotenv/config";
 
-import { Kysely, PostgresDialect } from "kysely";
+import { Kysely } from "kysely";
+import { CockroachDialect } from "./cockroach_dialect";
 import pg from "pg";
 
 import { getSecrets } from "../../config/secrets";
@@ -37,7 +38,7 @@ const run = async () => {
 
   const secrets = await getSecrets();
   const db = new Kysely<Database>({
-    dialect: new PostgresDialect({
+    dialect: new CockroachDialect({
       pool: new Pool({
         connectionString: buildConnectionString(secrets),
         max: 1,
