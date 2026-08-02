@@ -214,7 +214,7 @@ resource "aws_security_group" "valkey" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier               = "${local.name_prefix}-postgres"
+  identifier               = "${local.name_prefix}-postgres-public"
   engine                   = "postgres"
   engine_version           = "17"
   instance_class           = var.DB_INSTANCE_CLASS
