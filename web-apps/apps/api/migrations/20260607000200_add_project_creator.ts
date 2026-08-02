@@ -3,7 +3,7 @@ import { sql, type Kysely } from "kysely";
 export async function up(db: Kysely<unknown>): Promise<void> {
   await sql`
     alter table projects
-    add column created_by_user_id uuid references users(id);
+    add column if not exists created_by_user_id uuid references users(id);
   `.execute(db);
 
   await sql`
@@ -20,7 +20,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db);
 
   await sql`
-    create index projects_created_by_user_id_idx on projects(created_by_user_id);
+    create index if not exists projects_created_by_user_id_idx on projects(created_by_user_id);
   `.execute(db);
 }
 
