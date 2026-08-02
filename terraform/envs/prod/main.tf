@@ -114,7 +114,7 @@ resource "aws_route_table_association" "public_b" {
 }
 
 resource "aws_db_subnet_group" "main" {
-  name       = "${local.name_prefix}-db"
+  name       = "${local.name_prefix}-db-public"
   subnet_ids = [aws_subnet.public.id, aws_subnet.public_b.id]
 
   tags = merge(local.common_tags, {
@@ -214,7 +214,7 @@ resource "aws_security_group" "valkey" {
 }
 
 resource "aws_db_instance" "postgres" {
-  identifier               = "${local.name_prefix}-postgres-public"
+  identifier               = "${local.name_prefix}-postgres"
   engine                   = "postgres"
   engine_version           = "17"
   instance_class           = var.DB_INSTANCE_CLASS
