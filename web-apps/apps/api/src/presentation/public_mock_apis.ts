@@ -154,10 +154,10 @@ const extractProjectSlugFromHost = (
   try {
     const templateHostname = new URL(template).hostname;
     const pattern = escapeRegExp(templateHostname).replace(
-      /\\\{projectSlug\\\}/g,
+      /\\\{projectslug\\\}/ig,
       "(.+)",
     );
-    const match = host.match(new RegExp(`^${pattern}$`));
+    const match = host.match(new RegExp(`^${pattern}$`, "i"));
     return match?.[1] ?? null;
   } catch {
     return null;
