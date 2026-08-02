@@ -11,8 +11,8 @@
       // Replace with IDs from:
       //   wrangler kv:namespace create "synthapi-api-kv"
       //   wrangler kv:namespace create "synthapi-api-kv" --preview
-      "id": "<production-namespace-id>",
-      "preview_id": "<preview-namespace-id>"
+      "id": "9d1a047f0835438b9bd00a2d75e8789c",
+      "preview_id": "c4fb6c202931491097fba9926b83129c"
     }
   ],
 
@@ -53,7 +53,7 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "<hyperdrive-id>",
+      "id": "88ac85bfdae24ae4867a08cc10e4f31f",
       "localConnectionString": "postgresql://user:password@postgres:5432/mock_api"
     }
   ]
