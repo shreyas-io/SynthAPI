@@ -103,7 +103,7 @@ jobs:
 
             terraform -chdir="$STACK_DIR" destroy -auto-approve
           elif [ "${{ inputs.action }}" = "apply" ]; then
-            terraform -chdir="$STACK_DIR" apply -auto-approve -replace=aws_db_instance.postgres
+            terraform -chdir="$STACK_DIR" apply -auto-approve
           else
             terraform -chdir="$STACK_DIR" plan
           fi
