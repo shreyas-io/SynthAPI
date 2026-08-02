@@ -186,30 +186,7 @@ resource "aws_security_group" "rds" {
   })
 }
 
-resource "aws_security_group" "valkey" {
-  name        = "${local.name_prefix}-valkey"
-  description = "Valkey access from the SynthAPI EC2 instance"
-  vpc_id      = aws_vpc.main.id
 
-  ingress {
-    description     = "Valkey from EC2"
-    from_port       = 6379
-    to_port         = 6379
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ec2.id]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-valkey"
-  })
-}
 
 resource "aws_db_instance" "postgres" {
   identifier               = "${local.name_prefix}-postgres"
@@ -236,30 +213,7 @@ resource "aws_db_instance" "postgres" {
   })
 }
 
-resource "aws_elasticache_subnet_group" "valkey" {
-  name       = "${local.name_prefix}-valkey"
-  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-valkey"
-  })
-}
-
-resource "aws_elasticache_replication_group" "valkey" {
-  replication_group_id = "${local.name_prefix}-valkey"
-  description          = "SynthAPI Valkey cache"
-  engine               = "valkey"
-  node_type            = var.VALKEY_NODE_TYPE
-  port                 = 6379
-  num_cache_clusters   = 1
-  subnet_group_name    = aws_elasticache_subnet_group.valkey.name
-  security_group_ids   = [aws_security_group.valkey.id]
-  apply_immediately    = true
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-valkey"
-  })
-}
 
 resource "aws_ecr_repository" "api" {
   name                 = var.ECR_REPOSITORY_NAME

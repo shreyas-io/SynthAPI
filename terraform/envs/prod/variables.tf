@@ -33,11 +33,6 @@ variable "DB_INSTANCE_CLASS" {
   default     = "db.t4g.micro"
 }
 
-variable "VALKEY_NODE_TYPE" {
-  description = "ElastiCache Valkey node type."
-  type        = string
-  default     = "cache.t4g.micro"
-}
 
 variable "DB_NAME" {
   description = "Initial PostgreSQL database name."

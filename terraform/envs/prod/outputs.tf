@@ -23,10 +23,6 @@ output "rds_endpoint" {
   value       = aws_db_instance.postgres.address
 }
 
-output "valkey_endpoint" {
-  description = "ElastiCache Valkey primary endpoint used by the API host."
-  value       = aws_elasticache_replication_group.valkey.primary_endpoint_address
-}
 
 output "bootstrap_secret_arn" {
   description = "Secrets Manager secret ARN consumed by the EC2 bootstrap."
