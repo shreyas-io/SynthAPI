@@ -157,7 +157,7 @@ resource "aws_security_group" "ec2" {
 
 resource "aws_security_group" "rds" {
   name        = "${local.name_prefix}-rds"
-  description = "PostgreSQL access from the SynthAPI EC2 instance and public"
+  description = "PostgreSQL access from the SynthAPI EC2 instance"
   vpc_id      = aws_vpc.main.id
 
   ingress {
