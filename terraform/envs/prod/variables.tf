@@ -27,30 +27,6 @@ variable "INSTANCE_TYPE" {
   default     = "t4g.micro"
 }
 
-variable "DB_INSTANCE_CLASS" {
-  description = "RDS instance class."
-  type        = string
-  default     = "db.t4g.micro"
-}
-
-
-variable "DB_NAME" {
-  description = "Initial PostgreSQL database name."
-  type        = string
-  default     = "mock_api"
-}
-
-variable "DB_USERNAME" {
-  description = "Initial PostgreSQL master username."
-  type        = string
-  default     = "synthapi"
-}
-
-variable "DB_PASSWORD" {
-  description = "Initial PostgreSQL master password."
-  type        = string
-  sensitive   = true
-}
 
 variable "ECR_REPOSITORY_NAME" {
   description = "ECR repository name for the API image."

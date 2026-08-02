@@ -113,18 +113,6 @@ resource "aws_route_table_association" "public_b" {
   route_table_id = aws_route_table.public.id
 }
 
-resource "aws_db_subnet_group" "main" {
-  name       = "${local.name_prefix}-db-private"
-  subnet_ids = [aws_subnet.private_a.id, aws_subnet.private_b.id]
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-db-subnets"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
 
 resource "aws_security_group" "ec2" {
   name        = "${local.name_prefix}-ec2"
@@ -158,61 +146,6 @@ resource "aws_security_group" "ec2" {
     Name = "${local.name_prefix}-ec2"
   })
 }
-
-resource "aws_security_group" "rds" {
-  name        = "${local.name_prefix}-rds"
-  description = "PostgreSQL access from the SynthAPI EC2 instance"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description     = "PostgreSQL from EC2"
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.ec2.id]
-  }
-
-
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-rds"
-  })
-}
-
-
-
-resource "aws_db_instance" "postgres" {
-  identifier               = "${local.name_prefix}-postgres"
-  engine                   = "postgres"
-  engine_version           = "17"
-  instance_class           = var.DB_INSTANCE_CLASS
-  allocated_storage        = 20
-  storage_type             = "gp3"
-  db_name                  = var.DB_NAME
-  username                 = var.DB_USERNAME
-  password                 = var.DB_PASSWORD
-  db_subnet_group_name     = aws_db_subnet_group.main.name
-  vpc_security_group_ids   = [aws_security_group.rds.id]
-  backup_retention_period  = 7
-  delete_automated_backups = true
-  deletion_protection      = false
-  multi_az                 = false
-  skip_final_snapshot      = true
-  publicly_accessible      = false
-  apply_immediately        = true
-
-  tags = merge(local.common_tags, {
-    Name = "${local.name_prefix}-postgres"
-  })
-}
-
 
 
 resource "aws_ecr_repository" "api" {
@@ -337,6 +270,10 @@ resource "aws_launch_template" "api" {
 
   iam_instance_profile {
     name = aws_iam_instance_profile.ec2.name
+  }
+
+  instance_market_options {
+    market_type = "spot"
   }
 
   metadata_options {

@@ -18,11 +18,6 @@ output "ecr_repository_url" {
   value       = aws_ecr_repository.api.repository_url
 }
 
-output "rds_endpoint" {
-  description = "RDS endpoint to store in Infisical as DB_HOST."
-  value       = aws_db_instance.postgres.address
-}
-
 
 output "bootstrap_secret_arn" {
   description = "Secrets Manager secret ARN consumed by the EC2 bootstrap."
