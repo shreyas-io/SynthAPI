@@ -1,5 +1,4 @@
-import { Kysely, sql } from "kysely";
-import { CockroachDialect } from "./cockroach_dialect";
+import { Kysely, PostgresDialect, sql } from "kysely";
 import pg from "pg";
 
 import type { getSecrets } from "../../config/secrets";
@@ -34,7 +33,7 @@ const buildPoolSslConfig = (): pg.PoolConfig["ssl"] | undefined =>
 
 export const createDatabaseClient = (secrets: Secrets): ApiGatewayDatabase => {
   const db = new Kysely<Database>({
-    dialect: new CockroachDialect({
+    dialect: new PostgresDialect({
       pool: new Pool({
         connectionString: buildConnectionString(secrets),
         max: 10,

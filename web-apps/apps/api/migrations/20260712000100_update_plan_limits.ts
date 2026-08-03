@@ -3,11 +3,16 @@ import { Kysely, sql } from "kysely";
 export async function up(db: Kysely<any>): Promise<void> {
   // Add missing columns if they don't exist yet
   await sql`
-    ALTER TABLE plan_types ADD COLUMN IF NOT EXISTS max_projects integer NOT NULL DEFAULT 3;
-  `.execute(db);
-
-  await sql`
-    ALTER TABLE plan_types ADD COLUMN IF NOT EXISTS rate_limit_req_per_sec integer NOT NULL DEFAULT 10;
+    DO $$ 
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='plan_types' AND column_name='max_projects') THEN
+        ALTER TABLE plan_types ADD COLUMN max_projects integer NOT NULL DEFAULT 3;
+      END IF;
+      
+      IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='plan_types' AND column_name='rate_limit_req_per_sec') THEN
+        ALTER TABLE plan_types ADD COLUMN rate_limit_req_per_sec integer NOT NULL DEFAULT 10;
+      END IF;
+    END $$;
   `.execute(db);
 
   // Update 'basic' plan
