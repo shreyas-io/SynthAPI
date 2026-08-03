@@ -271,6 +271,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         },
         {
           version: "v2",
+          recursionLimit: 250,
           configurable: { thread_id: chat_session_id, turn_id },
           signal: abort_signal,
         },

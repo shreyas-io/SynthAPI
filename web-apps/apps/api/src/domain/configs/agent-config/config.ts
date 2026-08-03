@@ -23,8 +23,8 @@ export const AgentConfig = {
     models: [
       {
         priority: 0,
-        provider: "deepseek",
-        model: "@openrouter-2/deepseek/deepseek-v4-flash",
+        provider: "nvidia",
+        model: "@openrouter-2/nvidia/nemotron-3-ultra-550b-a55b:free",
         temperature: 0.2,
         max_tokens: 30 * 1024,
         pricing: {
@@ -34,24 +34,13 @@ export const AgentConfig = {
       },
       {
         priority: 1,
-        provider: "nvidia",
-        model: "@openrouter-2/nvidia/nemotron-3-super-120b-a12b:free",
+        provider: "deepseek",
+        model: "@openrouter-2/deepseek/deepseek-v4-flash",
         temperature: 0.2,
         max_tokens: 30 * 1024,
         pricing: {
-          input_tokens: 8e-8,
-          output_tokens: 4.5e-7,
-        },
-      },
-      {
-        priority: 2,
-        provider: "nvidia",
-        model: "@openrouter-2/nvidia/nemotron-3-super-120b-a12b",
-        temperature: 0.2,
-        max_tokens: 30 * 1024,
-        pricing: {
-          input_tokens: 8e-8,
-          output_tokens: 4.5e-7,
+          input_tokens: 9e-8,
+          output_tokens: 1.8e-7,
         },
       },
     ],
@@ -66,10 +55,10 @@ export const AgentConfig = {
     models: [
       {
         priority: 0,
-        provider: "deepseek",
-        model: "@openrouter-2/deepseek/deepseek-v4-flash",
+        provider: "nvidia",
+        model: "@openrouter-2/nvidia/nemotron-3-ultra-550b-a55b:free",
         temperature: 0.2,
-        max_tokens: 30 * 1024,
+        max_tokens: 10 * 1024,
         pricing: {
           input_tokens: 9e-8,
           output_tokens: 1.8e-7,
@@ -77,24 +66,13 @@ export const AgentConfig = {
       },
       {
         priority: 1,
-        provider: "nvidia",
-        model: "@openrouter-2/nvidia/nemotron-3-super-120b-a12b",
+        provider: "deepseek",
+        model: "@openrouter-2/deepseek/deepseek-v4-flash",
         temperature: 0.2,
         max_tokens: 10 * 1024,
         pricing: {
-          input_tokens: 8e-8,
-          output_tokens: 4.5e-7,
-        },
-      },
-      {
-        priority: 2,
-        provider: "nvidia",
-        model: "@openrouter-2/nvidia/nemotron-3-super-120b-a12b",
-        temperature: 0.2,
-        max_tokens: 10 * 1024,
-        pricing: {
-          input_tokens: 8e-8,
-          output_tokens: 4.5e-7,
+          input_tokens: 9e-8,
+          output_tokens: 1.8e-7,
         },
       },
     ],
