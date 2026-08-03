@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from "react";
 import type { FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -302,15 +302,23 @@ export function ProjectAgentChatPanel({
   const forceNextTranscriptScrollRef = useRef(true);
   const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const setUrlChatId = (chatId: string | null) => {
-    const next = new URLSearchParams(searchParams);
-    if (chatId) {
-      next.set("chat_id", chatId);
-    } else {
-      next.delete("chat_id");
-    }
-    setSearchParams(next, { replace: false });
-  };
+  const setUrlChatId = useCallback(
+    (chatId: string | null, options?: { replace?: boolean }) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (chatId) {
+            next.set("chat_id", chatId);
+          } else {
+            next.delete("chat_id");
+          }
+          return next;
+        },
+        { replace: options?.replace ?? false },
+      );
+    },
+    [setSearchParams]
+  );
 
   const chats = useProjectChats(projectId);
   const events = useProjectChatEvents(
@@ -395,6 +403,17 @@ export function ProjectAgentChatPanel({
       startTurnStream(selectedChatId, latestTurnId);
     }
   }, [selectedChatId, isDraftChat, activeTurnId, rawRecords]);
+
+  // Ensure chat_id stays in the URL even if the user navigates to other pages via <Link>
+  useEffect(() => {
+    if (selectedChatId && !isDraftChat) {
+      const currentUrlChatId = searchParams.get("chat_id");
+      if (currentUrlChatId !== selectedChatId) {
+        setUrlChatId(selectedChatId, { replace: true });
+      }
+    }
+  }, [selectedChatId, isDraftChat, searchParams, setUrlChatId]);
+
   const hasCanonicalActiveTurnSettled = Boolean(
     activeTurnId &&
       rawRecords.some(
