@@ -3399,3 +3399,56 @@ h3 {
 .response-editor-main {
   border-bottom: none;
 }
+
+.agent-tool-group {
+  align-self: stretch;
+  background: var(--color-surface-subtle);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.45rem 0.7rem;
+}
+
+.agent-tool-group-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  user-select: none;
+  list-style-type: disclosure-closed;
+}
+
+details[open].agent-tool-group > .agent-tool-group-summary {
+  list-style-type: disclosure-open;
+}
+
+.agent-tool-group-content {
+  display: grid;
+  gap: 0.8rem;
+  padding-top: 0.6rem;
+  margin-top: 0.5rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+.agent-tool-group-content .agent-message {
+  border: none;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.agent-tool-group-summary::-webkit-details-marker {
+  display: none;
+}
+.agent-tool-group-chevron {
+  transition: transform 0.2s;
+}
+details[open].agent-tool-group .agent-tool-group-chevron {
+  transform: rotate(90deg);
+}
+
+.agent-tool-group-summary {
+  list-style: none !important;
+}

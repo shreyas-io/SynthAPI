@@ -51,123 +51,6 @@ type ProjectAgentChatPanelProps = {
 const EMPTY_FORM_PROMPTS: FormPrompt[] = [];
 const STREAM_RENDER_INTERVAL_MS = 80;
 const AUTO_SCROLL_BOTTOM_THRESHOLD_PX = 80;
-const STREAM_IDLE_THINKING_DELAY_MS = 2000;
-
-const THINKING_MESSAGES = [
-  "Consulting the token committee",
-  "Pretending this was obvious all along",
-  "Assembling a sensible answer",
-  "Negotiating with autocomplete",
-  "Checking the vibes and the types",
-  "Turning caffeine into JSON",
-  "Reading the room, then the schema",
-  "Finding the least surprising answer",
-  "Warming up the context window",
-  "Convincing the prompt to cooperate",
-  "Sorting thoughts by confidence",
-  "Looking for the non-weird solution",
-  "Doing the tiny math",
-  "Polishing a response-shaped object",
-  "Untangling the obvious edge case",
-  "Waiting for the tokens to line up",
-  "Consulting several imaginary dashboards",
-  "Reducing chaos to bullet points",
-  "Finding the polite version",
-  "Poking the syntax with a stick",
-  "Turning maybe into probably",
-  "Gathering loose semicolons",
-  "Preparing a very normal answer",
-  "Running the internal shrug test",
-  "Checking if that actually makes sense",
-  "Folding the context neatly",
-  "Making a small plan look effortless",
-  "Asking the schema nicely",
-  "Removing unnecessary drama",
-  "Scanning for suspicious assumptions",
-  "Translating intent into action",
-  "Waiting for the good token",
-  "Doing a responsible amount of guessing",
-  "Making the answer less wobbly",
-  "Looking up from the token desk",
-  "Rehearsing the concise version",
-  "Trying not to overthink it",
-  "Compressing thoughts without loss",
-  "Checking the confidence meter",
-  "Stirring the context gently",
-  "Linting the idea before sending",
-  "Selecting the least chaotic path",
-  "Giving the answer a quick comb",
-  "Running a tiny sanity check",
-  "Putting the pieces in order",
-  "Reading the invisible footnotes",
-  "Making sure the nouns agree",
-  "Consulting the very serious checklist",
-  "Doing useful background noise",
-  "Rearranging the mental furniture",
-  "Finding a cleaner phrasing",
-  "Waiting for the model to blink",
-  "Checking if this is secretly simple",
-  "Giving the prompt some space",
-  "Solving the easy part first",
-  "Comparing three almost identical options",
-  "Looking busy, but productively",
-  "Turning ambiguity into a plan",
-  "Making sure this is not nonsense",
-  "Assembling the answer sandwich",
-  "Replacing hand-waving with specifics",
-  "Counting reasons on one hand",
-  "Looking for the missing comma",
-  "Letting the context settle",
-  "Consulting the imaginary runbook",
-  "Drafting the answer in pencil",
-  "Checking the boring but important part",
-  "Waiting for the obvious thing to appear",
-  "Rebalancing the token budget",
-  "Making the response less crunchy",
-  "Picking a lane",
-  "Reading between the stack traces",
-  "Turning the crank carefully",
-  "Looking for a simpler explanation",
-  "Making sure the button does button things",
-  "Checking the corners",
-  "Giving the answer a quick tap test",
-  "Moving bits into tidy piles",
-  "De-spaghettifying the thought process",
-  "Waiting for inspiration, but typing anyway",
-  "Choosing words with fewer surprises",
-  "Running on structured optimism",
-  "Filing the rough edges down",
-  "Checking whether that belongs here",
-  "Doing the part before the clever part",
-  "Converting hunches into sentences",
-  "Trying the direct route first",
-  "Making the invisible work visible",
-  "Looking for the shortest honest answer",
-  "Turning scattered context into one thing",
-  "Reviewing the plan for suspicious gaps",
-  "Keeping the answer under control",
-  "Making sure the data did not wander off",
-  "Waiting for the last token to arrive",
-  "Giving the response a final nudge",
-  "Checking the map before walking",
-  "Converting intent to pixels",
-  "Avoiding the dramatic solution",
-  "Making the state machine behave",
-  "Assembling the tiny gears",
-  "Checking the answer for loose screws",
-  "Doing the quiet part out loud",
-  "Turning input into progress",
-  "Trying the obvious fix first",
-  "Making the next step less mysterious",
-  "Looking for the boring correct answer",
-  "Holding the context steady",
-  "Giving the tokens a pep talk",
-  "Looking for a clean exit",
-  "Something to do with a zebra? 🦓",
-  "cet 🐱",
-  "deg 🐶",
-  "I am afraid I can't do this",
-];
 
 type UserInputPayload = Extract<ChatTurnEventPayload, { type: "user-input" }>;
 type AssistantMessagePayload = Extract<
@@ -406,9 +289,6 @@ export function ProjectAgentChatPanel({
   const [streamMessages, setStreamMessages] = useState<ChatMessage[]>([]);
   const [streamError, setStreamError] = useState<string | null>(null);
   const [activeTurnId, setActiveTurnId] = useState<string | null>(null);
-  const [isStreamIdle, setIsStreamIdle] = useState(false);
-  const [thinkingMessage, setThinkingMessage] = useState(THINKING_MESSAGES[0]);
-  const [thinkingDotCount, setThinkingDotCount] = useState(1);
   const [isChatListOpen, setIsChatListOpen] = useState(() => !chatIdFromUrl);
   const streamRef = useRef<EventSource | null>(null);
   const streamMessagesRef = useRef<ChatMessage[]>([]);
@@ -416,7 +296,6 @@ export function ProjectAgentChatPanel({
     null,
   );
   const streamFlushTimeoutRef = useRef<number | null>(null);
-  const streamIdleTimeoutRef = useRef<number | null>(null);
   const transcriptRef = useRef<HTMLDivElement | null>(null);
   const prevScrollHeightRef = useRef<number | null>(null);
   const shouldStickToBottomRef = useRef(true);
@@ -494,10 +373,28 @@ export function ProjectAgentChatPanel({
     }
   }, [rawRecords, projectId, queryClient]);
 
-  const canonicalMessages = useMemo(
-    () => messagesFromEvents([...rawRecords].reverse()),
-    [rawRecords],
+  const settledRecords = useMemo(
+    () => activeTurnId ? rawRecords.filter(r => r.chat_turn_id !== activeTurnId) : rawRecords,
+    [rawRecords, activeTurnId]
   );
+
+  const canonicalMessages = useMemo(
+    () => messagesFromEvents([...settledRecords].reverse()),
+    [settledRecords],
+  );
+
+  useEffect(() => {
+    if (!selectedChatId || isDraftChat || activeTurnId || rawRecords.length === 0) return;
+
+    const latestTurnId = rawRecords[0].chat_turn_id;
+    const hasSettled = rawRecords.some(
+      (e) => e.chat_turn_id === latestTurnId && e.payload.type === "turn-settled"
+    );
+
+    if (!hasSettled) {
+      startTurnStream(selectedChatId, latestTurnId);
+    }
+  }, [selectedChatId, isDraftChat, activeTurnId, rawRecords]);
   const hasCanonicalActiveTurnSettled = Boolean(
     activeTurnId &&
       rawRecords.some(
@@ -531,16 +428,38 @@ export function ProjectAgentChatPanel({
     createChatMutation.isPending ||
     createTurnMutation.isPending ||
     Boolean(activeTurnId);
-  const isWaitingForStream =
-    isSending &&
-    streamMessages.length > 0 &&
-    !streamMessages.some((message) => message.role !== "user");
-  const shouldShowThinking = isWaitingForStream || isStreamIdle;
 
-  const randomThinkingMessage = () => {
-    const index = Math.floor(Math.random() * THINKING_MESSAGES.length);
-    return THINKING_MESSAGES[index] ?? "Thinking";
-  };
+  type GroupedMessageBlock =
+    | { type: "single"; message: ChatMessage }
+    | { type: "tool-group"; messages: ChatMessage[]; id: string };
+
+  const groupedMessages = useMemo(() => {
+    const groups: GroupedMessageBlock[] = [];
+    let currentGroup: ChatMessage[] = [];
+
+    const pushGroup = () => {
+      if (currentGroup.length > 0) {
+        groups.push({
+          type: "tool-group",
+          messages: currentGroup,
+          id: `group-${currentGroup[0].id}`,
+        });
+        currentGroup = [];
+      }
+    };
+
+    for (const msg of messages) {
+      if (msg.role === "tool" || (msg.role === "system" && msg.eventType === "tool-input-start")) {
+        currentGroup.push(msg);
+      } else {
+        pushGroup();
+        groups.push({ type: "single", message: msg });
+      }
+    }
+    pushGroup();
+    return groups;
+  }, [messages]);
+  const shouldShowThinking = isSending;
 
   const isTranscriptNearBottom = (transcript: HTMLDivElement) =>
     transcript.scrollHeight - transcript.scrollTop - transcript.clientHeight <=
@@ -639,31 +558,12 @@ export function ProjectAgentChatPanel({
   useEffect(() => {
     return () => {
       clearStreamFlush();
-      clearStreamIdleTimer();
       pendingAssistantDeltaRef.current = null;
       streamRef.current?.close();
     };
   }, []);
 
-  useEffect(() => {
-    if (!shouldShowThinking) {
-      return;
-    }
 
-    setThinkingMessage(randomThinkingMessage());
-    setThinkingDotCount(1);
-    const intervalId = window.setInterval(() => {
-      setThinkingMessage(randomThinkingMessage());
-    }, 5000);
-    const dotsIntervalId = window.setInterval(() => {
-      setThinkingDotCount((count) => (count === 3 ? 1 : count + 1));
-    }, 500);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.clearInterval(dotsIntervalId);
-    };
-  }, [shouldShowThinking]);
 
   useEffect(() => {
     if (!chatIdFromUrl) {
@@ -702,8 +602,6 @@ export function ProjectAgentChatPanel({
 
   const closeStream = () => {
     clearStreamFlush();
-    clearStreamIdleTimer();
-    setIsStreamIdle(false);
     pendingAssistantDeltaRef.current = null;
     streamRef.current?.close();
     streamRef.current = null;
@@ -719,23 +617,7 @@ export function ProjectAgentChatPanel({
     streamFlushTimeoutRef.current = null;
   };
 
-  const clearStreamIdleTimer = () => {
-    if (streamIdleTimeoutRef.current === null) {
-      return;
-    }
 
-    window.clearTimeout(streamIdleTimeoutRef.current);
-    streamIdleTimeoutRef.current = null;
-  };
-
-  const markStreamActivity = () => {
-    clearStreamIdleTimer();
-    setIsStreamIdle(false);
-    streamIdleTimeoutRef.current = window.setTimeout(() => {
-      setIsStreamIdle(true);
-      streamIdleTimeoutRef.current = null;
-    }, STREAM_IDLE_THINKING_DELAY_MS);
-  };
 
   const setStreamMessagesSnapshot = (messages: ChatMessage[]) => {
     pendingAssistantDeltaRef.current = null;
@@ -823,8 +705,6 @@ export function ProjectAgentChatPanel({
   const settleStream = async (chatId: string) => {
     streamRef.current?.close();
     streamRef.current = null;
-    clearStreamIdleTimer();
-    setIsStreamIdle(false);
     flushBufferedStreamMessages();
     await refetchTranscript(chatId);
     setStreamMessagesSnapshot([]);
@@ -834,7 +714,6 @@ export function ProjectAgentChatPanel({
   const startTurnStream = (chatId: string, turnId: string) => {
     streamRef.current?.close();
     setActiveTurnId(turnId);
-    markStreamActivity();
     setStreamError(null);
 
     const stream = new EventSource(
@@ -848,93 +727,145 @@ export function ProjectAgentChatPanel({
     stream.onmessage = (event) => {
       const parsed = JSON.parse(event.data) as ChatStreamEvent;
       const payload = payloadFromStreamEvent(parsed);
-      const assistantDeltaId = `stream-assistant-delta-${turnId}`;
-      markStreamActivity();
+      
+      const getLastAssistantBlockId = () => {
+        const current = streamMessagesRef.current;
+        const lastMsg = current[current.length - 1];
+        if (lastMsg && lastMsg.role === "assistant" && lastMsg.id.startsWith("stream-assistant-delta")) {
+          return lastMsg.id;
+        }
+        return `stream-assistant-delta-${turnId}-${current.length}`;
+      };
+      
+      const assistantDeltaId = getLastAssistantBlockId();
 
       switch (payload.type) {
+        case "user-input":
+          updateBufferedStreamMessages((current) => {
+            if (current.some(m => m.role === "user")) return current;
+            return [
+              ...current,
+              {
+                id: `stream-user-input-${turnId}`,
+                role: "user",
+                text: textFromInput(payload),
+                transient: true,
+              },
+            ];
+          });
+          flushBufferedStreamMessages();
+          break;
         case "assistant-delta":
           bufferAssistantDelta(assistantDeltaId, payload.text);
           break;
         case "assistant-message":
-          updateBufferedStreamMessages((current) => [
-            ...current,
-            {
-              id: `stream-assistant-message-${turnId}`,
-              role: "assistant",
-              text: textFromAssistant(payload),
-              transient: true,
-            },
-          ]);
+          updateBufferedStreamMessages((current) => {
+            if (current.some(m => m.id === parsed.id)) return current;
+            
+            const lastDeltaIndex = current.findLastIndex(
+              (m) => m.role === "assistant" && m.id.startsWith("stream-assistant-delta")
+            );
+
+            if (lastDeltaIndex !== -1) {
+              const next = [...current];
+              next[lastDeltaIndex] = {
+                id: parsed.id,
+                role: "assistant",
+                text: textFromAssistant(payload),
+                eventType: "assistant-message",
+                transient: true,
+              };
+              return next;
+            }
+
+            return [
+              ...current,
+              {
+                id: parsed.id,
+                role: "assistant",
+                text: textFromAssistant(payload),
+                eventType: "assistant-message",
+                transient: true,
+              },
+            ];
+          });
           flushBufferedStreamMessages();
           break;
         case "tool-input":
-          updateBufferedStreamMessages((current) => [
-            ...current,
-            {
-              id: `stream-tool-input-${turnId}-${current.length}`,
-              role: "tool",
-              label: toolActionLabel(payload.input.label, "tool-input"),
-              text: summarizeContent(payload.input.content),
-              eventType: "tool-input",
-              isLoading: true,
-              toolUseId: payload.input.tool_use_id,
-              transient: true,
-            },
-          ]);
+          updateBufferedStreamMessages((current) => {
+            if (current.some(m => m.role === "tool" && m.eventType === "tool-input" && m.toolUseId === payload.input.tool_use_id)) return current;
+            return [
+              ...current,
+              {
+                id: `stream-tool-input-${turnId}-${current.length}`,
+                role: "tool",
+                label: toolActionLabel(payload.input.label, "tool-input"),
+                text: summarizeContent(payload.input.content),
+                eventType: "tool-input",
+                isLoading: true,
+                toolUseId: payload.input.tool_use_id,
+                transient: true,
+              },
+            ];
+          });
           flushBufferedStreamMessages();
           break;
         case "tool-result": {
           if (payload.output.status === "success") {
             const label = payload.output.label;
-            const content = payload.output.content as Record<string, unknown>;
+            const content = payload.output.content as Record<string, unknown> | null;
             if (label === "create_mock_api" || label === "update_mock_api" || label === "delete_mock_api") {
               queryClient.invalidateQueries({ queryKey: queryKeys.mockApis(projectId) });
             }
             if (label === "create_mock_api" || label === "update_mock_api") {
-              if (typeof content.id === "string") {
-                navigate(`/projects/${projectId}/mock-apis/${content.id}`);
+              if (content && typeof content.id === "string") {
+                navigate(`/projects/${projectId}/mock-apis/${content.id}?chat_id=${chatId}`);
               }
             } else if (
               label === "create_mock_api_response" ||
               label === "update_mock_api_response"
             ) {
               if (
+                content &&
                 typeof content.id === "string" &&
                 typeof content.mock_api_id === "string"
               ) {
                 navigate(
-                  `/projects/${projectId}/mock-apis/${content.mock_api_id}/responses/${content.id}`,
+                  `/projects/${projectId}/mock-apis/${content.mock_api_id}?response_id=${content.id}&chat_id=${chatId}`,
                 );
               }
             }
           }
 
-          updateBufferedStreamMessages((current) => [
-            ...current.map((message) =>
-              message.role === "tool" &&
-              message.toolUseId === payload.output.tool_use_id
-                ? {
-                    ...message,
-                    isLoading: false,
-                    status: payload.output.status,
-                  }
-                : message,
-            ),
-            {
-              id: `stream-tool-result-${turnId}-${current.length}`,
-              role: "tool",
-              label: toolActionLabel(
-                payload.output.label,
-                "tool-result",
-                payload.output.status,
+          updateBufferedStreamMessages((current) => {
+            if (current.some(m => m.role === "tool" && m.eventType === "tool-result" && m.toolUseId === payload.output.tool_use_id)) return current;
+            return [
+              ...current.map((message) =>
+                message.role === "tool" &&
+                message.toolUseId === payload.output.tool_use_id
+                  ? {
+                      ...message,
+                      isLoading: false,
+                      status: payload.output.status,
+                    }
+                  : message,
               ),
-              text: summarizeContent(payload.output.content),
-              status: payload.output.status,
-              eventType: "tool-result",
-              toolUseId: payload.output.tool_use_id,
-              transient: true,
-            },
-          ]);
+              {
+                id: `stream-tool-result-${turnId}-${current.length}`,
+                role: "tool",
+                label: toolActionLabel(
+                  payload.output.label,
+                  "tool-result",
+                  payload.output.status,
+                ),
+                text: summarizeContent(payload.output.content),
+                status: payload.output.status,
+                eventType: "tool-result",
+                toolUseId: payload.output.tool_use_id,
+                transient: true,
+              },
+            ];
+          });
           flushBufferedStreamMessages();
           break;
         }
@@ -1218,71 +1149,152 @@ export function ProjectAgentChatPanel({
             Could not load transcript: {events.error.message}
           </p>
         )}
-        {messages.map((message) => (
-          <article
-            key={message.id}
-            className={`agent-message agent-message-${message.role} ${
-              message.transient ? "agent-message-transient" : ""
-            }`}
-          >
-            {message.eventType &&
-              message.role !== "user" &&
-              message.role !== "assistant" && (
-                <p className="agent-message-event-type">{message.eventType}</p>
-              )}
-            {message.role === "tool" || message.role === "system" ? (
-              <>
-                <p className="agent-message-label">
-                  {message.isLoading && (
-                    <span aria-hidden="true" className="agent-tool-spinner" />
-                  )}
-                  {!message.isLoading && message.status === "success" && (
-                    <span
-                      aria-hidden="true"
-                      className="agent-tool-status agent-tool-status-success"
+        {groupedMessages.map((block) => {
+          if (block.type === "tool-group") {
+            const isAnyLoading = block.messages.some(m => m.isLoading);
+            const hasAnyFailed = block.messages.some(m => m.status === "failed");
+            return (
+              <details key={block.id} className="agent-tool-group">
+                <summary className="agent-tool-group-summary">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="agent-tool-group-chevron"
+                  >
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                  {isAnyLoading && <span aria-hidden="true" className="agent-tool-spinner" />}
+                  <span>{block.messages.length} tool execution{block.messages.length === 1 ? "" : "s"}</span>
+                </summary>
+                <div className="agent-tool-group-content">
+                  {block.messages.map((message) => (
+                    <article
+                      key={message.id}
+                      className={`agent-message agent-message-${message.role} ${
+                        message.transient ? "agent-message-transient" : ""
+                      }`}
                     >
-                      ✓
-                    </span>
-                  )}
-                  {!message.isLoading && message.status === "failed" && (
-                    <span
-                      aria-hidden="true"
-                      className="agent-tool-status agent-tool-status-failed"
-                    >
-                      ×
-                    </span>
-                  )}
-                  {message.label}
-                  {message.status ? ` (${message.status})` : ""}
-                </p>
-                <details className="agent-tool-details">
-                  <summary>
-                    {message.eventType === "tool-response" ||
-                    message.eventType === "tool-result"
-                      ? "Output"
-                      : "Input"}
-                  </summary>
-                  <pre>{message.text}</pre>
-                </details>
-              </>
-            ) : (
-              <>
-                {message.role === "assistant" ? (
-                  <MarkdownMessage markdown={message.text} />
-                ) : (
-                  <p>{message.text}</p>
+                      {message.eventType &&
+                        message.role !== "user" &&
+                        message.role !== "assistant" && (
+                          <p className="agent-message-event-type">{message.eventType}</p>
+                        )}
+                      {message.role === "tool" || message.role === "system" ? (
+                        <>
+                          <p className="agent-message-label">
+                            {message.isLoading && (
+                              <span aria-hidden="true" className="agent-tool-spinner" />
+                            )}
+                            {!message.isLoading && message.status === "success" && (
+                              <span
+                                aria-hidden="true"
+                                className="agent-tool-status agent-tool-status-success"
+                              >
+                                ✓
+                              </span>
+                            )}
+                            {!message.isLoading && message.status === "failed" && (
+                              <span
+                                aria-hidden="true"
+                                className="agent-tool-status agent-tool-status-failed"
+                              >
+                                ×
+                              </span>
+                            )}
+                            {message.label}
+                            {message.status ? ` (${message.status})` : ""}
+                          </p>
+                          <details className="agent-tool-details">
+                            <summary>
+                              {message.eventType === "tool-response" ||
+                              message.eventType === "tool-result"
+                                ? "Output"
+                                : "Input"}
+                            </summary>
+                            <pre>{message.text}</pre>
+                          </details>
+                        </>
+                      ) : (
+                        <p>{message.text}</p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              </details>
+            );
+          }
+
+          const message = block.message;
+          return (
+            <article
+              key={message.id}
+              className={`agent-message agent-message-${message.role} ${
+                message.transient ? "agent-message-transient" : ""
+              }`}
+            >
+              {message.eventType &&
+                message.role !== "user" &&
+                message.role !== "assistant" && (
+                  <p className="agent-message-event-type">{message.eventType}</p>
                 )}
-              </>
-            )}
-          </article>
-        ))}
+              {message.role === "tool" || message.role === "system" ? (
+                <>
+                  <p className="agent-message-label">
+                    {message.isLoading && (
+                      <span aria-hidden="true" className="agent-tool-spinner" />
+                    )}
+                    {!message.isLoading && message.status === "success" && (
+                      <span
+                        aria-hidden="true"
+                        className="agent-tool-status agent-tool-status-success"
+                      >
+                        ✓
+                      </span>
+                    )}
+                    {!message.isLoading && message.status === "failed" && (
+                      <span
+                        aria-hidden="true"
+                        className="agent-tool-status agent-tool-status-failed"
+                      >
+                        ×
+                      </span>
+                    )}
+                    {message.label}
+                    {message.status ? ` (${message.status})` : ""}
+                  </p>
+                  <details className="agent-tool-details">
+                    <summary>
+                      {message.eventType === "tool-response" ||
+                      message.eventType === "tool-result"
+                        ? "Output"
+                        : "Input"}
+                    </summary>
+                    <pre>{message.text}</pre>
+                  </details>
+                </>
+              ) : (
+                <>
+                  {message.role === "assistant" ? (
+                    <MarkdownMessage markdown={message.text} />
+                  ) : (
+                    <p>{message.text}</p>
+                  )}
+                </>
+              )}
+            </article>
+          );
+        })}
         {shouldShowThinking && (
           <article className="agent-message agent-message-system agent-thinking-message">
             <span aria-hidden="true" className="agent-thinking-spinner" />
-            <span>
-              {isStreamIdle ? "Thinking" : thinkingMessage}
-              {".".repeat(thinkingDotCount)}
-            </span>
+            <span>Thinking...</span>
           </article>
         )}
         {streamError && <p className="error">{streamError}</p>}

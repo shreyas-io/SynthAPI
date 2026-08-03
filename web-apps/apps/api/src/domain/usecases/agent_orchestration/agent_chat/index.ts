@@ -313,6 +313,20 @@ export const AgentChatUsecase = (ctx: AppContext) => {
                 output_tokens: usage.output_tokens,
               });
             }
+
+            if (fullText.length > 0) {
+              await createAndPublishEvent({
+                chat_turn_id: turn_id,
+                event_type: "assistant-message",
+                payload: {
+                  type: "assistant-message",
+                  content: [
+                    { type: "text", source: { type: "text", text: fullText } },
+                  ],
+                },
+              });
+              fullText = "";
+            }
           }
 
           if (event.event === "on_tool_start") {
@@ -414,18 +428,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       if (wasCancelled) return;
 
-      if (fullText.length > 0) {
-        await createAndPublishEvent({
-          chat_turn_id: turn_id,
-          event_type: "assistant-message",
-          payload: {
-            type: "assistant-message",
-            content: [
-              { type: "text", source: { type: "text", text: fullText } },
-            ],
-          },
-        });
-      }
+
 
       await createAndPublishEvent({
         chat_turn_id: turn_id,
