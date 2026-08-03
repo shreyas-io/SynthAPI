@@ -272,9 +272,6 @@ resource "aws_launch_template" "api" {
     name = aws_iam_instance_profile.ec2.name
   }
 
-  instance_market_options {
-    market_type = "spot"
-  }
 
   metadata_options {
     http_tokens = "required"
