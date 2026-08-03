@@ -23,17 +23,6 @@ export const AgentConfig = {
     models: [
       {
         priority: 0,
-        provider: "nvidia",
-        model: "@openrouter-2/nvidia/nemotron-3-ultra-550b-a55b:free",
-        temperature: 0.2,
-        max_tokens: 30 * 1024,
-        pricing: {
-          input_tokens: 9e-8,
-          output_tokens: 1.8e-7,
-        },
-      },
-      {
-        priority: 1,
         provider: "deepseek",
         model: "@openrouter-2/deepseek/deepseek-v4-flash",
         temperature: 0.2,
@@ -55,17 +44,6 @@ export const AgentConfig = {
     models: [
       {
         priority: 0,
-        provider: "nvidia",
-        model: "@openrouter-2/nvidia/nemotron-3-ultra-550b-a55b:free",
-        temperature: 0.2,
-        max_tokens: 10 * 1024,
-        pricing: {
-          input_tokens: 9e-8,
-          output_tokens: 1.8e-7,
-        },
-      },
-      {
-        priority: 1,
         provider: "deepseek",
         model: "@openrouter-2/deepseek/deepseek-v4-flash",
         temperature: 0.2,
