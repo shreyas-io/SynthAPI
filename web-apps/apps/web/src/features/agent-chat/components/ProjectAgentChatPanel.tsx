@@ -759,6 +759,7 @@ export function ProjectAgentChatPanel({
           bufferAssistantDelta(assistantDeltaId, payload.text);
           break;
         case "assistant-message":
+          pendingAssistantDeltaRef.current = null;
           updateBufferedStreamMessages((current) => {
             if (current.some(m => m.id === parsed.id)) return current;
             
@@ -769,7 +770,7 @@ export function ProjectAgentChatPanel({
             if (lastDeltaIndex !== -1) {
               const next = [...current];
               next[lastDeltaIndex] = {
-                id: parsed.id,
+                id: parsed.id ?? `stream-assistant-message-${turnId}-${current.length}`,
                 role: "assistant",
                 text: textFromAssistant(payload),
                 eventType: "assistant-message",
@@ -781,7 +782,7 @@ export function ProjectAgentChatPanel({
             return [
               ...current,
               {
-                id: parsed.id,
+                id: parsed.id ?? `stream-assistant-message-${turnId}-${current.length}`,
                 role: "assistant",
                 text: textFromAssistant(payload),
                 eventType: "assistant-message",
