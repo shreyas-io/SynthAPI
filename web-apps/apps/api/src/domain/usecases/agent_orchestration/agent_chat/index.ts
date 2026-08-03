@@ -337,22 +337,43 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
           if (event.event === "on_tool_end") {
             let toolStatus: "success" | "failed" = "success";
-            let toolContent: Record<string, unknown> = {
-              result: event.data.output,
-            };
+
+            let rawOutput = event.data.output;
+            if (
+              rawOutput &&
+              typeof rawOutput === "object" &&
+              "kwargs" in rawOutput
+            ) {
+              const kwargs = (rawOutput as any).kwargs;
+              if (kwargs && "content" in kwargs) {
+                rawOutput = kwargs.content;
+              }
+            }
+
+            let toolContent: any = rawOutput;
 
             try {
-              const parsed = JSON.parse(event.data.output);
+              if (typeof rawOutput === "string") {
+                const parsed = JSON.parse(rawOutput);
+                toolContent = parsed;
+              } else {
+                try {
+                  toolContent = JSON.parse(rawOutput.content);
+                } catch {
+                  toolContent = rawOutput.content;
+                }
+              }
+
               if (
-                parsed != null &&
-                typeof parsed === "object" &&
-                "error" in parsed
+                toolContent != null &&
+                typeof toolContent === "object" &&
+                "error" in toolContent
               ) {
                 toolStatus = "failed";
                 toolContent = { error: AGENT_CHAT_GENERIC_ERROR_MESSAGE };
               }
             } catch {
-              // Not a JSON output; leave as success.
+              // Not a JSON output; leave as is.
             }
 
             eventBus.publish(turn_id, {
@@ -360,10 +381,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
               output: {
                 tool_use_id: event.run_id,
                 label: event.name,
-                content:
-                  toolStatus === "failed"
-                    ? toolContent
-                    : event.data.output,
+                content: toolContent,
                 status: toolStatus,
               },
             });
