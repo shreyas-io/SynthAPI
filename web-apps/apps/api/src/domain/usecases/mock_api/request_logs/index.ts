@@ -20,7 +20,7 @@ export const RequestLogsUsecase = (ctx: AppContext) => {
       const project = await projects.getProject(user, projectId);
       await projects.assertOrganizationAccess(user, project.organization_id);
 
-      let query = ctx.db
+      let query = ctx.logDb
         .selectFrom("mock_api_request_logs")
         .selectAll()
         .where("project_id", "=", projectId);
@@ -40,7 +40,18 @@ export const RequestLogsUsecase = (ctx: AppContext) => {
         .execute();
 
       const hasMore = records.length > pagination.limit;
-      const results = records.slice(0, pagination.limit);
+      const results = records.slice(0, pagination.limit).map((record) => {
+        const decompressed = record.blob instanceof Buffer ? record.blob.toString("utf-8") : (record.blob as unknown as string);
+        const payload = JSON.parse(decompressed);
+        const { blob, ...rest } = record;
+        return {
+          ...rest,
+          request_headers: typeof payload.request_headers === 'string' ? payload.request_headers : JSON.stringify(payload.request_headers),
+          request_body: payload.request_body,
+          response_headers: typeof payload.response_headers === 'string' ? payload.response_headers : JSON.stringify(payload.response_headers),
+          response_body: payload.response_body,
+        };
+      });
       const nextCursor = hasMore 
         ? Buffer.from(results[results.length - 1]!.created_at.toISOString()).toString("base64url") 
         : null;

@@ -20,6 +20,7 @@ import { addRoutes } from "./presentation";
 import { addProjectSlugRouter } from "./presentation/public_mock_apis";
 import { RedisKeyValueStore } from "./infrastructure/infrastructure/redis";
 import { createDatabaseClient } from "./infrastructure/kysely";
+import { createLogDatabaseClient } from "./infrastructure/kysely/log_database";
 import { startDomainJobs } from "./domain/jobs";
 import type { IKeyValueStore } from "./domain/interfaces/kv_store";
 import type { IEventBus } from "./domain/interfaces/agent_orchestration/event_bus";
@@ -43,6 +44,7 @@ type ApiApp = {
 
 export type AppContext = {
   db: ReturnType<typeof createDatabaseClient>["db"];
+  logDb: Awaited<ReturnType<typeof createLogDatabaseClient>>["db"];
   kvStore: IKeyValueStore;
   pyodide: PyodideWorkerPool;
   env: Awaited<ReturnType<typeof getSecrets>>;
@@ -57,6 +59,11 @@ export const createApiApp = async (): Promise<ApiApp> => {
   const dbClient = createDatabaseClient(secrets);
   await runMigrations(dbClient.db);
 
+  const logDbClient = secrets.MYSQL_URL ? await createLogDatabaseClient(secrets.MYSQL_URL) : undefined;
+  if (!logDbClient) {
+    throw new Error("MYSQL_URL is required for log database.");
+  }
+
   const keyValueStore = RedisKeyValueStore(secrets.REDIS_URL);
 
   const pyodide = createPyodideWorkerPool({
@@ -70,11 +77,13 @@ export const createApiApp = async (): Promise<ApiApp> => {
   const emailService = createEmailService(secrets);
   const mockApiRequestLogger = createMockApiRequestLogger(
     secrets.REDIS_URL,
-    dbClient.db,
+    logDbClient.db,
+    dbClient.db, // pass main db for project info lookup
   );
   const webSearchProvider = new ExaWebSearchProvider(secrets.EXA_API_KEY);
   const appContext: AppContext = {
     db: dbClient.db,
+    logDb: logDbClient.db,
     kvStore: keyValueStore,
     pyodide: pyodide,
     env: secrets,
@@ -136,6 +145,7 @@ export const createApiApp = async (): Promise<ApiApp> => {
     async destroy() {
       await domainJobs.destroy();
       await dbClient.destroy();
+      await logDbClient.destroy();
       await keyValueStore.destroy();
       await pyodide.destroy();
       await mockApiRequestLogger.destroy();

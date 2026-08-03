@@ -12,6 +12,7 @@ const secretsSchema = z.object({
   DB_PORT: z.union([z.string(), z.number().int()]).transform((v) => +v),
   DB_NAME: z.string(),
   REDIS_URL: z.string().min(1),
+  MYSQL_URL: z.string().url(),
   CLOUDFLARE_ACCOUNT_ID: z.string(),
   CLOUDFLARE_AI_GATEWAY_ID: z.string(),
   CLOUDFLARE_AI_GATEWAY_TOKEN: z.string(),

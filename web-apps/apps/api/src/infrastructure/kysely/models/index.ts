@@ -7,7 +7,7 @@ import type { ChatTurnBlobsTable } from "./agent_orchestration/chat_turn_blobs";
 import type { ChatTurnEventsTable } from "./agent_orchestration/chat_turn_events";
 import type { ContactMessagesTable } from "./contact_messages";
 import type { MockApiResponsesTable } from "./mock_api_responses";
-import type { MockApisTable, MockApiRequestLogsTable } from "./mock_apis";
+import type { MockApisTable } from "./mock_apis";
 import type {
   OrganizationCreditGrantsTable,
   OrganizationCreditUsagesTable,
@@ -72,7 +72,6 @@ export type Database = {
   data_encryption_keys: DataEncryptionKeysTable;
   project_api_keys: ProjectApiKeysTable;
   mock_apis: MockApisTable;
-  mock_api_request_logs: MockApiRequestLogsTable;
   mock_api_responses: MockApiResponsesTable;
   agent_configs: AgentConfigsTable;
   chat_sessions: ChatSessionsTable;

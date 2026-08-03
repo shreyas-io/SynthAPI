@@ -2,6 +2,7 @@ import { Queue, Worker, type ConnectionOptions } from "bullmq";
 import type { Database } from "../kysely/models";
 import type { Kysely } from "kysely";
 import { getActiveOrganizationPlan } from "../../domain/usecases/organizations/plans";
+import type { LogDatabase } from "../kysely/log_database";
 
 const BULLMQ_KEY_PREFIX = "{synthapi_request_logs}";
 
@@ -24,6 +25,7 @@ export interface IMockApiRequestLogger {
 
 export const createMockApiRequestLogger = (
   redisUrlStr: string,
+  logDb: Kysely<LogDatabase>,
   db: Kysely<Database>,
 ): IMockApiRequestLogger => {
   const redisUrl = new URL(redisUrlStr);
@@ -60,19 +62,24 @@ export const createMockApiRequestLogger = (
     async (job) => {
       const data = job.data;
 
-      // 1. Insert the new log
-      await db
+      // 1. Compress request/response payload into a blob
+      const payloadString = JSON.stringify({
+        request_headers: data.request_headers,
+        request_body: data.request_body,
+        response_headers: data.response_headers,
+        response_body: data.response_body,
+      });
+
+      // 2. Insert the new log
+      await logDb
         .insertInto("mock_api_request_logs")
         .values({
           project_id: data.project_id,
           mock_api_id: data.mock_api_id,
           method: data.method,
           url: data.url,
-          request_headers: JSON.stringify(data.request_headers),
-          request_body: data.request_body,
           response_status: data.response_status,
-          response_headers: JSON.stringify(data.response_headers),
-          response_body: data.response_body,
+          blob: Buffer.from(payloadString, "utf-8"),
         })
         .execute();
 
@@ -94,13 +101,13 @@ export const createMockApiRequestLogger = (
           const maxLogs = plan?.max_request_logs ?? 1000;
 
           // Delete logs beyond the max_logs limit using an efficient offset query
-          await db.executeQuery(
-            db
+          await logDb.executeQuery(
+            logDb
               .deleteFrom("mock_api_request_logs")
               .where(
                 "id",
                 "in",
-                db
+                logDb
                   .selectFrom("mock_api_request_logs")
                   .select("id")
                   .where("project_id", "=", data.project_id)
