@@ -1382,11 +1382,13 @@ export function ProjectAgentChatPanel({
             <button
               className="agent-send-button agent-cancel-button"
               type="button"
+              disabled={cancelTurnMutation.isPending}
               onClick={() => {
                 cancelTurnMutation.mutate({ chatId: selectedChatId, turnId: activeTurnId });
               }}
             >
-              Cancel
+              <span aria-hidden="true" className="agent-send-spinner" />
+              {cancelTurnMutation.isPending ? "Cancelling" : "Cancel"}
             </button>
           ) : (
             <button
