@@ -1,5 +1,33 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { modelFallbackMiddleware } from "langchain";
+
+class SafeChatOpenAI extends ChatOpenAI {
+  async invoke(input: any, options?: any): Promise<any> {
+    const res = await super.invoke(input, options);
+    if (!res.content && (!res.additional_kwargs?.tool_calls || res.additional_kwargs.tool_calls.length === 0)) {
+      throw new Error("Empty model response");
+    }
+    return res;
+  }
+
+  async *_streamResponseChunks(
+    messages: any,
+    options: any,
+    runManager?: any
+  ): AsyncGenerator<any, void, unknown> {
+    let hasContent = false;
+    const generator = super._streamResponseChunks(messages, options, runManager);
+    for await (const chunk of generator) {
+      if ((chunk.message.content && chunk.message.content !== "") || (chunk.message.additional_kwargs?.tool_calls && chunk.message.additional_kwargs.tool_calls.length > 0)) {
+        hasContent = true;
+      }
+      yield chunk;
+    }
+    if (!hasContent) {
+      throw new Error("Empty model response");
+    }
+  }
+}
 import { AgentConfig } from "../../domain/configs/agent-config/config";
 import {
   HttpStatusCode,
@@ -77,7 +105,7 @@ function createChatModel(
     },
   });
 
-  return new ChatOpenAI({
+  const model = new SafeChatOpenAI({
     apiKey: "dummy",
     model: model_config.model,
     temperature: model_config.temperature,
@@ -94,4 +122,6 @@ function createChatModel(
       },
     },
   });
+
+  return model.withRetry({ stopAfterAttempt: 3 });
 }
