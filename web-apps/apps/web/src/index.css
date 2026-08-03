@@ -2671,10 +2671,6 @@ h3 {
   transition: border-color 0.2s ease;
 }
 
-.floating-chat-widget:hover {
-  border-color: var(--color-primary);
-}
-
 .floating-chat-panel {
   height: 100%;
   flex: 0 0 0;
