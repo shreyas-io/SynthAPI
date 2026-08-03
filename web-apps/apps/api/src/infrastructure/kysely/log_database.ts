@@ -33,7 +33,7 @@ export async function createLogDatabaseClient(url: string): Promise<{
 
   await sql`
     CREATE TABLE IF NOT EXISTS mock_api_request_logs (
-      id varchar(36) PRIMARY KEY DEFAULT (UUID()),
+      id varchar(36) PRIMARY KEY,
       project_id varchar(255) NOT NULL,
       mock_api_id varchar(255),
       method varchar(255) NOT NULL,

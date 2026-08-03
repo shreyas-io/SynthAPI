@@ -3,6 +3,7 @@ import type { Database } from "../kysely/models";
 import type { Kysely } from "kysely";
 import { getActiveOrganizationPlan } from "../../domain/usecases/organizations/plans";
 import type { LogDatabase } from "../kysely/log_database";
+import { uuidv7 } from "uuidv7";
 
 const BULLMQ_KEY_PREFIX = "{synthapi_request_logs}";
 
@@ -74,6 +75,7 @@ export const createMockApiRequestLogger = (
       await logDb
         .insertInto("mock_api_request_logs")
         .values({
+          id: uuidv7(),
           project_id: data.project_id,
           mock_api_id: data.mock_api_id,
           method: data.method,
