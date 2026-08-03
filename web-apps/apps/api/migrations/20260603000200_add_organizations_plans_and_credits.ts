@@ -162,11 +162,14 @@ export async function up(db: Kysely<unknown>): Promise<void> {
   `.execute(db);
 
   await sql`
-
     insert into organization_memberships (organization_id, user_id, role, status)
     select users.default_organization_id, users.id, 'owner', 'active'
     from users
-    where users.default_organization_id is not null;
+    where users.default_organization_id is not null
+    on conflict do nothing;
+  `.execute(db);
+
+  await sql`
 
     with plus_plan as (
       select id, default_ai_credits, credit_grant_duration_days
@@ -186,9 +189,10 @@ export async function up(db: Kysely<unknown>): Promise<void> {
         plus_plan.id,
         'active',
         now(),
-        now() + make_interval(days => plus_plan.credit_grant_duration_days)
+        now() + (plus_plan.credit_grant_duration_days * interval '1 day')
       from organizations
       cross join plus_plan
+      on conflict (organization_id) where status = 'active' do nothing
       returning id, organization_id, plan_type_id, expires_at
     )
     insert into organization_credit_grants (
