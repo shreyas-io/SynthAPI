@@ -24,7 +24,7 @@ export const AgentConfig = {
       {
         priority: 0,
         provider: "deepseek",
-        model: "@openrouter-2/deepseek/deepseek-v4-flash",
+        model: "@openrouter-2/~deepseek/deepseek-v4-flash-latest",
         temperature: 0.2,
         max_tokens: 30 * 1024,
         pricing: {
@@ -45,7 +45,7 @@ export const AgentConfig = {
       {
         priority: 0,
         provider: "deepseek",
-        model: "@openrouter-2/deepseek/deepseek-v4-flash",
+        model: "@openrouter-2/~deepseek/deepseek-v4-flash-latest",
         temperature: 0.2,
         max_tokens: 10 * 1024,
         pricing: {
