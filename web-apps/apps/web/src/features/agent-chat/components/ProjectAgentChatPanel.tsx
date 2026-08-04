@@ -394,7 +394,7 @@ export function ProjectAgentChatPanel({
   useEffect(() => {
     if (!selectedChatId || isDraftChat || activeTurnId || rawRecords.length === 0) return;
 
-    const latestTurnId = rawRecords[0].chat_turn_id;
+    const latestTurnId = rawRecords[0]!.chat_turn_id;
     const hasSettled = rawRecords.some(
       (e) => e.chat_turn_id === latestTurnId && e.payload.type === "turn-settled"
     );
@@ -461,7 +461,7 @@ export function ProjectAgentChatPanel({
         groups.push({
           type: "tool-group",
           messages: currentGroup,
-          id: `group-${currentGroup[0].id}`,
+          id: `group-${currentGroup[0]!.id}`,
         });
         currentGroup = [];
       }
@@ -780,16 +780,22 @@ export function ProjectAgentChatPanel({
         case "assistant-message":
           pendingAssistantDeltaRef.current = null;
           updateBufferedStreamMessages((current) => {
-            if (current.some(m => m.id === parsed.id)) return current;
-            
-            const lastDeltaIndex = current.findLastIndex(
-              (m) => m.role === "assistant" && m.id.startsWith("stream-assistant-delta")
-            );
+            const parsedId = "id" in parsed ? parsed.id : undefined;
+            if (current.some(m => m.id === parsedId)) return current;
+
+            let lastDeltaIndex = -1;
+            for (let i = current.length - 1; i >= 0; i--) {
+              const m = current[i];
+              if (m && m.role === "assistant" && m.id.startsWith("stream-assistant-delta")) {
+                lastDeltaIndex = i;
+                break;
+              }
+            }
 
             if (lastDeltaIndex !== -1) {
               const next = [...current];
               next[lastDeltaIndex] = {
-                id: parsed.id ?? `stream-assistant-message-${turnId}-${current.length}`,
+                id: parsedId ?? `stream-assistant-message-${turnId}-${current.length}`,
                 role: "assistant",
                 text: textFromAssistant(payload),
                 eventType: "assistant-message",
@@ -801,7 +807,7 @@ export function ProjectAgentChatPanel({
             return [
               ...current,
               {
-                id: parsed.id ?? `stream-assistant-message-${turnId}-${current.length}`,
+                id: parsedId ?? `stream-assistant-message-${turnId}-${current.length}`,
                 role: "assistant",
                 text: textFromAssistant(payload),
                 eventType: "assistant-message",
@@ -1171,8 +1177,10 @@ export function ProjectAgentChatPanel({
         )}
         {groupedMessages.map((block) => {
           if (block.type === "tool-group") {
-            const isAnyLoading = block.messages.some(m => m.isLoading);
-            const hasAnyFailed = block.messages.some(m => m.status === "failed");
+            const isAnyLoading = block.messages.some(m => "isLoading" in m && m.isLoading);
+            const hasAnyFailed = block.messages.some(
+              (m) => "status" in m && m.status === "failed",
+            );
             return (
               <details key={block.id} className="agent-tool-group">
                 <summary className="agent-tool-group-summary">
