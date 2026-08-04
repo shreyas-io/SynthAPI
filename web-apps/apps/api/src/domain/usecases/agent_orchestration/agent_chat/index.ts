@@ -17,6 +17,8 @@ import {
 } from "../../../exceptions/exception";
 import { createChatTurn } from "./create";
 import { createLangChainTools } from "../tools/langchain";
+import { z } from "zod";
+import { createMockApiRuleTreeDto } from "../../../../presentation/dtos/mock_api/mock_api_rule_tree";
 import type { ToolWorkspaceContext } from "../tools/types";
 import { AgentConfig } from "../../../configs/agent-config/config";
 import {
@@ -32,6 +34,11 @@ import { PostgresSaver } from "@langchain/langgraph-checkpoint-postgres";
 import { getPostgresConnString } from "../../../../config/utils";
 
 export { AGENT_CHAT_GENERIC_ERROR_MESSAGE } from "../../../entities/agent_orchestration/chat_turn_event";
+
+// Authoritative JSON Schema for a rule tree, generated from the same
+// createMockApiRuleTreeDto zod schema that validates the `rule_tree` field at
+// execution time. Kept in sync automatically — no hand-maintained copy.
+const ruleTreeSchemaPromptSection = `\n\n## Rule Tree Schema\n\nThe JSON Schema for a rule tree (the \`rule_tree\` field on \`create_mock_api_response\` and \`update_mock_api_response\`) is below. Match it exactly.\n\n\`\`\`json\n${JSON.stringify(z.toJSONSchema(createMockApiRuleTreeDto), null, 2)}\n\`\`\`\n`;
 
 const cancelledTurns = new Set<string>();
 
@@ -236,7 +243,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         chat_session_id,
       );
 
-      const tools = createLangChainTools(ctx, workspace, 1);
+      const tools = createLangChainTools(ctx, workspace);
 
       const middlewares = [
         ...(fallback ? [fallback] : []),
@@ -252,7 +259,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         model: llm,
         tools,
         checkpointer,
-        systemPrompt: AgentConfig.agent.prompt,
+        systemPrompt: AgentConfig.agent.prompt + ruleTreeSchemaPromptSection,
         ...(middlewares.length > 0 ? { middleware: middlewares } : {}),
       });
 
@@ -335,6 +342,20 @@ export const AgentChatUsecase = (ctx: AppContext) => {
               type: "tool-input-start",
               text: event.name,
             });
+            
+            let toolInputContent = event.data.input;
+            if (toolInputContent) {
+              if (typeof toolInputContent.input === "string") {
+                try {
+                  toolInputContent = JSON.parse(toolInputContent.input);
+                } catch {}
+              } else if (typeof toolInputContent === "string") {
+                try {
+                  toolInputContent = JSON.parse(toolInputContent);
+                } catch {}
+              }
+            }
+
             await createAndPublishEvent({
               chat_turn_id: turn_id,
               event_type: "tool-input",
@@ -343,7 +364,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
                 input: {
                   tool_use_id: event.run_id,
                   label: event.name,
-                  content: event.data.input,
+                  content: toolInputContent,
                 },
               },
             });

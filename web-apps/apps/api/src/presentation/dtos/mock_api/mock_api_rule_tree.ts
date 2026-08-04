@@ -88,7 +88,7 @@ const mock_api_rule_node: z.ZodType<MockApiRuleNode> = z.lazy(() => {
       "string_empty",
       "string_not_empty",
     ]),
-  });
+  }).strict();
 
   const mockApiPredicateWithExpectedSchema = z.object({
     label: z.string(),
@@ -108,7 +108,7 @@ const mock_api_rule_node: z.ZodType<MockApiRuleNode> = z.lazy(() => {
       "valid_json_schema",
     ]),
     expected: predicate_value,
-  });
+  }).strict();
 
   const mockApiSimplePredicateSchema = z.discriminatedUnion("operator", [
     mockApiPredicateWithoutExpectedSchema,
@@ -119,7 +119,7 @@ const mock_api_rule_node: z.ZodType<MockApiRuleNode> = z.lazy(() => {
     label: z.string(),
     type: z.literal("custom"),
     script: z.string(),
-  });
+  }).strict();
 
   const mock_api_predicate = z.discriminatedUnion("type", [
     mock_api_custom_predicate,
@@ -131,7 +131,7 @@ const mock_api_rule_node: z.ZodType<MockApiRuleNode> = z.lazy(() => {
     type: z.enum(["and", "or"]),
     predicates: z.array(mock_api_predicate),
     children: z.array(mock_api_rule_node).optional(),
-  });
+  }).strict();
 });
 
 export const createMockApiRuleTreeDto = mock_api_rule_node;

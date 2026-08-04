@@ -5,7 +5,7 @@ type _ToolParameter =
   | { type: "string"; description: string }
   | { type: "number"; description: string }
   | { type: "boolean"; description: string }
-  | { type: string; description: string }
+  | { type: string; description: string; enum?: string[] }
   | { type: "array"; description: string; items: _ToolParameter }
   | { type: "object"; description: string; properties: Record<string, _ToolParameter>; required: string[] };
 
@@ -14,7 +14,7 @@ export const toolParameterSchema: z.ZodType<_ToolParameter> = z.lazy(() =>
     z.object({ type: z.literal("string"), description: z.string() }),
     z.object({ type: z.literal("number"), description: z.string() }),
     z.object({ type: z.literal("boolean"), description: z.string() }),
-    z.object({ type: z.string(), description: z.string() }),
+    z.object({ type: z.string(), description: z.string(), enum: z.array(z.string()).optional() }),
     z.object({
       type: z.literal("array"),
       description: z.string(),

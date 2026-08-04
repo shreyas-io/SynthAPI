@@ -22,32 +22,114 @@ const variableSchema = {
   required: ["name", "type", "value"],
 } as const;
 
-const responseSchema = {
+// The full response object, nested under the `response` key. This mirrors the
+// REST createMockApiResponseDto shape and the system prompt instructions.
+const responseObjectSchema = {
   type: "object",
-  description: "Mock API response payload",
+  description:
+    "The full response object. Always provide all four fields together.",
   properties: {
     status_code: { type: "number", description: "HTTP response status code" },
     headers: {
       type: "object",
-      description: "Response headers",
-      properties: {},
-      required: [],
+      description: "Response headers object, e.g. { \"content-type\": \"application/json\" }",
+    },
+    cookies: {
+      type: "object",
+      description: "Response cookies object",
     },
     body: {
       type: "object",
       description:
-        "Response body. Supported types: json, text, empty, json_script, and sse.",
-      properties: {},
-      required: [],
-    },
-    cookies: {
-      type: "object",
-      description: "Response cookies",
-      properties: {},
-      required: [],
+        "Response body. Use { \"type\": \"json\", \"value\": ... }, { \"type\": \"text\", \"value\": \"...\" }, { \"type\": \"empty\" }, { \"type\": \"json_script\", \"code\": \"...\" }, or an SSE object { \"type\": \"sse\", ... }.",
     },
   },
   required: ["status_code", "headers", "body", "cookies"],
+} as const;
+
+// A rule tree predicate. Mirrors the predicate shapes in createMockApiRuleTreeDto
+// (now strict). Enums match the engine exactly.
+const ruleTreePredicateSchema = {
+  type: "object",
+  description:
+    "A rule tree predicate. `simple` predicates compare `actual` using `operator` (and `expected` when the operator requires it). `custom` predicates run a Python `script` that returns a boolean and may only read execution_context.",
+  properties: {
+    label: { type: "string", description: "Predicate label" },
+    type: {
+      type: "string",
+      description: "Predicate type",
+      enum: ["simple", "custom"],
+    },
+    actual: {
+      type: "string",
+      description:
+        "Template evaluated against the request, e.g. {{request.headers.authorization}}. Required for simple predicates.",
+    },
+    operator: {
+      type: "string",
+      description: "Comparison operator for simple predicates.",
+      enum: [
+        "null",
+        "not_null",
+        "empty_array",
+        "not_empty_array",
+        "is_set",
+        "is_not_set",
+        "string_empty",
+        "string_not_empty",
+        "equals",
+        "not_equals",
+        "regex",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "array_includes",
+        "string_includes",
+        "string_not_includes",
+        "valid_json_schema",
+      ],
+    },
+    expected: {
+      type: "string",
+      description:
+        "Expected value, required only for operators that need it (equals, not_equals, regex, gt, gte, lt, lte, array_includes, string_includes, string_not_includes, valid_json_schema).",
+    },
+    script: {
+      type: "string",
+      description: "Python script returning a boolean. Custom predicates only.",
+    },
+  },
+  required: ["label", "type"],
+} as const;
+
+// A rule tree node. Mirrors createMockApiRuleTreeDto (now strict).
+const ruleTreeNodeSchema = {
+  type: "object",
+  description:
+    "A rule tree node used for conditional responses. `and` requires every predicate and child to pass; `or` requires any to pass.",
+  properties: {
+    label: { type: "string", description: "Node label" },
+    type: {
+      type: "string",
+      description: "Node combinator",
+      enum: ["and", "or"],
+    },
+    predicates: {
+      type: "array",
+      description: "Predicates evaluated for this node",
+      items: ruleTreePredicateSchema,
+    },
+    children: {
+      type: "array",
+      description: "Child rule nodes; each has the same shape as this node",
+      items: {
+        type: "object",
+        description: "Child rule node (same shape as the parent node)",
+      },
+    },
+  },
+  required: ["label", "type", "predicates"],
 } as const;
 
 export const toolDefinitions = {
@@ -196,25 +278,15 @@ export const toolDefinitions = {
           type: "boolean",
           description: "Whether this is the default response",
         },
-        ...responseSchema.properties,
-        rule_tree: {
-          type: "object",
-          description: "Rule tree",
-          properties: {},
-          required: [],
-        },
+        response: responseObjectSchema,
+        rule_tree: ruleTreeNodeSchema,
         post_response_actions: {
           type: "array",
-          description: "Post-response actions",
-          items: {
-            type: "object",
-            description: "Action",
-            properties: {},
-            required: [],
-          },
+          description: "Optional post-response actions",
+          items: { type: "object", description: "Action" },
         },
       },
-      required: ["mock_api_id", "name", ...responseSchema.required],
+      required: ["mock_api_id", "name", "response"],
     },
   ),
   update_mock_api_response: toolEntry(
@@ -230,22 +302,12 @@ export const toolDefinitions = {
           type: "boolean",
           description: "Whether this is the default response",
         },
-        ...responseSchema.properties,
-        rule_tree: {
-          type: "object",
-          description: "Rule tree",
-          properties: {},
-          required: [],
-        },
+        response: responseObjectSchema,
+        rule_tree: ruleTreeNodeSchema,
         post_response_actions: {
           type: "array",
-          description: "Post-response actions",
-          items: {
-            type: "object",
-            description: "Action",
-            properties: {},
-            required: [],
-          },
+          description: "Optional post-response actions",
+          items: { type: "object", description: "Action" },
         },
       },
       required: ["response_id"],

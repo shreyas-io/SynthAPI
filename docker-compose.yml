@@ -15,6 +15,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      mysql:
+        condition: service_healthy
     env_file:
       - web-apps/apps/api/.env
     expose:
@@ -101,6 +103,25 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+  mysql:
+    image: mysql:8.4
+    container_name: synthapi-mysql
+    environment:
+      MYSQL_DATABASE: synthapi_logs
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: root-password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # Ping as the app user, which only authenticates after the entrypoint has
+      # finished initializing the database and user.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u user -ppassword --silent"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
   redis:
     image: redis:7.4-alpine
     container_name: synthapi-redis
@@ -135,3 +156,4 @@ volumes:
   landing-node-modules:
   postgres-data:
   redis-data:
+  mysql-data:

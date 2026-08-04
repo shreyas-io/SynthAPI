@@ -215,7 +215,7 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
         )
         .where("chat_session_turns.chat_session_id", "=", chatId)
         .selectAll("chat_turn_events")
-        .orderBy("chat_session_turns.created_at", "desc")
+        .orderBy("chat_turn_events.id", "desc")
         .limit(50)
         .execute()) as unknown as ChatTurnEventEt[];
 
@@ -224,11 +224,34 @@ export const ChatTurnEventsUsecase = (ctx: AppContext) => {
         if (event.event_type === "user-input") {
           break;
         }
+
+        let payload: any;
+        try {
+          payload =
+            typeof event.payload === "string"
+              ? JSON.parse(event.payload)
+              : event.payload;
+        } catch {
+          payload = event.payload;
+        }
+
         if (
           event.event_type === "tool-input" &&
-          (event.payload as any).input?.label === "render_ui_form"
+          payload?.input?.label === "render_ui_form"
         ) {
-          prompts.push((event.payload as any).input.content);
+          let formContent = payload.input.content;
+          if (formContent) {
+            if (typeof formContent.input === "string") {
+              try {
+                formContent = JSON.parse(formContent.input);
+              } catch {}
+            } else if (typeof formContent === "string") {
+              try {
+                formContent = JSON.parse(formContent);
+              } catch {}
+            }
+          }
+          prompts.push(formContent);
         }
       }
 
