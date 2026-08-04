@@ -141,15 +141,21 @@ export const BillingUsecase = (ctx: AppContext) => {
         const orgId = payment.notes?.organization_id;
         const type = payment.notes?.purchase_type as PurchaseType;
 
+        let alreadyCompleted = false;
         if (payment.order_id) {
-          await ctx.db
+          // Atomically transition pending -> completed so a retried
+          // payment.captured webhook can't double-grant the plan/credits.
+          const result = await ctx.db
             .updateTable("payment_transactions")
             .set({ status: "completed" })
             .where("razorpay_transaction_id", "=", payment.order_id)
-            .execute();
+            .where("status", "=", "pending")
+            .executeTakeFirst();
+
+          alreadyCompleted = Number(result.numUpdatedRows) === 0;
         }
 
-        if (orgId && type) {
+        if (!alreadyCompleted && orgId && type) {
           await ctx.db.transaction().execute(async (trx) => {
             if (PLUS_PLAN_CONFIG[type]) {
               const config = PLUS_PLAN_CONFIG[type];
@@ -193,20 +199,16 @@ export const BillingUsecase = (ctx: AppContext) => {
       type: PurchaseType,
     ) => {
       let variantId = "";
-      if (type === "plus_1m")
-        variantId = ctx.env.LS_VARIANT_PLUS_1M || "1001";
-      if (type === "plus_3m")
-        variantId = ctx.env.LS_VARIANT_PLUS_3M || "1005";
-      if (type === "plus_6m")
-        variantId = ctx.env.LS_VARIANT_PLUS_6M || "1006";
+      if (type === "plus_1m") variantId = ctx.env.LS_VARIANT_PLUS_1M || "1001";
+      if (type === "plus_3m") variantId = ctx.env.LS_VARIANT_PLUS_3M || "1005";
+      if (type === "plus_6m") variantId = ctx.env.LS_VARIANT_PLUS_6M || "1006";
       if (type === "plus_12m")
         variantId = ctx.env.LS_VARIANT_PLUS_12M || "1007";
       if (type === "credits_5000")
         variantId = ctx.env.LS_VARIANT_5000 || "1002";
       if (type === "credits_2000")
         variantId = ctx.env.LS_VARIANT_2000 || "1003";
-      if (type === "credits_500")
-        variantId = ctx.env.LS_VARIANT_500 || "1004";
+      if (type === "credits_500") variantId = ctx.env.LS_VARIANT_500 || "1004";
 
       let planTypeId: string | null = null;
       if (type.startsWith("plus")) {
@@ -315,18 +317,26 @@ export const BillingUsecase = (ctx: AppContext) => {
         const type = customData.purchase_type as PurchaseType;
         const txId = customData.transaction_id;
 
+        // Atomically transition pending -> completed. A duplicate webhook (LS
+        // retries, or order_created + subscription_created firing for the same
+        // purchase) finds the row already completed, so this matches 0 rows and
+        // we skip re-provisioning to stay idempotent.
+        let alreadyCompleted = false;
         if (txId && payload.data.id) {
-          await ctx.db
+          const result = await ctx.db
             .updateTable("payment_transactions")
             .set({
               status: "completed",
               lemonsqueezy_transaction_id: String(payload.data.id),
             })
             .where("id", "=", txId)
-            .execute();
+            .where("status", "=", "pending")
+            .executeTakeFirst();
+
+          alreadyCompleted = Number(result.numUpdatedRows) === 0;
         }
 
-        if (orgId && type) {
+        if (!alreadyCompleted && orgId && type) {
           await ctx.db.transaction().execute(async (trx) => {
             if (PLUS_PLAN_CONFIG[type]) {
               const config = PLUS_PLAN_CONFIG[type];
