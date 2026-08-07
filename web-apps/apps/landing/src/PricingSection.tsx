@@ -37,10 +37,10 @@ export function PricingSection() {
         </div>
 
         <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-          <h2 style={{ fontSize: "3rem", fontWeight: "800", marginBottom: "1rem" }}>
+          <h2>
             Supercharge your workflow
           </h2>
-          <p style={{ fontSize: "1.2rem", color: "var(--muted)" }}>
+          <p style={{ fontSize: "1.05rem", color: "var(--muted)" }}>
             Choose the perfect plan for your API mocking needs. No hidden fees.
           </p>
         </div>
