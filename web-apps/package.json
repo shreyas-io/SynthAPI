@@ -2,6 +2,7 @@
   "name": "synthapi",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "packageManager": "pnpm@11.1.1",
   "scripts": {
     "dev": "pnpm dev:local",
