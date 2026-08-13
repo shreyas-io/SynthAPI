@@ -1,5 +1,7 @@
 # SynthAPI
 
+<p align="center"><a href="https://getsynthapi.com/"><strong>getsynthapi.com</strong></a></p>
+
 <p align="center">
   <img src="banner.png" alt="SynthAPI" />
 </p>
