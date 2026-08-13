@@ -1,0 +1,16 @@
+# Keep GitHub Actions pinned to the latest commit SHAs.
+# Dependabot opens PRs that bump the SHAs (and the # vN comments) when new
+# action versions are released, so SHA pinning doesn't freeze us on old code.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+    groups:
+      actions:
+        patterns:
+          - "*"
