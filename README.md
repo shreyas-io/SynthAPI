@@ -1,11 +1,22 @@
 # SynthAPI
 
+<p align="center">
+  <img src="banner.png" alt="SynthAPI" />
+</p>
+
+SynthAPI is an AI-assisted platform for designing, mocking, and securing APIs. Describe an endpoint in plain language and get a working mock in seconds, then add stateful responses, rule trees, and project API keys from a single dashboard.
+
+![SynthAPI projects dashboard](web-apps/apps/landing/docs/assets/projects.png)
+
+## Local stack
+
 Docker-first local stack with:
 
 - `gateway/`: Nginx gateway configuration.
 - `web-apps/apps/api`: Express API, reachable through Nginx in local Docker.
-- `web-apps/apps/web`: React/Vite frontend.
-- `web-apps/packages/application`: backend application package consumed by the API.
+- `web-apps/apps/web`: React/Vite platform UI.
+- `web-apps/apps/landing`: marketing site + VitePress docs.
+- `web-apps/packages/ui`: shared React UI components.
 
 ## Quick Start
 
@@ -90,16 +101,16 @@ Required GitHub repository variables:
 `VITE_API_BASE_URL` should point at the deployed API host, for example
 `https://api.<domain>`.
 
-The workflow is [deploy-web.yml](/home/shreyas/Projects/mock-stack/.github/workflows/deploy-web.yml) and publishes the built `dist/` directory to the configured Pages project.
+The workflow is [deploy-web.yml](.github/workflows/deploy-web.yml) and publishes the built `dist/` directory to the configured Pages project.
 
 ## AWS Backend
 
-Terraform lives in [terraform/](/home/shreyas/Projects/mock-stack/terraform). The production backend stack is split into:
+Terraform lives in [terraform/](terraform). The production backend stack is split into:
 
-- [terraform/bootstrap/README.md](/home/shreyas/Projects/mock-stack/terraform/bootstrap/README.md) for the remote-state backend and GitHub IAM roles
-- [terraform/envs/prod/README.md](/home/shreyas/Projects/mock-stack/terraform/envs/prod/README.md) for the EC2/RDS/ECR/Route53 stack
+- [terraform/bootstrap/README.md](terraform/bootstrap/README.md) for the remote-state backend and GitHub IAM roles
+- [terraform/envs/prod/README.md](terraform/envs/prod/README.md) for the EC2/RDS/ECR/Route53 stack
 
-The API deploy workflow is [deploy-api.yml](/home/shreyas/Projects/mock-stack/.github/workflows/deploy-api.yml). It assumes the bootstrap-created deploy role, builds `linux/arm64`, pushes to ECR, and restarts the single `synthapi-api` systemd service over SSM.
+The API deploy workflow is [deploy-api.yml](.github/workflows/deploy-api.yml). It assumes the bootstrap-created deploy role, builds `linux/arm64`, pushes to ECR, and restarts the single `synthapi-api` systemd service over SSM.
 
 Required GitHub repository variables:
 
@@ -135,3 +146,7 @@ The EC2 instance reads one AWS Secrets Manager JSON secret whose body must conta
 ```
 
 Everything else stays in Infisical, including `DB_*`, `REDIS_*`, OAuth config, MailerSend config, and the public app URL settings.
+
+## License
+
+Released under the [MIT License](LICENSE).
