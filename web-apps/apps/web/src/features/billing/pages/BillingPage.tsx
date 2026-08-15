@@ -1,12 +1,7 @@
 import { useState } from "react";
 import {
-  Sparkles,
   Check,
-  CreditCard,
-  ShoppingBag,
   Loader2,
-  Gift,
-  Zap,
 } from "lucide-react";
 import {
   useCreateLemonSqueezyCheckout,
@@ -62,7 +57,7 @@ export function BillingPage() {
             alert("Payment successful! Credits will be provisioned shortly.");
             setPurchaseType(null);
           },
-          theme: { color: "#3399cc" },
+          theme: { color: "#111111" },
         };
         const rzp = new (window as any).Razorpay(options);
         rzp.open();
@@ -78,193 +73,256 @@ export function BillingPage() {
 
   return (
     <div className="billing-container">
-      <div className="billing-glow glow-purple"></div>
-      <div className="billing-glow glow-pink"></div>
+      <div className="pricing-content">
+        <div className="pricing-header">
+          <h2>Pricing</h2>
+          <p>Choose the perfect plan for your API mocking needs. No hidden fees.</p>
+        </div>
 
-      <div className="billing-content">
-        {/* Early Bird Banner */}
-        <div className="early-bird-banner">
-          <div className="banner-text">
-            <h2>
-              <Gift size={28} /> Early Bird Special!
-            </h2>
-            <p>
-              Get up to 50% off on all Plus subscriptions. Valid for a limited time.
-            </p>
+        <div className="pricing-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))" }}>
+          {/* Free Plan */}
+          <div className="pricing-card">
+            <div className="pricing-card-header">
+              <h3>Free Plan</h3>
+              <p className="pricing-card-subtitle">
+                A lightweight way to get started. No cost, no card, no hassle.
+              </p>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">0</span>
+              <span className="period">/month</span>
+            </div>
+            <div className="pricing-card-billing-info">
+              {/* Empty spacing */}
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-secondary"
+                disabled={true}
+              >
+                Current Plan
+              </button>
+            </div>
+            <ul className="pricing-features">
+              <li><Check size={18} /> 1k Credits</li>
+              <li><Check size={18} /> 30 days access</li>
+              <li><Check size={18} /> 1 Team Member</li>
+              <li><Check size={18} /> 3 Projects</li>
+            </ul>
           </div>
-          <Sparkles size={48} opacity={0.8} />
+
+          {/* 1 Month */}
+          <div className="pricing-card">
+            <div className="pricing-card-header">
+              <h3>1 Month</h3>
+              <p className="pricing-card-subtitle">
+                Standard access for short-term projects and testing.
+              </p>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">9.99</span>
+            </div>
+            <div className="pricing-card-billing-info">
+              One-time payment
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-secondary"
+                onClick={() => handlePurchase("plus_1m")}
+                disabled={isPending}
+              >
+                Select Plan
+              </button>
+            </div>
+            <ul className="pricing-features">
+              <li><Check size={18} /> <b>10k</b> Credits</li>
+              <li><Check size={18} /> 30 days access</li>
+              <li><Check size={18} /> 10 Team Members</li>
+              <li><Check size={18} /> 100 Projects</li>
+            </ul>
+          </div>
+
+          {/* 3 Months */}
+          <div className="pricing-card">
+            <div className="pricing-badge">25% OFF</div>
+            <div className="pricing-card-header">
+              <h3>3 Months</h3>
+              <p className="pricing-card-subtitle">
+                Perfect for medium-length projects and growing teams.
+              </p>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">22.49</span>
+            </div>
+            <div className="pricing-card-billing-info">
+              <span className="savings">($7.49 / mo)</span>
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-secondary"
+                onClick={() => handlePurchase("plus_3m")}
+                disabled={isPending}
+              >
+                Get 25% Off
+              </button>
+            </div>
+            <ul className="pricing-features">
+              <li><Check size={18} /> <b>30k</b> Credits</li>
+              <li><Check size={18} /> 90 days access</li>
+              <li><Check size={18} /> 10 Team Members</li>
+              <li><Check size={18} /> 100 Projects</li>
+            </ul>
+          </div>
+
+          {/* 6 Months */}
+          <div className="pricing-card">
+            <div className="pricing-card-header">
+              <h3>6 Months</h3>
+              <p className="pricing-card-subtitle">
+                Extended access for continuous development.
+              </p>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">39.99</span>
+            </div>
+            <div className="pricing-card-billing-info">
+              <span className="savings">($6.66 / mo)</span>
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-secondary"
+                onClick={() => handlePurchase("plus_6m")}
+                disabled={isPending}
+              >
+                Select Plan
+              </button>
+            </div>
+            <ul className="pricing-features">
+              <li><Check size={18} /> <b>60k</b> Credits</li>
+              <li><Check size={18} /> 180 days access</li>
+              <li><Check size={18} /> 10 Team Members</li>
+              <li><Check size={18} /> 100 Projects</li>
+            </ul>
+          </div>
+
+          {/* 12 Months */}
+          <div className="pricing-card pricing-card-popular">
+            <div className="pricing-badge">50% OFF</div>
+            <div className="pricing-card-header">
+              <h3>12 Months</h3>
+              <p className="pricing-card-subtitle">
+                The best value for long-term API mocking and scale.
+              </p>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">59.99</span>
+            </div>
+            <div className="pricing-card-billing-info">
+              <span className="savings">($4.99 / mo)</span>
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-primary"
+                onClick={() => handlePurchase("plus_12m")}
+                disabled={isPending}
+              >
+                Get 50% Off
+              </button>
+            </div>
+            <ul className="pricing-features">
+              <li><Check size={18} /> <b>120k</b> Credits</li>
+              <li><Check size={18} /> 365 days access</li>
+              <li><Check size={18} /> 10 Team Members</li>
+              <li><Check size={18} /> 100 Projects</li>
+            </ul>
+          </div>
         </div>
 
-        <div style={{ textAlign: "center", marginBottom: "4rem" }}>
-          <h1 style={{ fontSize: "3rem", fontWeight: "800", marginBottom: "1rem" }}>
-            Supercharge your workflow
-          </h1>
-          <p style={{ fontSize: "1.2rem", color: "var(--color-text-muted)" }}>
-            Choose the perfect plan for your API mocking needs. No hidden fees.
-          </p>
+        <div className="pricing-header" style={{ marginTop: "6rem", marginBottom: "3rem" }}>
+          <h3 style={{ fontSize: "1.8rem", fontWeight: "600" }}>Buy Credits On-Demand</h3>
         </div>
 
-        <div style={{ display: "flex", gap: "2rem", flexDirection: "column" }}>
-          {/* PLUS PLANS */}
-          <div>
-            <h2 style={{ fontSize: "1.8rem", fontWeight: "700", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Zap color="#8b5cf6" /> Plus Subscriptions
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
-              {/* 1 Month */}
-              <div className="funky-card">
-                <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>1 MONTH</div>
-                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0" }}>$9.99</h3>
-                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>Standard access</div>
-                
-                <ul className="funky-features">
-                  <li><Check size={18} /> <span><b>10k</b> Credits</span></li>
-                  <li><Check size={18} /> <span>30 days access</span></li>
-                  <li><Check size={18} /> <span>10 Team Members</span></li>
-                  <li><Check size={18} /> <span>100 Projects</span></li>
-                </ul>
-
-                <button
-                  className="funky-btn funky-btn-secondary"
-                  onClick={() => handlePurchase("plus_1m")}
-                  disabled={isPending}
-                >
-                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Select Plan
-                </button>
-              </div>
-
-              {/* 3 Months */}
-              <div className="funky-card highlight">
-                <div className="funky-badge">25% OFF</div>
-                <div style={{ color: "var(--color-primary)", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>3 MONTHS</div>
-                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0", color: "var(--color-primary)" }}>$22.49</h3>
-                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>($7.49 / mo)</div>
-                
-                <ul className="funky-features">
-                  <li><Check size={18} /> <span><b>30k</b> Credits</span></li>
-                  <li><Check size={18} /> <span>90 days access</span></li>
-                  <li><Check size={18} /> <span>10 Team Members</span></li>
-                  <li><Check size={18} /> <span>100 Projects</span></li>
-                </ul>
-
-                <button
-                  className="funky-btn funky-btn-primary"
-                  onClick={() => handlePurchase("plus_3m")}
-                  disabled={isPending}
-                >
-                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Get 25% Off
-                </button>
-              </div>
-
-              {/* 6 Months */}
-              <div className="funky-card">
-                <div style={{ color: "var(--color-text-muted)", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>6 MONTHS</div>
-                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0" }}>$39.99</h3>
-                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>($6.66 / mo)</div>
-                
-                <ul className="funky-features">
-                  <li><Check size={18} /> <span><b>60k</b> Credits</span></li>
-                  <li><Check size={18} /> <span>180 days access</span></li>
-                  <li><Check size={18} /> <span>10 Team Members</span></li>
-                  <li><Check size={18} /> <span>100 Projects</span></li>
-                </ul>
-
-                <button
-                  className="funky-btn funky-btn-secondary"
-                  onClick={() => handlePurchase("plus_6m")}
-                  disabled={isPending}
-                >
-                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Select Plan
-                </button>
-              </div>
-
-              {/* 12 Months */}
-              <div className="funky-card highlight" style={{ borderColor: "rgba(236, 72, 153, 0.4)", background: "linear-gradient(180deg, rgba(236, 72, 153, 0.1) 0%, var(--color-surface) 100%)" }}>
-                <div className="funky-badge" style={{ background: "#ec4899" }}>50% OFF</div>
-                <div style={{ color: "#ec4899", fontSize: "0.9rem", fontWeight: "700", marginBottom: "0.5rem" }}>12 MONTHS</div>
-                <h3 style={{ fontSize: "2.5rem", margin: "0 0 0.5rem 0", color: "#ec4899" }}>$59.99</h3>
-                <div style={{ fontSize: "0.9rem", color: "var(--color-text-muted)" }}>($4.99 / mo)</div>
-                
-                <ul className="funky-features">
-                  <li><Check size={18} /> <span><b>120k</b> Credits</span></li>
-                  <li><Check size={18} /> <span>365 days access</span></li>
-                  <li><Check size={18} /> <span>10 Team Members</span></li>
-                  <li><Check size={18} /> <span>100 Projects</span></li>
-                </ul>
-
-                <button
-                  className="funky-btn"
-                  style={{ background: "linear-gradient(90deg, #ec4899, #f43f5e)", color: "white" }}
-                  onClick={() => handlePurchase("plus_12m")}
-                  disabled={isPending}
-                >
-                  {isPending ? <Loader2 className="spin" size={18} /> : <CreditCard size={18} />} Get 50% Off
-                </button>
-              </div>
+        <div className="pricing-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
+          {/* $4.99 Pack */}
+          <div className="pricing-card pricing-card-popular">
+            <div className="pricing-badge">Best Value</div>
+            <div className="pricing-card-header">
+              <h3>10,000 Credits</h3>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">4.99</span>
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-primary"
+                onClick={() => handlePurchase("credits_5000")}
+                disabled={isPending}
+              >
+                Buy Credits
+              </button>
             </div>
           </div>
 
-          <div style={{ marginTop: "3rem", borderTop: "1px solid var(--color-border)", paddingTop: "3rem" }}>
-            <h2 style={{ fontSize: "1.8rem", fontWeight: "700", marginBottom: "1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <ShoppingBag color="#3b82f6" /> Buy Credits On-Demand
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem" }}>
-              {/* $4.99 Pack */}
-              <div className="funky-card">
-                <div className="funky-badge" style={{ background: "#3b82f6" }}>BEST VALUE</div>
-                <h3 style={{ fontSize: "1.8rem", margin: "1rem 0 0.5rem 0" }}>10,000 Credits</h3>
-                <div style={{ fontSize: "1.2rem", color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>$4.99</div>
-                <button
-                  className="funky-btn funky-btn-secondary"
-                  onClick={() => handlePurchase("credits_5000")}
-                  disabled={isPending}
-                >
-                  {isPending ? <Loader2 className="spin" size={18} /> : <ShoppingBag size={18} />} Buy Credits
-                </button>
-              </div>
+          {/* $1.99 Pack */}
+          <div className="pricing-card">
+            <div className="pricing-badge" style={{ backgroundColor: "var(--color-text-muted)" }}>Popular</div>
+            <div className="pricing-card-header">
+              <h3>4,000 Credits</h3>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">1.99</span>
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-secondary"
+                onClick={() => handlePurchase("credits_2000")}
+                disabled={isPending}
+              >
+                Buy Credits
+              </button>
+            </div>
+          </div>
 
-              {/* $1.99 Pack */}
-              <div className="funky-card">
-                <div className="funky-badge" style={{ background: "var(--color-text-muted)", color: "var(--color-bg)" }}>POPULAR</div>
-                <h3 style={{ fontSize: "1.8rem", margin: "1rem 0 0.5rem 0" }}>4,000 Credits</h3>
-                <div style={{ fontSize: "1.2rem", color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>$1.99</div>
-                <button
-                  className="funky-btn funky-btn-secondary"
-                  onClick={() => handlePurchase("credits_2000")}
-                  disabled={isPending}
-                >
-                  {isPending ? <Loader2 className="spin" size={18} /> : <ShoppingBag size={18} />} Buy Credits
-                </button>
-              </div>
-
-              {/* $0.99 Pack */}
-              <div className="funky-card">
-                <h3 style={{ fontSize: "1.8rem", margin: "1rem 0 0.5rem 0" }}>1,000 Credits</h3>
-                <div style={{ fontSize: "1.2rem", color: "var(--color-text-muted)", marginBottom: "1.5rem" }}>$0.99</div>
-                <button
-                  className="funky-btn funky-btn-secondary"
-                  onClick={() => handlePurchase("credits_500")}
-                  disabled={isPending}
-                >
-                  {isPending ? <Loader2 className="spin" size={18} /> : <ShoppingBag size={18} />} Buy Credits
-                </button>
-              </div>
+          {/* $0.99 Pack */}
+          <div className="pricing-card">
+            <div className="pricing-card-header">
+              <h3>1,000 Credits</h3>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">0.99</span>
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-secondary"
+                onClick={() => handlePurchase("credits_500")}
+                disabled={isPending}
+              >
+                Buy Credits
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {purchaseType && (
-        <div className="funky-modal-overlay">
-          <div className="funky-modal">
-            <h2 style={{ marginBottom: "0.5rem", fontSize: "1.8rem", fontWeight: "800" }}>Checkout</h2>
+        <div className="pricing-modal-overlay">
+          <div className="pricing-modal">
+            <h2 style={{ marginBottom: "0.5rem", fontSize: "1.8rem", fontWeight: "600", letterSpacing: "-0.02em" }}>Checkout</h2>
             <p style={{ color: "var(--color-text-muted)", marginBottom: "2rem", fontSize: "1rem" }}>Select your preferred payment provider to complete the purchase.</p>
             
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              <button className="funky-btn funky-btn-secondary" onClick={() => executePurchase(purchaseType, "lemonsqueezy")} disabled={isPending}>
+              <button className="pricing-btn pricing-btn-secondary" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }} onClick={() => executePurchase(purchaseType, "lemonsqueezy")} disabled={isPending}>
                 {isPending && provider === "lemonsqueezy" ? <Loader2 className="spin" size={18} /> : null} Pay with Lemon Squeezy
               </button>
-              <button className="funky-btn funky-btn-secondary" onClick={() => executePurchase(purchaseType, "razorpay")} disabled={isPending}>
+              <button className="pricing-btn pricing-btn-secondary" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }} onClick={() => executePurchase(purchaseType, "razorpay")} disabled={isPending}>
                 {isPending && provider === "razorpay" ? <Loader2 className="spin" size={18} /> : null} Pay with Razorpay
               </button>
             </div>
@@ -272,7 +330,7 @@ export function BillingPage() {
             <div style={{ marginTop: "2rem", textAlign: "center" }}>
               <button 
                 onClick={() => setPurchaseType(null)} 
-                style={{ background: "transparent", color: "var(--color-text-muted)", border: "none", cursor: "pointer", fontSize: "1rem", fontWeight: "600" }}
+                style={{ background: "transparent", color: "var(--color-text-muted)", border: "none", cursor: "pointer", fontSize: "0.875rem", fontWeight: "500", fontFamily: "inherit" }}
               >
                 Cancel
               </button>
