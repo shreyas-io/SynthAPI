@@ -1,5 +1,6 @@
 import type { ColumnType } from "kysely";
 
+import type { AgentRuntimeConfigTable } from "./agent_orchestration/agent_runtime_config";
 import type { ChatSessionTurnsTable } from "./agent_orchestration/chat_session_turns";
 import type { ChatSessionsTable } from "./agent_orchestration/chat_sessions";
 import type { ChatTurnBlobsTable } from "./agent_orchestration/chat_turn_blobs";
@@ -80,4 +81,5 @@ export type Database = {
   chat_turn_events: ChatTurnEventsTable;
   contact_messages: ContactMessagesTable;
   payment_transactions: PaymentTransactionsTable;
+  agent_runtime_config: AgentRuntimeConfigTable;
 };

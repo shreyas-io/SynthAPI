@@ -14,7 +14,7 @@ export type PlanAiPricing = {
  * Resolves the plan-level AI economics for an organization from its active
  * plan subscription, falling back to the basic plan's pricing when no active
  * subscription exists (organizations are normally always covered).
- * Token prices live with the model definitions in AgentConfig, not here.
+ * Token prices live with the model definitions in agent_runtime_config, not here.
  */
 export const getPlanAiPricingForOrganization = async (
   db: DatabaseExecutor,

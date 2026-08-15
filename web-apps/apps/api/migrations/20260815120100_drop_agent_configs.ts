@@ -50,7 +50,7 @@ export async function down(db: Kysely<unknown>): Promise<void> {
       'local-default',
       'Local Default Agent',
       null,
-      '{"chat_config": {"input_tokens": 8e-08, "output_tokens": 4.5e-07}, "compaction_config": {"input_tokens": 3e-08, "output_tokens": 1.5e-07}}'::jsonb,
+      '{}'::jsonb,
       '{}'::jsonb,
       null,
       null,

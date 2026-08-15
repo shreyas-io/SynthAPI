@@ -23,7 +23,10 @@ import {
 import { z } from "zod";
 import { createMockApiRuleTreeDto } from "../../../../presentation/dtos/mock_api/mock_api_rule_tree";
 import type { ToolWorkspaceContext } from "../tools/types";
-import { AgentConfig } from "../../../configs/agent-config/config";
+import {
+  loadAgentConfig,
+  type AgentConfig,
+} from "../../../configs/agent-config/config";
 import {
   createAgent,
   createMiddleware,
@@ -62,7 +65,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     output_tokens: a.output_tokens + b.output_tokens,
   });
 
-  type ModelPricing = (typeof AgentConfig.agent.models)[number]["pricing"];
+  type ModelPricing = AgentConfig["agent"]["models"][number]["pricing"];
 
   const calculateCost = (
     chat_pricing: ModelPricing,
@@ -112,18 +115,24 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     return fallback_grant?.id ?? null;
   };
 
-  const recordCreditUsage = async (input: {
-    organization_id: string;
-    user_id: string;
-    chat_turn_id: string;
-    chat_usage: TokenUsage;
-    compaction_usage: TokenUsage;
-    web_search_count: number;
-  }): Promise<void> => {
-    const chat_pricing = AgentConfig.agent.models[0]?.pricing;
-    const compaction_pricing = AgentConfig.compaction.models[0]?.pricing;
+  const recordCreditUsage = async (
+    agentConfig: AgentConfig,
+    input: {
+      organization_id: string;
+      user_id: string;
+      chat_turn_id: string;
+      chat_usage: TokenUsage;
+      compaction_usage: TokenUsage;
+      web_search_count: number;
+    },
+  ): Promise<void> => {
+    const chat_pricing = agentConfig.agent.models[0]?.pricing;
+    const compaction_pricing = agentConfig.compaction.models[0]?.pricing;
     if (!chat_pricing || !compaction_pricing) {
-      throw new Error("Agent model pricing is not configured.");
+      throw new AgentOrchestrationException({
+        public_message: "Agent model pricing is not configured.",
+        status_code: HttpStatusCode.PRECONDITION_FAILED,
+      });
     }
 
     const plan_pricing = await getPlanAiPricingForOrganization(
@@ -225,6 +234,8 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
     if (!turn || turn.status !== "in_progress") return;
 
+    const agentConfig = await loadAgentConfig(ctx);
+
     let totalChatUsage = zeroUsage();
     let totalCompactionUsage = zeroUsage();
     let webSearchCount = 0;
@@ -238,21 +249,21 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       const llm = createLlm(
         ctx,
-        AgentConfig.agent,
+        agentConfig.agent,
         turn.chat_session_id,
         user_id,
         chat_session_id,
       );
       const fallback = createFallbackMiddleware(
         ctx,
-        AgentConfig.agent,
+        agentConfig.agent,
         turn.chat_session_id,
         user_id,
         chat_session_id,
       );
       const compaction_llm = createLlm(
         ctx,
-        AgentConfig.compaction,
+        agentConfig.compaction,
         turn.chat_session_id,
         user_id,
         chat_session_id,
@@ -264,9 +275,9 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         ...(fallback ? [fallback] : []),
         summarizationMiddleware({
           model: compaction_llm,
-          trigger: { tokens: AgentConfig.compaction.threshold_tokens },
+          trigger: { tokens: agentConfig.compaction.threshold_tokens },
           keep: { messages: 20 },
-          summaryPrompt: AgentConfig.compaction.prompt,
+          summaryPrompt: agentConfig.compaction.prompt,
         }),
       ];
 
@@ -274,7 +285,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         model: llm,
         tools,
         checkpointer,
-        systemPrompt: AgentConfig.agent.prompt + ruleTreeSchemaPromptSection,
+        systemPrompt: agentConfig.agent.prompt + ruleTreeSchemaPromptSection,
         ...(middlewares.length > 0 ? { middleware: middlewares } : {}),
       });
 
@@ -494,7 +505,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       throw error;
     } finally {
       try {
-        await recordCreditUsage({
+        await recordCreditUsage(agentConfig, {
           organization_id,
           user_id,
           chat_turn_id: turn_id,

@@ -1,6 +1,9 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { modelFallbackMiddleware } from "langchain";
-import { AgentConfig } from "../../domain/configs/agent-config/config";
+import type {
+  AgentModelConfig,
+  AgentCompactionConfig,
+} from "../../domain/configs/agent-config/config";
 import {
   HttpStatusCode,
   MockApiException,
@@ -101,9 +104,7 @@ class SafeChatOpenAI extends ChatOpenAI {
   }
 }
 
-type LlmConfig =
-  | (typeof AgentConfig)["agent"]
-  | (typeof AgentConfig)["compaction"];
+type LlmConfig = AgentModelConfig | AgentCompactionConfig;
 
 export function createLlm(
   ctx: AppContext,

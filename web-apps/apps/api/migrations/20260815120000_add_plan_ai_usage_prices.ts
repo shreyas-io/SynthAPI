@@ -19,10 +19,20 @@ export async function up(db: Kysely<unknown>): Promise<void> {
     for each row execute function set_updated_at();
   `.execute(db);
 
+  // Pricing values are intentionally left at 0 — configure them manually in
+  // each environment's DB. They are not stored in the repo.
   await sql`
-    insert into plan_ai_usage_prices (plan_type_id, credits_per_usd, min_credit_charge, web_search_cost_usd)
-    select id, 4000, 0.01, 0.008
-    from plan_types;
+    insert into plan_ai_usage_prices (id, plan_type_id, credits_per_usd, min_credit_charge, web_search_cost_usd)
+    select '01a00680-e98c-74eb-a00b-381682e5ea87'::uuid, id, 0, 0, 0
+    from plan_types
+    where key = 'basic';
+  `.execute(db);
+
+  await sql`
+    insert into plan_ai_usage_prices (id, plan_type_id, credits_per_usd, min_credit_charge, web_search_cost_usd)
+    select '01a00680-ffa2-754c-a68b-ae0db90390c5'::uuid, id, 0, 0, 0
+    from plan_types
+    where key = 'plus';
   `.execute(db);
 }
 
