@@ -20,7 +20,7 @@ export type TextMessageContent = {
 };
 
 export const llmConfigSchema = z.object({
-  model_host: z.enum(["openrouter", "portkey", "ollama", "workers_ai"]),
+  model_host: z.enum(["openrouter", "ollama", "workers_ai"]),
   model_provider: z.enum(["nvidia", "google", "meta", "openai"]),
   model_gateway: z.enum(["cloudflare_aig"]).nullable(),
   model_id: z.string(),
