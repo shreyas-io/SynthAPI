@@ -234,14 +234,14 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
     if (!turn || turn.status !== "in_progress") return;
 
-    const agentConfig = await loadAgentConfig(ctx);
-
     let totalChatUsage = zeroUsage();
     let totalCompactionUsage = zeroUsage();
     let webSearchCount = 0;
     let wasCancelled = false;
+    let agentConfig: AgentConfig | null = null;
 
     try {
+      agentConfig = await loadAgentConfig(ctx);
       const checkpointer = PostgresSaver.fromConnString(
         getPostgresConnString(ctx),
       );
@@ -368,7 +368,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
               type: "tool-input-start",
               text: event.name,
             });
-            
+
             let toolInputContent = event.data.input;
             if (toolInputContent) {
               if (typeof toolInputContent.input === "string") {
@@ -475,8 +475,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       if (wasCancelled) return;
 
-
-
       await createAndPublishEvent({
         chat_turn_id: turn_id,
         event_type: "turn-settled",
@@ -505,14 +503,15 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       throw error;
     } finally {
       try {
-        await recordCreditUsage(agentConfig, {
-          organization_id,
-          user_id,
-          chat_turn_id: turn_id,
-          chat_usage: totalChatUsage,
-          compaction_usage: totalCompactionUsage,
-          web_search_count: webSearchCount,
-        });
+        if (agentConfig)
+          await recordCreditUsage(agentConfig, {
+            organization_id,
+            user_id,
+            chat_turn_id: turn_id,
+            chat_usage: totalChatUsage,
+            compaction_usage: totalCompactionUsage,
+            web_search_count: webSearchCount,
+          });
       } catch (error) {
         logger.error(
           { err: error, chat_turn_id: turn_id },
