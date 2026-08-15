@@ -29,7 +29,15 @@ export async function up(db: Kysely<unknown>): Promise<void> {
           {
             priority: 0,
             provider: "openrouter",
-            model: "nvidia/nemotron-super-49b-v1:free",
+            model: "nvidia/nemotron-3-super-120b-a12b:free",
+            temperature: 0.2,
+            max_tokens: 30720,
+            pricing: { input_tokens: 0, output_tokens: 0 },
+          },
+          {
+            priority: 1,
+            provider: "openrouter",
+            model: "openai/gpt-oss-20b:free",
             temperature: 0.2,
             max_tokens: 30720,
             pricing: { input_tokens: 0, output_tokens: 0 },
@@ -44,7 +52,15 @@ export async function up(db: Kysely<unknown>): Promise<void> {
           {
             priority: 0,
             provider: "openrouter",
-            model: "nvidia/nemotron-super-49b-v1:free",
+            model: "nvidia/nemotron-3-super-120b-a12b:free",
+            temperature: 0.2,
+            max_tokens: 10240,
+            pricing: { input_tokens: 0, output_tokens: 0 },
+          },
+          {
+            priority: 1,
+            provider: "openrouter",
+            model: "openai/gpt-oss-20b:free",
             temperature: 0.2,
             max_tokens: 10240,
             pricing: { input_tokens: 0, output_tokens: 0 },
