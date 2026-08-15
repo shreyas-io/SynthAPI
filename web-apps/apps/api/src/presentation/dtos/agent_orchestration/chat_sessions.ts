@@ -2,14 +2,6 @@ import z from "zod";
 
 export const chatSessionStatusDto = z.enum(["active", "archived"]);
 
-export const createChatSessionDto = z.object({
-  agent_config_id: z.uuidv7(),
-  project_id: z.uuidv7(),
-  name: z.string().max(255),
-  description: z.string().max(2048).nullable(),
-  status: chatSessionStatusDto.default("active"),
-});
-
 export const createProjectChatSessionDto = z.object({
   name: z.string().max(255),
   description: z.string().max(2048).nullable().optional(),
@@ -23,7 +15,6 @@ export const updateChatSessionDto = z.object({
 
 export const listChatSessionsFilterDto = z.object({
   ids: z.uuidv7().array().optional(),
-  agent_config_ids: z.uuidv7().array().optional(),
   project_ids: z.uuidv7().array().optional(),
   name: z.string().optional(),
   description: z.string().optional(),

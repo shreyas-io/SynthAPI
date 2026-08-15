@@ -1,6 +1,5 @@
 import type { AppContext } from "../../../../server";
 import { logger } from "../../../../infrastructure/logger";
-import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import type {
   ChatSessionTurnEt,
@@ -17,6 +16,10 @@ import {
 } from "../../../exceptions/exception";
 import { createChatTurn } from "./create";
 import { createLangChainTools } from "../tools/langchain";
+import {
+  getPlanAiPricingForOrganization,
+  type PlanAiPricing,
+} from "../../organizations/pricing";
 import { z } from "zod";
 import { createMockApiRuleTreeDto } from "../../../../presentation/dtos/mock_api/mock_api_rule_tree";
 import type { ToolWorkspaceContext } from "../tools/types";
@@ -47,10 +50,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   const runningTurns = new Set<string>();
   const turnAbortControllers = new Map<string, AbortController>();
 
-  const credits_per_usd = 4000;
-  const min_credit_charge = 0.01;
-  const web_search_cost_usd = 0.008;
-
   type TokenUsage = {
     input_tokens: number;
     output_tokens: number;
@@ -63,30 +62,29 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     output_tokens: a.output_tokens + b.output_tokens,
   });
 
+  type ModelPricing = (typeof AgentConfig.agent.models)[number]["pricing"];
+
   const calculateCost = (
+    chat_pricing: ModelPricing,
+    compaction_pricing: ModelPricing,
+    plan_pricing: PlanAiPricing,
     chat_usage: TokenUsage,
     compaction_usage: TokenUsage,
     web_search_count: number,
   ): number => {
-    // Hardcoded pricing from previous migrations
-    const chat_input_price = 8e-8;
-    const chat_output_price = 4.5e-7;
-    const compaction_input_price = 3e-8;
-    const compaction_output_price = 1.5e-7;
-
     const chat_cost =
-      chat_usage.input_tokens * chat_input_price +
-      chat_usage.output_tokens * chat_output_price;
+      chat_usage.input_tokens * chat_pricing.input_tokens +
+      chat_usage.output_tokens * chat_pricing.output_tokens;
     const compaction_cost =
-      compaction_usage.input_tokens * compaction_input_price +
-      compaction_usage.output_tokens * compaction_output_price;
+      compaction_usage.input_tokens * compaction_pricing.input_tokens +
+      compaction_usage.output_tokens * compaction_pricing.output_tokens;
 
-    const web_search_cost = web_search_count * web_search_cost_usd;
+    const web_search_cost = web_search_count * plan_pricing.web_search_cost_usd;
 
     return chat_cost + compaction_cost + web_search_cost;
   };
 
-  const roundCredits = (credits: number): number => {
+  const roundCredits = (min_credit_charge: number, credits: number): number => {
     const rounded = Math.round(credits * 100) / 100;
     return Math.max(rounded, min_credit_charge);
   };
@@ -122,14 +120,31 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     compaction_usage: TokenUsage;
     web_search_count: number;
   }): Promise<void> => {
+    const chat_pricing = AgentConfig.agent.models[0]?.pricing;
+    const compaction_pricing = AgentConfig.compaction.models[0]?.pricing;
+    if (!chat_pricing || !compaction_pricing) {
+      throw new Error("Agent model pricing is not configured.");
+    }
+
+    const plan_pricing = await getPlanAiPricingForOrganization(
+      ctx.db,
+      input.organization_id,
+    );
+
     const cost_usd = calculateCost(
+      chat_pricing,
+      compaction_pricing,
+      plan_pricing,
       input.chat_usage,
       input.compaction_usage,
       input.web_search_count,
     );
     if (cost_usd <= 0) return;
 
-    const credits = roundCredits(cost_usd * credits_per_usd);
+    const credits = roundCredits(
+      plan_pricing.min_credit_charge,
+      cost_usd * plan_pricing.credits_per_usd,
+    );
     const credit_grant_id = await getCreditGrantForUsage(input.organization_id);
 
     if (!credit_grant_id) {
@@ -188,13 +203,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     workspace: ToolWorkspaceContext;
     abort_signal: AbortSignal;
   }): Promise<void> => {
-    const sessionCount = await ctx.db
+    const session = await ctx.db
       .selectFrom("chat_sessions")
-      .select(sql<number>`count(*)::int`.as("count"))
+      .select("id")
       .where("id", "=", chat_session_id)
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
 
-    if (sessionCount.count === 0) {
+    if (!session) {
       throw new AgentOrchestrationException({
         public_message: "Chat session not found.",
         status_code: HttpStatusCode.NOT_FOUND,

@@ -29,7 +29,6 @@ RUN pnpm install --frozen-lockfile --filter @synthapi/api...
 COPY --from=builder /repo/web-apps/apps/api/dist apps/api/dist
 COPY --from=builder /repo/web-apps/apps/api/src apps/api/src
 COPY --from=builder /repo/web-apps/apps/api/migrations apps/api/migrations
-COPY --from=builder /repo/web-apps/apps/api/agent_config_migrations apps/api/agent_config_migrations
 
 WORKDIR /app/web-apps/apps/api
 

@@ -140,12 +140,12 @@ export const addProjectChatRoutes = (app: Express, ctx: AppContext) => {
 
       await validateProjectAccess(projects, user, project_id);
 
-      const session =
-        await chat_sessions.createChatSessionWithDefaultAgentConfig({
-          project_id,
-          name,
-          description: description ?? null,
-        });
+      const session = await chat_sessions.createChatSession({
+        project_id,
+        name,
+        description: description ?? null,
+        status: "active",
+      });
 
       res.status(201).json(session);
     }),

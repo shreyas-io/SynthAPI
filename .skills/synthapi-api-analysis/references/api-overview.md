@@ -127,7 +127,6 @@ erDiagram
 
   mock_apis ||--o{ mock_api_responses : has
 
-  agent_configs ||--o{ chat_sessions : configures
   chat_sessions ||--o{ chat_session_turns : has
   chat_session_turns ||--o{ chat_turn_events : emits
   chat_turn_blobs ||..o{ chat_session_turns : referenced_by_user_input
@@ -182,7 +181,6 @@ erDiagram
 
   chat_sessions {
     uuid id
-    uuid agent_config_id
     uuid project_id
     string name
     string status

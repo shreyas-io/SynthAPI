@@ -8,7 +8,6 @@ import express, { type Express } from "express";
 
 import { getSecrets } from "./config/secrets";
 import { runMigrations } from "./infrastructure/kysely/run_migrations";
-import { runAgentConfigMigrations } from "./run_agent_config_migrations";
 import { InMemoryEventBus } from "./infrastructure/agent_orchestration/event_bus";
 import {
   createPyodideWorkerPool,
@@ -96,8 +95,6 @@ export const createApiApp = async (): Promise<ApiApp> => {
     ctx: appContext,
     secrets,
   });
-
-  await runAgentConfigMigrations(appContext);
 
   const app = express();
 
