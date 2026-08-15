@@ -16,7 +16,6 @@ const secretsSchema = z.object({
   CLOUDFLARE_ACCOUNT_ID: z.string(),
   CLOUDFLARE_AI_GATEWAY_ID: z.string(),
   CLOUDFLARE_AI_GATEWAY_TOKEN: z.string(),
-  PORTKEY_API_KEY: z.string(),
   OPENROUTER_API_KEY: z.preprocess(
     emptyStringToUndefined,
     z.string().optional(),

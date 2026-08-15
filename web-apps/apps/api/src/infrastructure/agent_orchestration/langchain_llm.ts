@@ -1,12 +1,14 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { modelFallbackMiddleware } from "langchain";
-import { AgentConfig } from "../../domain/configs/agent-config/config";
+import type {
+  AgentModelConfig,
+  AgentCompactionConfig,
+} from "../../domain/configs/agent-config/config";
 import {
   HttpStatusCode,
   MockApiException,
 } from "../../domain/exceptions/exception";
 import { AppContext } from "../../server";
-import { createHeaders } from "portkey-ai";
 import { setTimeout as sleep } from "node:timers/promises";
 
 const MAX_ATTEMPTS = 3;
@@ -101,9 +103,7 @@ class SafeChatOpenAI extends ChatOpenAI {
   }
 }
 
-type LlmConfig =
-  | (typeof AgentConfig)["agent"]
-  | (typeof AgentConfig)["compaction"];
+type LlmConfig = AgentModelConfig | AgentCompactionConfig;
 
 export function createLlm(
   ctx: AppContext,
@@ -163,17 +163,18 @@ function createChatModel(
   session_id: string,
   reasoning?: LlmConfig["reasoning"],
 ) {
-  const portkey_config = createHeaders({
-    apiKey: ctx.env.PORTKEY_API_KEY,
-    metadata: {
-      _env: ctx.env.ENV,
-      _user: user_id,
-      _chat: chat_id,
-    },
-  });
+  let baseURL: string | undefined = undefined;
+  let apiKey: string = "dummy";
+
+  if (model_config.provider === "openrouter") {
+    baseURL = "https://openrouter.ai/api/v1";
+    apiKey = ctx.env.OPENROUTER_API_KEY ?? "dummy";
+  } else if (model_config.provider === "ollama") {
+    baseURL = ctx.env.OLLAMA_BASE_URL;
+  }
 
   return new SafeChatOpenAI({
-    apiKey: "dummy",
+    apiKey,
     model: model_config.model,
     temperature: model_config.temperature,
     maxTokens: model_config.max_tokens,
@@ -182,9 +183,8 @@ function createChatModel(
       session_id,
     },
     configuration: {
-      baseURL: "https://api.portkey.ai/v1",
+      baseURL,
       defaultHeaders: {
-        ...portkey_config,
         "x-session-id": session_id,
       },
     },

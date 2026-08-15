@@ -1,6 +1,5 @@
 import type { AppContext } from "../../../../server";
 import { logger } from "../../../../infrastructure/logger";
-import { sql } from "kysely";
 import { uuidv7 } from "uuidv7";
 import type {
   ChatSessionTurnEt,
@@ -17,10 +16,17 @@ import {
 } from "../../../exceptions/exception";
 import { createChatTurn } from "./create";
 import { createLangChainTools } from "../tools/langchain";
+import {
+  getPlanAiPricingForOrganization,
+  type PlanAiPricing,
+} from "../../organizations/pricing";
 import { z } from "zod";
 import { createMockApiRuleTreeDto } from "../../../../presentation/dtos/mock_api/mock_api_rule_tree";
 import type { ToolWorkspaceContext } from "../tools/types";
-import { AgentConfig } from "../../../configs/agent-config/config";
+import {
+  loadAgentConfig,
+  type AgentConfig,
+} from "../../../configs/agent-config/config";
 import {
   createAgent,
   createMiddleware,
@@ -47,10 +53,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
   const runningTurns = new Set<string>();
   const turnAbortControllers = new Map<string, AbortController>();
 
-  const credits_per_usd = 4000;
-  const min_credit_charge = 0.01;
-  const web_search_cost_usd = 0.008;
-
   type TokenUsage = {
     input_tokens: number;
     output_tokens: number;
@@ -63,30 +65,29 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     output_tokens: a.output_tokens + b.output_tokens,
   });
 
+  type ModelPricing = AgentConfig["agent"]["models"][number]["pricing"];
+
   const calculateCost = (
+    chat_pricing: ModelPricing,
+    compaction_pricing: ModelPricing,
+    plan_pricing: PlanAiPricing,
     chat_usage: TokenUsage,
     compaction_usage: TokenUsage,
     web_search_count: number,
   ): number => {
-    // Hardcoded pricing from previous migrations
-    const chat_input_price = 8e-8;
-    const chat_output_price = 4.5e-7;
-    const compaction_input_price = 3e-8;
-    const compaction_output_price = 1.5e-7;
-
     const chat_cost =
-      chat_usage.input_tokens * chat_input_price +
-      chat_usage.output_tokens * chat_output_price;
+      chat_usage.input_tokens * chat_pricing.input_tokens +
+      chat_usage.output_tokens * chat_pricing.output_tokens;
     const compaction_cost =
-      compaction_usage.input_tokens * compaction_input_price +
-      compaction_usage.output_tokens * compaction_output_price;
+      compaction_usage.input_tokens * compaction_pricing.input_tokens +
+      compaction_usage.output_tokens * compaction_pricing.output_tokens;
 
-    const web_search_cost = web_search_count * web_search_cost_usd;
+    const web_search_cost = web_search_count * plan_pricing.web_search_cost_usd;
 
     return chat_cost + compaction_cost + web_search_cost;
   };
 
-  const roundCredits = (credits: number): number => {
+  const roundCredits = (min_credit_charge: number, credits: number): number => {
     const rounded = Math.round(credits * 100) / 100;
     return Math.max(rounded, min_credit_charge);
   };
@@ -114,22 +115,45 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     return fallback_grant?.id ?? null;
   };
 
-  const recordCreditUsage = async (input: {
-    organization_id: string;
-    user_id: string;
-    chat_turn_id: string;
-    chat_usage: TokenUsage;
-    compaction_usage: TokenUsage;
-    web_search_count: number;
-  }): Promise<void> => {
+  const recordCreditUsage = async (
+    agentConfig: AgentConfig,
+    input: {
+      organization_id: string;
+      user_id: string;
+      chat_turn_id: string;
+      chat_usage: TokenUsage;
+      compaction_usage: TokenUsage;
+      web_search_count: number;
+    },
+  ): Promise<void> => {
+    const chat_pricing = agentConfig.agent.models[0]?.pricing;
+    const compaction_pricing = agentConfig.compaction.models[0]?.pricing;
+    if (!chat_pricing || !compaction_pricing) {
+      throw new AgentOrchestrationException({
+        public_message: "Agent model pricing is not configured.",
+        status_code: HttpStatusCode.PRECONDITION_FAILED,
+      });
+    }
+
+    const plan_pricing = await getPlanAiPricingForOrganization(
+      ctx.db,
+      input.organization_id,
+    );
+
     const cost_usd = calculateCost(
+      chat_pricing,
+      compaction_pricing,
+      plan_pricing,
       input.chat_usage,
       input.compaction_usage,
       input.web_search_count,
     );
     if (cost_usd <= 0) return;
 
-    const credits = roundCredits(cost_usd * credits_per_usd);
+    const credits = roundCredits(
+      plan_pricing.min_credit_charge,
+      cost_usd * plan_pricing.credits_per_usd,
+    );
     const credit_grant_id = await getCreditGrantForUsage(input.organization_id);
 
     if (!credit_grant_id) {
@@ -188,13 +212,13 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     workspace: ToolWorkspaceContext;
     abort_signal: AbortSignal;
   }): Promise<void> => {
-    const sessionCount = await ctx.db
+    const session = await ctx.db
       .selectFrom("chat_sessions")
-      .select(sql<number>`count(*)::int`.as("count"))
+      .select("id")
       .where("id", "=", chat_session_id)
-      .executeTakeFirstOrThrow();
+      .executeTakeFirst();
 
-    if (sessionCount.count === 0) {
+    if (!session) {
       throw new AgentOrchestrationException({
         public_message: "Chat session not found.",
         status_code: HttpStatusCode.NOT_FOUND,
@@ -214,8 +238,10 @@ export const AgentChatUsecase = (ctx: AppContext) => {
     let totalCompactionUsage = zeroUsage();
     let webSearchCount = 0;
     let wasCancelled = false;
+    let agentConfig: AgentConfig | null = null;
 
     try {
+      agentConfig = await loadAgentConfig(ctx);
       const checkpointer = PostgresSaver.fromConnString(
         getPostgresConnString(ctx),
       );
@@ -223,21 +249,21 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       const llm = createLlm(
         ctx,
-        AgentConfig.agent,
+        agentConfig.agent,
         turn.chat_session_id,
         user_id,
         chat_session_id,
       );
       const fallback = createFallbackMiddleware(
         ctx,
-        AgentConfig.agent,
+        agentConfig.agent,
         turn.chat_session_id,
         user_id,
         chat_session_id,
       );
       const compaction_llm = createLlm(
         ctx,
-        AgentConfig.compaction,
+        agentConfig.compaction,
         turn.chat_session_id,
         user_id,
         chat_session_id,
@@ -249,9 +275,9 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         ...(fallback ? [fallback] : []),
         summarizationMiddleware({
           model: compaction_llm,
-          trigger: { tokens: AgentConfig.compaction.threshold_tokens },
+          trigger: { tokens: agentConfig.compaction.threshold_tokens },
           keep: { messages: 20 },
-          summaryPrompt: AgentConfig.compaction.prompt,
+          summaryPrompt: agentConfig.compaction.prompt,
         }),
       ];
 
@@ -259,7 +285,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
         model: llm,
         tools,
         checkpointer,
-        systemPrompt: AgentConfig.agent.prompt + ruleTreeSchemaPromptSection,
+        systemPrompt: agentConfig.agent.prompt + ruleTreeSchemaPromptSection,
         ...(middlewares.length > 0 ? { middleware: middlewares } : {}),
       });
 
@@ -342,7 +368,7 @@ export const AgentChatUsecase = (ctx: AppContext) => {
               type: "tool-input-start",
               text: event.name,
             });
-            
+
             let toolInputContent = event.data.input;
             if (toolInputContent) {
               if (typeof toolInputContent.input === "string") {
@@ -449,8 +475,6 @@ export const AgentChatUsecase = (ctx: AppContext) => {
 
       if (wasCancelled) return;
 
-
-
       await createAndPublishEvent({
         chat_turn_id: turn_id,
         event_type: "turn-settled",
@@ -479,14 +503,15 @@ export const AgentChatUsecase = (ctx: AppContext) => {
       throw error;
     } finally {
       try {
-        await recordCreditUsage({
-          organization_id,
-          user_id,
-          chat_turn_id: turn_id,
-          chat_usage: totalChatUsage,
-          compaction_usage: totalCompactionUsage,
-          web_search_count: webSearchCount,
-        });
+        if (agentConfig)
+          await recordCreditUsage(agentConfig, {
+            organization_id,
+            user_id,
+            chat_turn_id: turn_id,
+            chat_usage: totalChatUsage,
+            compaction_usage: totalCompactionUsage,
+            web_search_count: webSearchCount,
+          });
       } catch (error) {
         logger.error(
           { err: error, chat_turn_id: turn_id },

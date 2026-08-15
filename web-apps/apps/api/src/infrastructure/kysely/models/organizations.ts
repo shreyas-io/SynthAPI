@@ -73,6 +73,16 @@ export type OrganizationPlanSubscriptionsTable = {
   updated_at: Timestamp;
 };
 
+export type PlanAiUsagePricesTable = {
+  id: GeneratedUuid;
+  plan_type_id: string;
+  credits_per_usd: number;
+  min_credit_charge: number;
+  web_search_cost_usd: number;
+  created_at: Timestamp;
+  updated_at: Timestamp;
+};
+
 export type OrganizationCreditGrantsTable = {
   id: GeneratedUuid;
   organization_id: string;

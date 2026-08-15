@@ -1,6 +1,6 @@
 import type { ColumnType } from "kysely";
 
-import type { AgentConfigsTable } from "./agent_orchestration/agent_configs";
+import type { AgentRuntimeConfigTable } from "./agent_orchestration/agent_runtime_config";
 import type { ChatSessionTurnsTable } from "./agent_orchestration/chat_session_turns";
 import type { ChatSessionsTable } from "./agent_orchestration/chat_sessions";
 import type { ChatTurnBlobsTable } from "./agent_orchestration/chat_turn_blobs";
@@ -15,6 +15,7 @@ import type {
   OrganizationMembershipsTable,
   OrganizationPlanSubscriptionsTable,
   OrganizationsTable,
+  PlanAiUsagePricesTable,
   PlanTypesTable,
   PaymentTransactionsTable,
 } from "./organizations";
@@ -64,6 +65,7 @@ export type Database = {
   organization_memberships: OrganizationMembershipsTable;
   organization_invites: OrganizationInvitesTable;
   plan_types: PlanTypesTable;
+  plan_ai_usage_prices: PlanAiUsagePricesTable;
   organization_plan_subscriptions: OrganizationPlanSubscriptionsTable;
   organization_credit_grants: OrganizationCreditGrantsTable;
   organization_credit_usages: OrganizationCreditUsagesTable;
@@ -73,11 +75,11 @@ export type Database = {
   project_api_keys: ProjectApiKeysTable;
   mock_apis: MockApisTable;
   mock_api_responses: MockApiResponsesTable;
-  agent_configs: AgentConfigsTable;
   chat_sessions: ChatSessionsTable;
   chat_turn_blobs: ChatTurnBlobsTable;
   chat_session_turns: ChatSessionTurnsTable;
   chat_turn_events: ChatTurnEventsTable;
   contact_messages: ContactMessagesTable;
   payment_transactions: PaymentTransactionsTable;
+  agent_runtime_config: AgentRuntimeConfigTable;
 };
