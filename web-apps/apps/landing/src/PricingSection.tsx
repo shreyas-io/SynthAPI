@@ -33,7 +33,7 @@ export function PricingSection() {
               <span className="period">/month</span>
             </div>
             <div className="pricing-card-billing-info">
-              {/* Empty spacing */}
+              Free forever
             </div>
             <div className="pricing-card-action">
               <button
@@ -51,64 +51,34 @@ export function PricingSection() {
             </ul>
           </div>
 
-          {/* 1 Month */}
-          <div className="pricing-card">
+          {/* 12 Months */}
+          <div className="pricing-card pricing-card-popular">
+            <div className="pricing-badge">50% OFF</div>
             <div className="pricing-card-header">
-              <h3>1 Month</h3>
+              <h3>12 Months</h3>
               <p className="pricing-card-subtitle">
-                Standard access for short-term projects and testing.
+                The best value for long-term API mocking and scale.
               </p>
             </div>
             <div className="pricing-card-price">
               <span className="currency">$</span>
-              <span className="amount">9.99</span>
+              <span className="amount">4.99</span>
+              <span className="period">/month</span>
             </div>
             <div className="pricing-card-billing-info">
-              One-time payment
+              Billed annually ($59.99)
             </div>
             <div className="pricing-card-action">
               <button
-                className="pricing-btn pricing-btn-secondary"
+                className="pricing-btn pricing-btn-primary"
                 onClick={handlePurchase}
               >
-                Select Plan
+                Get 50% Off
               </button>
             </div>
             <ul className="pricing-features">
-              <li><Check size={18} /> <b>10k</b> Credits</li>
-              <li><Check size={18} /> 30 days access</li>
-              <li><Check size={18} /> 10 Team Members</li>
-              <li><Check size={18} /> 100 Projects</li>
-            </ul>
-          </div>
-
-          {/* 3 Months */}
-          <div className="pricing-card">
-            <div className="pricing-badge">25% OFF</div>
-            <div className="pricing-card-header">
-              <h3>3 Months</h3>
-              <p className="pricing-card-subtitle">
-                Perfect for medium-length projects and growing teams.
-              </p>
-            </div>
-            <div className="pricing-card-price">
-              <span className="currency">$</span>
-              <span className="amount">22.49</span>
-            </div>
-            <div className="pricing-card-billing-info">
-              <span className="savings">($7.49 / mo)</span>
-            </div>
-            <div className="pricing-card-action">
-              <button
-                className="pricing-btn pricing-btn-secondary"
-                onClick={handlePurchase}
-              >
-                Get 25% Off
-              </button>
-            </div>
-            <ul className="pricing-features">
-              <li><Check size={18} /> <b>30k</b> Credits</li>
-              <li><Check size={18} /> 90 days access</li>
+              <li><Check size={18} /> <b>120k</b> Credits</li>
+              <li><Check size={18} /> 365 days access</li>
               <li><Check size={18} /> 10 Team Members</li>
               <li><Check size={18} /> 100 Projects</li>
             </ul>
@@ -124,10 +94,11 @@ export function PricingSection() {
             </div>
             <div className="pricing-card-price">
               <span className="currency">$</span>
-              <span className="amount">39.99</span>
+              <span className="amount">6.66</span>
+              <span className="period">/month</span>
             </div>
             <div className="pricing-card-billing-info">
-              <span className="savings">($6.66 / mo)</span>
+              Billed semi-annually ($39.99)
             </div>
             <div className="pricing-card-action">
               <button
@@ -145,33 +116,66 @@ export function PricingSection() {
             </ul>
           </div>
 
-          {/* 12 Months */}
-          <div className="pricing-card pricing-card-popular">
-            <div className="pricing-badge">50% OFF</div>
+          {/* 3 Months */}
+          <div className="pricing-card">
+            <div className="pricing-badge">25% OFF</div>
             <div className="pricing-card-header">
-              <h3>12 Months</h3>
+              <h3>3 Months</h3>
               <p className="pricing-card-subtitle">
-                The best value for long-term API mocking and scale.
+                Perfect for medium-length projects and growing teams.
               </p>
             </div>
             <div className="pricing-card-price">
               <span className="currency">$</span>
-              <span className="amount">59.99</span>
+              <span className="amount">7.49</span>
+              <span className="period">/month</span>
             </div>
             <div className="pricing-card-billing-info">
-              <span className="savings">($4.99 / mo)</span>
+              Billed quarterly ($22.49)
             </div>
             <div className="pricing-card-action">
               <button
-                className="pricing-btn pricing-btn-primary"
+                className="pricing-btn pricing-btn-secondary"
                 onClick={handlePurchase}
               >
-                Get 50% Off
+                Get 25% Off
               </button>
             </div>
             <ul className="pricing-features">
-              <li><Check size={18} /> <b>120k</b> Credits</li>
-              <li><Check size={18} /> 365 days access</li>
+              <li><Check size={18} /> <b>30k</b> Credits</li>
+              <li><Check size={18} /> 90 days access</li>
+              <li><Check size={18} /> 10 Team Members</li>
+              <li><Check size={18} /> 100 Projects</li>
+            </ul>
+          </div>
+
+          {/* 1 Month */}
+          <div className="pricing-card">
+            <div className="pricing-card-header">
+              <h3>1 Month</h3>
+              <p className="pricing-card-subtitle">
+                Standard access for short-term projects and testing.
+              </p>
+            </div>
+            <div className="pricing-card-price">
+              <span className="currency">$</span>
+              <span className="amount">9.99</span>
+              <span className="period">/month</span>
+            </div>
+            <div className="pricing-card-billing-info">
+              Billed monthly
+            </div>
+            <div className="pricing-card-action">
+              <button
+                className="pricing-btn pricing-btn-secondary"
+                onClick={handlePurchase}
+              >
+                Select Plan
+              </button>
+            </div>
+            <ul className="pricing-features">
+              <li><Check size={18} /> <b>10k</b> Credits</li>
+              <li><Check size={18} /> 30 days access</li>
               <li><Check size={18} /> 10 Team Members</li>
               <li><Check size={18} /> 100 Projects</li>
             </ul>
@@ -183,19 +187,18 @@ export function PricingSection() {
         </div>
 
         <div className="pricing-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))" }}>
-          {/* $4.99 Pack */}
-          <div className="pricing-card pricing-card-popular">
-            <div className="pricing-badge">Best Value</div>
+          {/* $0.99 Pack */}
+          <div className="pricing-card">
             <div className="pricing-card-header">
-              <h3>10,000 Credits</h3>
+              <h3>1,000 Credits</h3>
             </div>
             <div className="pricing-card-price">
               <span className="currency">$</span>
-              <span className="amount">4.99</span>
+              <span className="amount">0.99</span>
             </div>
             <div className="pricing-card-action">
               <button
-                className="pricing-btn pricing-btn-primary"
+                className="pricing-btn pricing-btn-secondary"
                 onClick={handlePurchase}
               >
                 Buy Credits
@@ -223,18 +226,19 @@ export function PricingSection() {
             </div>
           </div>
 
-          {/* $0.99 Pack */}
-          <div className="pricing-card">
+          {/* $4.99 Pack */}
+          <div className="pricing-card pricing-card-popular">
+            <div className="pricing-badge">Best Value</div>
             <div className="pricing-card-header">
-              <h3>1,000 Credits</h3>
+              <h3>10,000 Credits</h3>
             </div>
             <div className="pricing-card-price">
               <span className="currency">$</span>
-              <span className="amount">0.99</span>
+              <span className="amount">4.99</span>
             </div>
             <div className="pricing-card-action">
               <button
-                className="pricing-btn pricing-btn-secondary"
+                className="pricing-btn pricing-btn-primary"
                 onClick={handlePurchase}
               >
                 Buy Credits
